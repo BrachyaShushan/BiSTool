@@ -86,62 +86,26 @@ export const AppProvider = ({ children }) => {
     return [];
   });
 
-  // Save state to localStorage whenever it changes
-  useEffect(() => {
-    const state = {
-      urlData,
-      requestConfig,
-      yamlOutput,
-      activeSection,
-      segmentVariables
-    };
-    localStorage.setItem('app_state', JSON.stringify(state));
-
-    // Auto-save current session if it exists
-    if (activeSession) {
-      const updatedSession = {
-        ...activeSession,
-        urlData,
-        requestConfig,
-        segmentVariables
-      };
-      setSavedSessions(prev => prev.map(s =>
-        s.id === activeSession.id ? updatedSession : s
-      ));
-      setActiveSession(updatedSession);
-    }
-  }, [urlData, requestConfig, yamlOutput, activeSection, segmentVariables, activeSession]);
-
-  // Save shared variables when they change
-  useEffect(() => {
-    localStorage.setItem('shared_variables', JSON.stringify(sharedVariables));
-
-    // Auto-save current session if it exists
-    if (activeSession) {
-      const updatedSession = {
-        ...activeSession,
-        sharedVariables
-      };
-      setSavedSessions(prev => prev.map(s =>
-        s.id === activeSession.id ? updatedSession : s
-      ));
-      setActiveSession(updatedSession);
-    }
-  }, [sharedVariables, activeSession]);
-
-  // Save active session when it changes
+  // Single useEffect to handle all session state
   useEffect(() => {
     if (activeSession) {
+      // Update all state from active session
+      setUrlData(activeSession.urlData || null);
+      setRequestConfig(activeSession.requestConfig || null);
+      setYamlOutput(activeSession.yamlOutput || '');
+      setSegmentVariables(activeSession.segmentVariables || {});
+      setSharedVariables(activeSession.sharedVariables || {});
+      setActiveSection(activeSession.activeSection || 'url');
+
+      // Save to localStorage
       localStorage.setItem('active_session', JSON.stringify(activeSession));
-    } else {
-      localStorage.removeItem('active_session');
+
+      // Update saved sessions
+      setSavedSessions(prev => prev.map(s =>
+        s.id === activeSession.id ? activeSession : s
+      ));
     }
   }, [activeSession]);
-
-  // Save sessions list when it changes
-  useEffect(() => {
-    localStorage.setItem('saved_sessions', JSON.stringify(savedSessions));
-  }, [savedSessions]);
 
   const handleURLBuilderSubmit = (data) => {
     setUrlData(data);
@@ -183,11 +147,27 @@ export const AppProvider = ({ children }) => {
   };
 
   const handleLoadSession = (session) => {
-    setUrlData(session.urlData);
-    setRequestConfig(session.requestConfig);
-    setSegmentVariables(session.segmentVariables || {});
-    setActiveSection('url');
-    setActiveSession(session);
+    if (session) {
+      // Save current session if it exists
+      if (activeSession) {
+        const currentSession = {
+          ...activeSession,
+          urlData,
+          requestConfig,
+          yamlOutput,
+          segmentVariables,
+          sharedVariables,
+          activeSection
+        };
+        setSavedSessions(prev => prev.map(s =>
+          s.id === activeSession.id ? currentSession : s
+        ));
+        localStorage.setItem('active_session', JSON.stringify(currentSession));
+      }
+
+      // Load new session
+      setActiveSession(session);
+    }
   };
 
   const handleDuplicateSession = (session) => {

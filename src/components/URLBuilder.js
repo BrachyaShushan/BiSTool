@@ -19,21 +19,31 @@ const URLBuilder = ({ onSubmit }) => {
   const [editingSegment, setEditingSegment] = useState(null);
   const [showSegmentEditor, setShowSegmentEditor] = useState(false);
 
-  // Update builtUrl whenever protocol, domain, or segments change
+  // Effect to handle initial load and urlData changes
+  useEffect(() => {
+    if (urlData) {
+      setProtocol(urlData.protocol || 'http');
+      setDomain(urlData.domain || '{base_url}');
+      setSegments(urlData.segments || []);
+      setSessionDescription(urlData.sessionDescription || '');
+    }
+  }, [urlData]);
+
+  // Effect to handle builtUrl updates
   useEffect(() => {
     let url = `${protocol}://${domain}`;
     if (segments.length > 0) {
       url += '/' + segments.map(segment => {
         if (segment.isDynamic && segment.paramName) {
-          return `{${segment.paramName}}`; // Show the variable name in preview
+          return `{${segment.paramName}}`;
         }
         return segment.value;
       }).join('/');
     }
     setBuiltUrl(url);
-  }, [protocol, domain, segments, sharedVariables, environment]);
+  }, [protocol, domain, segments]);
 
-  // Sync with context whenever local state changes
+  // Effect to sync with context
   useEffect(() => {
     const data = {
       protocol,

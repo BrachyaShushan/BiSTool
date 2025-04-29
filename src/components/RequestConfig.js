@@ -15,8 +15,20 @@ const RequestConfig = ({ onSubmit }) => {
   const [method, setMethod] = useState(savedConfig?.method || 'GET');
   const [bodyType, setBodyType] = useState(savedConfig?.bodyType || 'none');
   const [jsonBody, setJsonBody] = useState(savedConfig?.jsonBody || '{\n  \n}');
-  const [formData, setFormData] = useState([{ key: '', value: '', required: false }]);
+  const [formData, setFormData] = useState(savedConfig?.formData || [{ key: '', value: '', required: false }]);
   const editorRef = useRef(null);
+
+  // Update local state when savedConfig changes
+  useEffect(() => {
+    if (savedConfig) {
+      setMethod(savedConfig.method || 'GET');
+      setQueryParams(savedConfig.queryParams || []);
+      setHeaders(savedConfig.headers || []);
+      setBodyType(savedConfig.bodyType || 'none');
+      setJsonBody(savedConfig.jsonBody || '{\n  \n}');
+      setFormData(savedConfig.formData || [{ key: '', value: '', required: false }]);
+    }
+  }, [savedConfig]);
 
   // Save state to context whenever it changes
   useEffect(() => {
@@ -25,10 +37,11 @@ const RequestConfig = ({ onSubmit }) => {
       queryParams,
       headers,
       bodyType,
-      jsonBody: bodyType === 'json' ? jsonBody : null
+      jsonBody: bodyType === 'json' ? jsonBody : null,
+      formData: bodyType === 'form' ? formData : null
     };
     setRequestConfig(config);
-  }, [method, queryParams, headers, bodyType, jsonBody, setRequestConfig]);
+  }, [method, queryParams, headers, bodyType, jsonBody, formData, setRequestConfig]);
 
   // Add new query parameter
   const addQueryParam = () => {
@@ -43,32 +56,12 @@ const RequestConfig = ({ onSubmit }) => {
   // Update query parameter
   const updateQueryParam = (index, field, value) => {
     const updatedParams = [...queryParams];
-    if (field === 'key') {
-      updatedParams[index] = {
-        ...updatedParams[index],
-        key: value,
-        description: updatedParams[index].description || '',
-        required: updatedParams[index].required || false
-      };
-    } else if (field === 'value') {
-      updatedParams[index] = {
-        ...updatedParams[index],
-        value: value,
-        description: updatedParams[index].description || '',
-        required: updatedParams[index].required || false
-      };
-    } else if (field === 'description') {
-      updatedParams[index] = {
-        ...updatedParams[index],
-        description: value,
-        required: updatedParams[index].required || false
-      };
-    } else if (field === 'required') {
-      updatedParams[index] = {
-        ...updatedParams[index],
-        required: value
-      };
-    }
+    updatedParams[index] = {
+      ...updatedParams[index],
+      [field]: value,
+      description: updatedParams[index]?.description || '',
+      required: updatedParams[index]?.required || false
+    };
     setQueryParams(updatedParams);
   };
 
@@ -85,32 +78,12 @@ const RequestConfig = ({ onSubmit }) => {
   // Update header
   const updateHeader = (index, field, value) => {
     const updatedHeaders = [...headers];
-    if (field === 'key') {
-      updatedHeaders[index] = {
-        ...updatedHeaders[index],
-        key: value,
-        description: updatedHeaders[index].description || '',
-        required: updatedHeaders[index].required || false
-      };
-    } else if (field === 'value') {
-      updatedHeaders[index] = {
-        ...updatedHeaders[index],
-        value: value,
-        description: updatedHeaders[index].description || '',
-        required: updatedHeaders[index].required || false
-      };
-    } else if (field === 'description') {
-      updatedHeaders[index] = {
-        ...updatedHeaders[index],
-        description: value,
-        required: updatedHeaders[index].required || false
-      };
-    } else if (field === 'required') {
-      updatedHeaders[index] = {
-        ...updatedHeaders[index],
-        required: value
-      };
-    }
+    updatedHeaders[index] = {
+      ...updatedHeaders[index],
+      [field]: value,
+      description: updatedHeaders[index]?.description || '',
+      required: updatedHeaders[index]?.required || false
+    };
     setHeaders(updatedHeaders);
   };
 
@@ -260,7 +233,8 @@ const RequestConfig = ({ onSubmit }) => {
       queryParams,
       headers,
       bodyType,
-      jsonBody: bodyType === 'json' ? jsonBody : null
+      jsonBody: bodyType === 'json' ? jsonBody : null,
+      formData: bodyType === 'form' ? formData : null
     };
 
     onSubmit(config);
@@ -305,9 +279,9 @@ const RequestConfig = ({ onSubmit }) => {
   }, [checkTokenExpiration]);
 
   return (
-    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
+    <div className={`p-4 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow`}>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Request Configuration</h2>
+        <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Request Configuration</h2>
         <div className="flex space-x-2 items-center">
           <TokenGenerator />
           {tokenExpiration !== null && (
@@ -377,43 +351,47 @@ const RequestConfig = ({ onSubmit }) => {
           <div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Query Parameters</label>
+                <label className={`block text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>Query Parameters</label>
                 <div className="space-y-2">
                   {queryParams.map((param, index) => (
-                    <div key={index} className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-md">
+                    <div key={index} className={`flex items-center space-x-2 p-2 rounded-md ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                       <input
                         type="text"
                         value={param.key}
                         onChange={(e) => updateQueryParam(index, 'key', e.target.value)}
                         placeholder="Key"
-                        className="block w-1/3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
                       />
                       <input
                         type="text"
                         value={param.value}
                         onChange={(e) => updateQueryParam(index, 'value', e.target.value)}
                         placeholder="Value"
-                        className="block w-1/3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
                       />
                       <input
                         type="text"
                         value={param.description}
                         onChange={(e) => updateQueryParam(index, 'description', e.target.value)}
                         placeholder="Description (optional)"
-                        className="block w-1/3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
                       />
                       <div className="flex items-center">
                         <input
                           type="checkbox"
                           checked={param.required}
                           onChange={(e) => updateQueryParam(index, 'required', e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border rounded ${isDarkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white'
+                            }`}
                         />
-                        <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Required</span>
+                        <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Required</span>
                       </div>
                       <button
                         onClick={() => removeQueryParam(index)}
-                        className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        className={`p-2 ${isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
                       >
                         ×
                       </button>
@@ -422,7 +400,10 @@ const RequestConfig = ({ onSubmit }) => {
                 </div>
                 <button
                   onClick={addQueryParam}
-                  className="mt-2 inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm leading-4 font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className={`mt-2 inline-flex items-center px-3 py-2 border text-sm leading-4 font-medium rounded-md shadow-sm ${isDarkMode
+                    ? 'border-gray-600 text-gray-300 bg-gray-700 hover:bg-gray-600'
+                    : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                 >
                   Add Query Parameter
                 </button>
@@ -436,43 +417,47 @@ const RequestConfig = ({ onSubmit }) => {
           <div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Headers</label>
+                <label className={`block text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>Headers</label>
                 <div className="space-y-2">
                   {headers.map((header, index) => (
-                    <div key={index} className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-md">
+                    <div key={index} className={`flex items-center space-x-2 p-2 rounded-md ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                       <input
                         type="text"
                         value={header.key}
                         onChange={(e) => updateHeader(index, 'key', e.target.value)}
                         placeholder="Key"
-                        className="block w-1/3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
                       />
                       <input
                         type="text"
                         value={header.value}
                         onChange={(e) => updateHeader(index, 'value', e.target.value)}
                         placeholder="Value"
-                        className="block w-1/3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
                       />
                       <input
                         type="text"
                         value={header.description}
                         onChange={(e) => updateHeader(index, 'description', e.target.value)}
                         placeholder="Description (optional)"
-                        className="block w-1/3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
                       />
                       <div className="flex items-center">
                         <input
                           type="checkbox"
                           checked={header.required}
                           onChange={(e) => updateHeader(index, 'required', e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border rounded ${isDarkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white'
+                            }`}
                         />
-                        <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Required</span>
+                        <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Required</span>
                       </div>
                       <button
                         onClick={() => removeHeader(index)}
-                        className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        className={`p-2 ${isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
                       >
                         ×
                       </button>
@@ -481,7 +466,10 @@ const RequestConfig = ({ onSubmit }) => {
                 </div>
                 <button
                   onClick={addHeader}
-                  className="mt-2 inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm leading-4 font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className={`mt-2 inline-flex items-center px-3 py-2 border text-sm leading-4 font-medium rounded-md shadow-sm ${isDarkMode
+                    ? 'border-gray-600 text-gray-300 bg-gray-700 hover:bg-gray-600'
+                    : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                 >
                   Add Header
                 </button>
@@ -494,11 +482,12 @@ const RequestConfig = ({ onSubmit }) => {
         {activeTab === 'body' && (
           <div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Body Type</label>
+              <label className={`block text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-700'} mb-2`}>Body Type</label>
               <select
                 value={bodyType}
                 onChange={(e) => setBodyType(e.target.value)}
-                className="w-full md:w-1/3 rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                className={`w-full md:w-1/3 rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500 ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                  }`}
               >
                 <option value="none">None</option>
                 <option value="json">JSON</option>
