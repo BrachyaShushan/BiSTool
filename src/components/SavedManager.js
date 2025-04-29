@@ -84,6 +84,9 @@ const SavedManager = () => {
           };
           handleSaveSession(sessionName, newSession);
           break;
+        default:
+          console.warn(`Unknown modal type: ${modalType}`);
+          break;
       }
       setShowSessionModal(false);
       setSessionName('');

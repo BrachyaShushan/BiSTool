@@ -1,5 +1,5 @@
 // In App.js, modify your component to ensure proper flow
-import React, { useState } from 'react';
+import React from 'react';
 import URLBuilder from './components/URLBuilder';
 import RequestConfig from './components/RequestConfig';
 import YAMLGenerator from './components/YAMLGenerator';

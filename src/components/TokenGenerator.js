@@ -146,14 +146,14 @@ const TokenGenerator = () => {
         checkTokenExpiration();
         const interval = setInterval(checkTokenExpiration, 30000); // Check every 30 seconds
         return () => clearInterval(interval);
-    }, []);
+    }, [checkTokenExpiration]);
 
     // Generate token if expired
     useEffect(() => {
         if (tokenDuration < 1 && tokenDuration !== 0) {
             generateToken();
         }
-    }, [tokenDuration]);
+    }, [tokenDuration, generateToken]);
 
     return (
         <>

@@ -24,12 +24,9 @@ const YAMLGenerator = ({ onGenerate }) => {
   const {
     urlData,
     requestConfig,
-    segmentVariables,
     setYamlOutput,
-    handleYAMLGenerated,
     setActiveSection,
     sharedVariables,
-    updateSharedVariable,
     activeSession
   } = useAppContext();
 
@@ -60,14 +57,10 @@ const YAMLGenerator = ({ onGenerate }) => {
 }
   `);
   const [isCustomResponseValid, setIsCustomResponseValid] = useState(true);
-  const [editorHeight, setEditorHeight] = useState('200px');
-  const [yamlEditorHeight, setYamlEditorHeight] = useState('200px');
   const editorRef = useRef(null);
   const yamlEditorRef = useRef(null);
   const containerRef = useRef(null);
   const yamlContainerRef = useRef(null);
-  const [isResizing, setIsResizing] = useState(false);
-  const [isYamlResizing, setIsYamlResizing] = useState(false);
 
   // Initialize variables with empty strings to prevent uncontrolled input warning
   const [variableValues, setVariableValues] = useState(() => {
@@ -117,7 +110,6 @@ const YAMLGenerator = ({ onGenerate }) => {
 
   const handleMouseDown = (e) => {
     e.preventDefault();
-    setIsResizing(true);
     const startY = e.pageY;
     const startHeight = containerRef.current.getBoundingClientRect().height;
 
@@ -131,7 +123,6 @@ const YAMLGenerator = ({ onGenerate }) => {
     }
 
     function onMouseUp() {
-      setIsResizing(false);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       if (editorRef.current) {
@@ -145,7 +136,6 @@ const YAMLGenerator = ({ onGenerate }) => {
 
   const handleYamlMouseDown = (e) => {
     e.preventDefault();
-    setIsYamlResizing(true);
     const startY = e.pageY;
     const startHeight = yamlContainerRef.current.getBoundingClientRect().height;
 
@@ -159,7 +149,6 @@ const YAMLGenerator = ({ onGenerate }) => {
     }
 
     function onMouseUp() {
-      setIsYamlResizing(false);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       if (yamlEditorRef.current) {
@@ -174,15 +163,11 @@ const YAMLGenerator = ({ onGenerate }) => {
   const handleYamlEditorDidMount = (editor, monaco) => {
     yamlEditorRef.current = editor;
     // Set initial height based on content
-    const contentHeight = editor.getModel().getLineCount() * 19; // 19px per line
-    setYamlEditorHeight(`${Math.max(200, contentHeight)}px`);
   };
 
   // Update YAML editor height when content changes
   useEffect(() => {
     if (yamlEditorRef.current && yamlOutput) {
-      const contentHeight = yamlEditorRef.current.getModel().getLineCount() * 19;
-      setYamlEditorHeight(`${Math.max(200, contentHeight)}px`);
     }
   }, [yamlOutput]);
 
@@ -200,7 +185,7 @@ const YAMLGenerator = ({ onGenerate }) => {
       const domainVars = domain.match(/{([^}]+)}/g) || [];
       domainVars.forEach(varMatch => {
         const varName = varMatch.slice(1, -1);
-        const value = sharedVariables[varName] || segmentVariables[varName] || variableValues[varName];
+        const value = sharedVariables[varName] || variableValues[varName];
         if (value) {
           // Remove any ${} wrapping if present
           const cleanValue = value.replace(/^\${(.*)}$/, '$1');
@@ -230,7 +215,7 @@ const YAMLGenerator = ({ onGenerate }) => {
         if (isVariable) {
           const varName = isVariable[1] || isVariable[2];
           // Try to get value from sharedVariables first, then fall back to others
-          const value = sharedVariables[varName] || segmentVariables[varName] || variableValues[varName];
+          const value = sharedVariables[varName] || variableValues[varName];
           if (!value) {
             setError(`Missing value for path variable: ${varName}`);
             throw new Error(`Missing value for path variable: ${varName}`);
@@ -253,7 +238,7 @@ const YAMLGenerator = ({ onGenerate }) => {
             let value = param.value;
             if (value.startsWith('{') && value.endsWith('}')) {
               const varName = value.slice(1, -1);
-              value = sharedVariables[varName] || segmentVariables[varName] || variableValues[varName];
+              value = sharedVariables[varName] || variableValues[varName];
             }
             if (value) {
               queryParams.append(param.key, value);
@@ -275,7 +260,7 @@ const YAMLGenerator = ({ onGenerate }) => {
             let value = header.value;
             if (value.startsWith('{') && value.endsWith('}')) {
               const varName = value.slice(1, -1);
-              value = sharedVariables[varName] || segmentVariables[varName] || variableValues[varName];
+              value = sharedVariables[varName] || variableValues[varName];
             }
             if (value) {
               headers[header.key] = value;
@@ -301,10 +286,6 @@ const YAMLGenerator = ({ onGenerate }) => {
           let jsonBody = requestConfig.jsonBody;
           // Replace variables in the JSON body
           Object.entries(sharedVariables).forEach(([key, value]) => {
-            const regex = new RegExp(`{${key}}`, 'g');
-            jsonBody = jsonBody.replace(regex, value);
-          });
-          Object.entries(segmentVariables).forEach(([key, value]) => {
             const regex = new RegExp(`{${key}}`, 'g');
             jsonBody = jsonBody.replace(regex, value);
           });
@@ -407,7 +388,7 @@ const YAMLGenerator = ({ onGenerate }) => {
     const getValueFromVariables = (value) => {
       if (typeof value === 'string' && value.startsWith('${') && value.endsWith('}')) {
         const varName = value.slice(2, -1);
-        return sharedVariables[varName] || segmentVariables[varName] || variableValues[varName] || value;
+        return sharedVariables[varName] || variableValues[varName] || value;
       }
       return value;
     };
@@ -523,7 +504,7 @@ parameters:`;
       // Add path parameters from URL Builder
       const pathParams = extractVariables(urlData.builtUrl);
       pathParams.forEach(param => {
-        const paramValue = getValueFromVariables(segmentVariables[param] || sharedVariables[param] || variableValues[param] || `${param}_value`);
+        const paramValue = getValueFromVariables(sharedVariables[param] || variableValues[param] || `${param}_value`);
         const type = getParameterType(paramValue);
         const segment = urlData.segments.find(s => s.paramName === param);
         yaml += `
@@ -838,7 +819,6 @@ ${indent}  description: ${key}`;
         <div className="space-y-2">
           <div
             className="border rounded-md overflow-hidden relative"
-            style={{ height: editorHeight }}
             ref={containerRef}
           >
             <Editor
@@ -893,7 +873,7 @@ ${indent}  description: ${key}`;
                 const isVariable = segment.match(/(?:{([^}]+)}|%7B([^%]+)%7D)/);
                 if (isVariable) {
                   const varName = isVariable[1] || isVariable[2];
-                  const value = sharedVariables[varName] || segmentVariables[varName] || variableValues[varName] || '';
+                  const value = sharedVariables[varName] || variableValues[varName] || '';
                   const cleanValue = value.replace(/^\${(.*)}$/, '$1');
                   return (
                     <React.Fragment key={index}>
@@ -934,7 +914,7 @@ ${indent}  description: ${key}`;
                   {param.value && (
                     <span className={`ml-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       = {param.value.startsWith('{') && param.value.endsWith('}')
-                        ? sharedVariables[param.value.slice(1, -1)] || segmentVariables[param.value.slice(1, -1)] || variableValues[param.value.slice(1, -1)] || param.value
+                        ? sharedVariables[param.value.slice(1, -1)] || variableValues[param.value.slice(1, -1)] || param.value
                         : param.value}
                     </span>
                   )}
@@ -971,7 +951,6 @@ ${indent}  description: ${key}`;
         </div>
         <div
           className="border rounded-md overflow-hidden relative"
-          style={{ height: yamlEditorHeight }}
           ref={yamlContainerRef}
         >
           <Editor

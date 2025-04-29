@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import Editor from '@monaco-editor/react';
 import Anthropic from '@anthropic-ai/sdk/index.mjs';
@@ -97,7 +97,7 @@ Additional Requirements:
 ${requirements}
 
 IMPORTANT: Please ensure the response is complete and not cut off. Include all test cases and their implementations.
-IMPORTANT: ${`Please generate the test code in ${useOOP ? 'object-oriented' : 'functional'} style`}`;
+IMPORTANT: ${useOOP ? 'Please generate the test code in object-oriented style' : 'Please generate the test code in functional style'}`;
 
       const response = await anthropic.messages.create({
         model: "claude-3-opus-20240229",

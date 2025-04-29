@@ -26,14 +26,6 @@ const URLBuilder = ({ onSubmit }) => {
   const [segments, setSegments] = useState(urlData?.segments || []);
   const [builtUrl, setBuiltUrl] = useState(urlData?.builtUrl || '');
   const [sessionDescription, setSessionDescription] = useState(urlData?.sessionDescription || '');
-  const [segmentVariables, setSegmentVariables] = useState(() => {
-    const saved = localStorage.getItem('segment_variables');
-    if (saved) {
-      const parsed = safeParseJSON(saved);
-      return parsed || {};
-    }
-    return {};
-  });
   const [environment, setEnvironment] = useState('development');
   const [showVariableEditor, setShowVariableEditor] = useState(false);
   const [editingVariable, setEditingVariable] = useState(null);
@@ -46,8 +38,6 @@ const URLBuilder = ({ onSubmit }) => {
     if (segments.length > 0) {
       url += '/' + segments.map(segment => {
         if (segment.isDynamic && segment.paramName) {
-          const envVar = sharedVariables[`${segment.paramName}_${environment}`];
-          const defaultVar = sharedVariables[segment.paramName];
           return `{${segment.paramName}}`; // Show the variable name in preview
         }
         return segment.value;

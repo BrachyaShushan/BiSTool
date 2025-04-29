@@ -300,7 +300,7 @@ const RequestConfig = ({ onSubmit }) => {
     checkTokenExpiration();
     const interval = setInterval(checkTokenExpiration, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
-  }, [sharedVariables]);
+  }, [sharedVariables, checkTokenExpiration]);
 
   return (
     <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
