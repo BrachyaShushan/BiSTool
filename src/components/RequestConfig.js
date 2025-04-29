@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { useTheme } from '../context/ThemeContext';
 import Editor from '@monaco-editor/react';
 import TokenGenerator from './TokenGenerator';
 
 const RequestConfig = ({ onSubmit }) => {
   const { requestConfig: savedConfig, setRequestConfig, sharedVariables } = useAppContext();
+  const { isDarkMode } = useTheme();
   const [tokenExpiration, setTokenExpiration] = useState(null);
 
   const [activeTab, setActiveTab] = useState('params');
@@ -264,16 +266,16 @@ const RequestConfig = ({ onSubmit }) => {
     onSubmit(config);
   };
 
-  const decodeString = (encodedString) => {
+  const decodeString = useCallback((encodedString) => {
     try {
       return atob(encodedString.replace(/-/g, '+').replace(/_/g, '/'));
     } catch (e) {
       console.error('Error decoding string:', e);
       return null;
     }
-  };
+  }, []);
 
-  const checkTokenExpiration = () => {
+  const checkTokenExpiration = useCallback(() => {
     const tokenName = sharedVariables.tokenName;
     const token = sharedVariables[tokenName];
     if (token && token.trim() !== "") {
@@ -293,14 +295,14 @@ const RequestConfig = ({ onSubmit }) => {
       setTokenExpiration(null);
       return false;
     }
-  };
+  }, [sharedVariables, decodeString]);
 
   // Check token expiration periodically
   useEffect(() => {
     checkTokenExpiration();
     const interval = setInterval(checkTokenExpiration, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
-  }, [sharedVariables, checkTokenExpiration]);
+  }, [checkTokenExpiration]);
 
   return (
     <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
@@ -319,15 +321,18 @@ const RequestConfig = ({ onSubmit }) => {
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value)}
-            className="w-32 rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            className={`w-32 px-3 py-2 rounded-md border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+              ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'
+              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
           >
-            <option value="GET">GET</option>
-            <option value="POST">POST</option>
-            <option value="PUT">PUT</option>
-            <option value="DELETE">DELETE</option>
-            <option value="PATCH">PATCH</option>
-            <option value="HEAD">HEAD</option>
-            <option value="OPTIONS">OPTIONS</option>
+            <option value="GET" className={isDarkMode ? 'bg-gray-700' : 'bg-white'}>GET</option>
+            <option value="POST" className={isDarkMode ? 'bg-gray-700' : 'bg-white'}>POST</option>
+            <option value="PUT" className={isDarkMode ? 'bg-gray-700' : 'bg-white'}>PUT</option>
+            <option value="DELETE" className={isDarkMode ? 'bg-gray-700' : 'bg-white'}>DELETE</option>
+            <option value="PATCH" className={isDarkMode ? 'bg-gray-700' : 'bg-white'}>PATCH</option>
+            <option value="HEAD" className={isDarkMode ? 'bg-gray-700' : 'bg-white'}>HEAD</option>
+            <option value="OPTIONS" className={isDarkMode ? 'bg-gray-700' : 'bg-white'}>OPTIONS</option>
           </select>
         </div>
       </div>

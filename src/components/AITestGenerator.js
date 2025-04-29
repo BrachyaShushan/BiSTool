@@ -18,7 +18,7 @@ const AITestGenerator = ({ yamlData }) => {
 
     try {
       const anthropic = new Anthropic({
-        apiKey: process.env.REACT_APP_ANTHROPIC_API_KEY,
+        apiKey: process.env.REACT_APP_ANTHROPIC_API_KEY, dangerouslyAllowBrowser: true
       });
 
       const prompt = `Create BDD-style pytest tests for the following Flask API endpoint based on this OpenAPI YAML specification:
@@ -286,7 +286,7 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
           [/\s+/, 'white'],
 
           // Delimiters
-          [/[{}()\[\]]/, '@brackets'],
+          [/[{}()[\]]/, '@brackets'],
           [/[;,.]/, 'delimiter'],
 
           // Operators

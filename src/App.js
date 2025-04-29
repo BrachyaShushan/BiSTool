@@ -10,8 +10,6 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 
 const AppContent = () => {
   const {
-    urlData,
-    requestConfig,
     yamlOutput,
     activeSection,
     handleURLBuilderSubmit,

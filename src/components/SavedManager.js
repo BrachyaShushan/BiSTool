@@ -7,7 +7,6 @@ const SavedManager = () => {
     activeSession,
     savedSessions,
     sharedVariables,
-    handleNewSession,
     handleLoadSession,
     handleSaveSession,
     handleDeleteSession,
@@ -25,16 +24,6 @@ const SavedManager = () => {
   const [modalType, setModalType] = useState('new'); // 'new', 'rename', 'duplicate'
   const [selectedSession, setSelectedSession] = useState(null);
   const [selectedVariable, setSelectedVariable] = useState({ key: '', value: '' });
-
-  const handleSave = () => {
-    if (activeSession) {
-      handleSaveSession(activeSession.name);
-    } else {
-      setModalType('new');
-      setSessionName('');
-      setShowSessionModal(true);
-    }
-  };
 
   const handleVariableAction = (action, variable = null) => {
     if (action === 'new') {
@@ -60,7 +49,11 @@ const SavedManager = () => {
   const handleSessionAction = (action, session = null) => {
     setSelectedSession(session);
     setModalType(action);
-    setSessionName(action === 'rename' ? session.name : action === 'duplicate' ? `${session.name} (Copy)` : '');
+    if (action === 'duplicate') {
+      setSessionName(`${session.name} (Copy)`); // Set default name for duplicate
+    } else {
+      setSessionName(action === 'rename' ? session.name : '');
+    }
     setShowSessionModal(true);
   };
 
@@ -76,13 +69,20 @@ const SavedManager = () => {
           }
           break;
         case 'duplicate':
-          const newSession = {
-            ...selectedSession,
-            id: Date.now().toString(),
-            name: sessionName,
-            timestamp: new Date().toISOString()
-          };
-          handleSaveSession(sessionName, newSession);
+          if (selectedSession) {
+            // Create a new session with the same configuration
+            const newSession = {
+              id: Date.now().toString(),
+              name: sessionName,
+              timestamp: new Date().toISOString(),
+              urlData: selectedSession.urlData,
+              requestConfig: selectedSession.requestConfig,
+              yamlOutput: selectedSession.yamlOutput,
+              sharedVariables: selectedSession.sharedVariables
+            };
+            // Save as a new session without modifying the original
+            handleSaveSession(sessionName, newSession);
+          }
           break;
         default:
           console.warn(`Unknown modal type: ${modalType}`);
@@ -143,7 +143,10 @@ const SavedManager = () => {
                     </h3>
                     <button
                       onClick={() => handleSessionAction('new')}
-                      className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        }`}
                     >
                       New Session
                     </button>
@@ -164,19 +167,37 @@ const SavedManager = () => {
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleLoadSession(session)}
-                              className="text-blue-600 hover:text-blue-700"
+                              className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                }`}
                             >
                               Load
                             </button>
                             <button
                               onClick={() => handleSessionAction('rename', session)}
-                              className="text-yellow-600 hover:text-yellow-700"
+                              className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                                ? 'bg-yellow-600 text-white hover:bg-yellow-700'
+                                : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                                }`}
                             >
                               Rename
                             </button>
                             <button
+                              onClick={() => handleSessionAction('duplicate', session)}
+                              className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                                ? 'bg-green-600 text-white hover:bg-green-700'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                }`}
+                            >
+                              Duplicate
+                            </button>
+                            <button
                               onClick={() => handleDeleteSession(session.id)}
-                              className="text-red-600 hover:text-red-700"
+                              className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                                ? 'bg-red-600 text-white hover:bg-red-700'
+                                : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                }`}
                             >
                               Delete
                             </button>
@@ -195,7 +216,10 @@ const SavedManager = () => {
                     </h3>
                     <button
                       onClick={() => handleVariableAction('new')}
-                      className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700"
+                      className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
                     >
                       New Variable
                     </button>
@@ -217,13 +241,19 @@ const SavedManager = () => {
                           <div className="flex space-x-2 shrink-0">
                             <button
                               onClick={() => handleVariableAction('edit', [key, value])}
-                              className="text-blue-600 hover:text-blue-700"
+                              className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                }`}
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => deleteSharedVariable(key)}
-                              className="text-red-600 hover:text-red-700"
+                              className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                                ? 'bg-red-600 text-white hover:bg-red-700'
+                                : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                }`}
                             >
                               Delete
                             </button>
@@ -260,13 +290,19 @@ const SavedManager = () => {
                   setSessionName('');
                   setSelectedSession(null);
                 }}
-                className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                  ? 'bg-gray-600 text-white hover:bg-gray-700'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSessionModalSubmit}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }`}
               >
                 {modalType === 'new' ? 'Create' : modalType === 'rename' ? 'Rename' : 'Duplicate'}
               </button>
@@ -314,13 +350,19 @@ const SavedManager = () => {
                   setShowVariableModal(false);
                   setSelectedVariable({ key: '', value: '' });
                 }}
-                className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                  ? 'bg-gray-600 text-white hover:bg-gray-700'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 Cancel
               </button>
               <button
                 onClick={handleVariableModalSubmit}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                  }`}
               >
                 {modalType === 'new' ? 'Create' : 'Save'}
               </button>

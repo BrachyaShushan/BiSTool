@@ -63,7 +63,7 @@ const YAMLGenerator = ({ onGenerate }) => {
   const yamlContainerRef = useRef(null);
 
   // Initialize variables with empty strings to prevent uncontrolled input warning
-  const [variableValues, setVariableValues] = useState(() => {
+  const [variableValues] = useState(() => {
     const initialVariables = {};
     const variables = extractVariables(urlData.builtUrl);
     variables.forEach(variable => {
@@ -594,7 +594,7 @@ responses:
     schema:\n`;
       yaml += generateResponseSchema(responseData, 3);
       // Add standard error responses
-      yaml += ` 204:
+      yaml += `  204:
     description: No Content
   400:
     description: Bad Request

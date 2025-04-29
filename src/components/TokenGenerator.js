@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -7,12 +7,12 @@ const TokenGenerator = () => {
     const { isDarkMode } = useTheme();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [tokenConfig, setTokenConfig] = useState({
-        domain: 'http://${base_url}', // Default local development server
+        domain: 'http://{base_url}', // Default local development server
         method: 'POST',
         path: '/auth/login',
         tokenName: 'x-access-token',
         headerKey: 'x-access-token',
-        headerValueFormat: '${token}',
+        headerValueFormat: '{token}',
         refreshToken: false,
         refreshTokenName: 'refresh_token'
     });
@@ -29,23 +29,23 @@ const TokenGenerator = () => {
         }));
     };
 
-    const decodeString = (encodedString) => {
+    const decodeString = useCallback((encodedString) => {
         try {
             return atob(encodedString.replace(/-/g, '+').replace(/_/g, '/'));
         } catch (e) {
             console.error('Error decoding string:', e);
             return null;
         }
-    };
+    }, []);
 
-    const replaceVariables = (str) => {
+    const replaceVariables = useCallback((str) => {
         if (!str) return str;
-        return str.replace(/\${([^}]+)}/g, (match, variableName) => {
+        return str.replace(/\{([^}]+)\}/g, (match, variableName) => {
             return sharedVariables[variableName] || match;
         });
-    };
+    }, [sharedVariables]);
 
-    const checkTokenExpiration = () => {
+    const checkTokenExpiration = useCallback(() => {
         const token = sharedVariables[tokenConfig.tokenName];
         if (token && token.trim() !== "") {
             try {
@@ -64,9 +64,9 @@ const TokenGenerator = () => {
             setTokenDuration(0);
             return false;
         }
-    };
+    }, [sharedVariables, tokenConfig.tokenName, decodeString]);
 
-    const generateToken = async () => {
+    const generateToken = useCallback(async () => {
         setIsGenerating(true);
         setError(null);
         setSuccessMessage('');
@@ -106,7 +106,6 @@ const TokenGenerator = () => {
                 credentials: 'same-origin'
             });
 
-
             const responseText = await response.text();
 
             let jsonData;
@@ -126,6 +125,7 @@ const TokenGenerator = () => {
             updateSharedVariable(tokenConfig.tokenName, token);
             updateSharedVariable("tokenName", tokenConfig.tokenName);
             setSuccessMessage('Token generated successfully!');
+            setIsModalOpen(false);
 
             // If refresh token is enabled and available
             const refreshToken = jsonData.refresh_token || jsonData.refreshToken;
@@ -139,7 +139,7 @@ const TokenGenerator = () => {
         } finally {
             setIsGenerating(false);
         }
-    };
+    }, [sharedVariables, tokenConfig, replaceVariables, updateSharedVariable]);
 
     // Check token expiration on mount and periodically
     useEffect(() => {
@@ -193,7 +193,7 @@ const TokenGenerator = () => {
                                     name="domain"
                                     value={tokenConfig.domain}
                                     onChange={handleInputChange}
-                                    placeholder="https://api.example.com or https://${apiHost}"
+                                    placeholder="https://api.example.com or https://{apiHost}"
                                     className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
                                         ? 'bg-gray-700 border-gray-600 text-white'
                                         : 'bg-white border-gray-300 text-gray-900'

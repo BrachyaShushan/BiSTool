@@ -2,22 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 
-// Helper function to safely parse JSON
-const safeParseJSON = (str) => {
-  try {
-    return JSON.parse(str);
-  } catch (e) {
-    console.error('Error parsing JSON:', e);
-    return null;
-  }
-};
-
 const URLBuilder = ({ onSubmit }) => {
   const {
     urlData,
     setUrlData,
     sharedVariables,
-    updateSharedVariable
   } = useAppContext();
   const { isDarkMode } = useTheme();
 
@@ -27,8 +16,6 @@ const URLBuilder = ({ onSubmit }) => {
   const [builtUrl, setBuiltUrl] = useState(urlData?.builtUrl || '');
   const [sessionDescription, setSessionDescription] = useState(urlData?.sessionDescription || '');
   const [environment, setEnvironment] = useState('development');
-  const [showVariableEditor, setShowVariableEditor] = useState(false);
-  const [editingVariable, setEditingVariable] = useState(null);
   const [editingSegment, setEditingSegment] = useState(null);
   const [showSegmentEditor, setShowSegmentEditor] = useState(false);
 
@@ -57,26 +44,6 @@ const URLBuilder = ({ onSubmit }) => {
     };
     setUrlData(data);
   }, [protocol, domain, segments, builtUrl, sessionDescription, setUrlData]);
-
-  const handleEditVariable = (variableName) => {
-    setEditingVariable({
-      name: variableName,
-      value: sharedVariables[variableName] || '',
-      environment: environment
-    });
-    setShowVariableEditor(true);
-  };
-
-  const handleSaveVariable = () => {
-    if (editingVariable) {
-      const varName = editingVariable.environment === 'development'
-        ? editingVariable.name
-        : `${editingVariable.name}_${editingVariable.environment}`;
-      updateSharedVariable(varName, editingVariable.value);
-      setShowVariableEditor(false);
-      setEditingVariable(null);
-    }
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -290,89 +257,6 @@ const URLBuilder = ({ onSubmit }) => {
           </button>
         </div>
       </div>
-
-      {showVariableEditor && editingVariable && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`w-full max-w-md rounded-lg shadow-lg p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'
-            }`}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
-                }`}>Edit Path Segment</h3>
-              <button
-                onClick={() => {
-                  setShowVariableEditor(false);
-                  setEditingVariable(null);
-                }}
-                className={`p-2 rounded-full ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                  }`}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                  }`}>Name</label>
-                <input
-                  type="text"
-                  value={editingVariable.name}
-                  onChange={(e) => setEditingVariable({ ...editingVariable, name: e.target.value })}
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                    }`}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                  }`}>Description</label>
-                <textarea
-                  value={editingVariable.description}
-                  onChange={(e) => setEditingVariable({ ...editingVariable, description: e.target.value })}
-                  rows="3"
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                    }`}
-                />
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={editingVariable.isDynamic}
-                  onChange={(e) => setEditingVariable({ ...editingVariable, isDynamic: e.target.checked })}
-                  className={`h-4 w-4 text-blue-600 focus:ring-blue-500 rounded ${isDarkMode ? 'border-gray-600' : 'border-gray-300'
-                    }`}
-                />
-                <label className={`ml-2 block text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
-                  Dynamic Segment (updates automatically)
-                </label>
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowVariableEditor(false);
-                    setEditingVariable(null);
-                  }}
-                  className={`inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${isDarkMode
-                    ? 'bg-gray-700 text-white border-gray-600 hover:bg-gray-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveVariable}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showSegmentEditor && editingSegment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
