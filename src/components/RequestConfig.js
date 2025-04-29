@@ -21,12 +21,18 @@ const RequestConfig = ({ onSubmit }) => {
   // Update local state when savedConfig changes
   useEffect(() => {
     if (savedConfig) {
-      setMethod(savedConfig.method || 'GET');
-      setQueryParams(savedConfig.queryParams || []);
-      setHeaders(savedConfig.headers || []);
-      setBodyType(savedConfig.bodyType || 'none');
-      setJsonBody(savedConfig.jsonBody || '{\n  \n}');
-      setFormData(savedConfig.formData || [{ key: '', value: '', required: false }]);
+      // Only update if values are different to prevent unnecessary re-renders
+      if (savedConfig.method !== method) setMethod(savedConfig.method || 'GET');
+      if (JSON.stringify(savedConfig.queryParams) !== JSON.stringify(queryParams))
+        setQueryParams(savedConfig.queryParams || []);
+      if (JSON.stringify(savedConfig.headers) !== JSON.stringify(headers))
+        setHeaders(savedConfig.headers || []);
+      if (savedConfig.bodyType !== bodyType)
+        setBodyType(savedConfig.bodyType || 'none');
+      if (savedConfig.jsonBody !== jsonBody)
+        setJsonBody(savedConfig.jsonBody || '{\n  \n}');
+      if (JSON.stringify(savedConfig.formData) !== JSON.stringify(formData))
+        setFormData(savedConfig.formData || [{ key: '', value: '', required: false }]);
     }
   }, [savedConfig]);
 
@@ -40,8 +46,12 @@ const RequestConfig = ({ onSubmit }) => {
       jsonBody: bodyType === 'json' ? jsonBody : null,
       formData: bodyType === 'form' ? formData : null
     };
-    setRequestConfig(config);
-  }, [method, queryParams, headers, bodyType, jsonBody, formData, setRequestConfig]);
+
+    // Only update if the config has actually changed
+    if (JSON.stringify(config) !== JSON.stringify(savedConfig)) {
+      setRequestConfig(config);
+    }
+  }, [method, queryParams, headers, bodyType, jsonBody, formData, setRequestConfig, savedConfig]);
 
   // Add new query parameter
   const addQueryParam = () => {
@@ -59,8 +69,8 @@ const RequestConfig = ({ onSubmit }) => {
     updatedParams[index] = {
       ...updatedParams[index],
       [field]: value,
-      description: updatedParams[index]?.description || '',
-      required: updatedParams[index]?.required || false
+      description: field === 'description' ? value : (updatedParams[index]?.description || ''),
+      required: field === 'required' ? value : (updatedParams[index]?.required || false)
     };
     setQueryParams(updatedParams);
   };
@@ -81,8 +91,8 @@ const RequestConfig = ({ onSubmit }) => {
     updatedHeaders[index] = {
       ...updatedHeaders[index],
       [field]: value,
-      description: updatedHeaders[index]?.description || '',
-      required: updatedHeaders[index]?.required || false
+      description: field === 'description' ? value : (updatedHeaders[index]?.description || ''),
+      required: field === 'required' ? value : (updatedHeaders[index]?.required || false)
     };
     setHeaders(updatedHeaders);
   };
