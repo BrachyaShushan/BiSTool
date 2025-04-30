@@ -10,15 +10,18 @@ export interface Section {
 export interface QueryParam {
   key: string;
   value: string;
-  description: string;
-  required: boolean;
+  description?: string;
+  required?: boolean;
+  type?: string;
 }
 
 export interface Header {
   key: string;
   value: string;
-  description: string;
-  required: boolean;
+  description?: string;
+  required?: boolean;
+  type?: string;
+  in: "path" | "header" | "query";
 }
 
 export interface FormDataField {
@@ -26,25 +29,40 @@ export interface FormDataField {
   value: string;
   type: "text" | "file";
   required: boolean;
+  description?: string;
 }
 
 export interface URLData {
+  domain: string;
+  protocol: string;
+  builtUrl: string;
+  environment: string;
   baseURL: string;
+  processedURL: string;
   segments: string;
+  parsedSegments: Array<{
+    paramName: string;
+    description?: string;
+    required?: boolean;
+    value: string;
+    isDynamic: boolean;
+  }>;
   queryParams: QueryParam[];
-  segmentVariables: string[];
-  processedURL?: string;
-  description?: string;
+  segmentVariables: Array<{
+    key: string;
+    value: string;
+  }>;
   sessionDescription?: string;
 }
 
 export interface RequestConfigData {
   method: string;
-  queryParams: QueryParam[];
   headers: Header[];
+  queryParams: QueryParam[];
   bodyType: "none" | "json" | "form";
-  jsonBody: string | null;
-  formData: FormDataField[] | null;
+  jsonBody?: string;
+  formData?: FormDataField[];
+  body?: Record<string, any>;
 }
 
 export interface Variable {
