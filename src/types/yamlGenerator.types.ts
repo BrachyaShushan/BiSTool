@@ -1,4 +1,3 @@
-import { EditorProps } from "@monaco-editor/react";
 import {
   URLData as AppURLData,
   RequestConfigData,

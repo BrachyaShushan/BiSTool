@@ -13,6 +13,7 @@
     "@anthropic-ai/sdk": "^0.40.1",
     "@monaco-editor/react": "^4.7.0",
     "autoprefixer": "^10.4.14",
+    "BiSTool": "file:",
     "monaco-editor": "^0.52.2",
     "postcss": "^8.4.21",
     "react": "^18.2.0",

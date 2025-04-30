@@ -324,17 +324,19 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
       case "json":
         return (
           <div className="mt-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label id="jsonBodyLabel" className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
               JSON Body
             </label>
             <div
               className="overflow-hidden border rounded-md"
               style={{ height: "200px" }}
+              aria-labelledby="jsonBodyLabel"
             >
               <Editor
                 height="200px"
                 defaultLanguage="json"
                 value={jsonBody}
+                theme={isDarkMode ? "vs-dark" : "vs"}
                 onChange={handleEditorChange}
                 onMount={handleEditorDidMount}
                 options={{
@@ -368,7 +370,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             <div className="space-y-2">
               {formData.map((field, index) => (
                 <div
-                  key={index}
+                  key={`${field.key}-${index}`}
                   className="flex items-center p-2 space-x-2 rounded-md bg-gray-50 dark:bg-gray-700"
                 >
                   <input
@@ -444,15 +446,13 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
   return (
     <div
-      className={`p-4 ${
-        isDarkMode ? "bg-gray-800" : "bg-white"
-      } rounded-lg shadow`}
+      className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
+        } rounded-lg shadow`}
     >
       <div className="flex items-center justify-between mb-4">
         <h2
-          className={`text-xl font-bold ${
-            isDarkMode ? "text-white" : "text-gray-900"
-          }`}
+          className={`text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"
+            }`}
         >
           Request Configuration
         </h2>
@@ -460,13 +460,12 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           <TokenGenerator />
           {tokenExpiration !== null && (
             <div
-              className={`px-3 py-1 rounded-md text-sm ${
-                tokenExpiration > 5
-                  ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
-                  : tokenExpiration > 1
+              className={`px-3 py-1 rounded-md text-sm ${tokenExpiration > 5
+                ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                : tokenExpiration > 1
                   ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"
                   : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
-              }`}
+                }`}
             >
               Token expires in: {Math.floor(tokenExpiration)} minutes
             </div>
@@ -474,11 +473,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value)}
-            className={`w-32 px-3 py-2 rounded-md border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-              isDarkMode
-                ? "bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
-                : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-            }`}
+            className={`w-32 px-3 py-2 rounded-md border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+              ? "bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+              : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+              }`}
           >
             <option value="GET">GET</option>
             <option value="POST">POST</option>
@@ -496,31 +494,28 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
         <nav className="flex -mb-px">
           <button
             onClick={() => setActiveTab("params")}
-            className={`mr-4 py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "params"
-                ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-            }`}
+            className={`mr-4 py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "params"
+              ? "border-blue-500 text-blue-600 dark:text-blue-400"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+              }`}
           >
             Query Parameters
           </button>
           <button
             onClick={() => setActiveTab("headers")}
-            className={`mr-4 py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "headers"
-                ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-            }`}
+            className={`mr-4 py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "headers"
+              ? "border-blue-500 text-blue-600 dark:text-blue-400"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+              }`}
           >
             Headers
           </button>
           <button
             onClick={() => setActiveTab("body")}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "body"
-                ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "body"
+              ? "border-blue-500 text-blue-600 dark:text-blue-400"
+              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+              }`}
           >
             Body
           </button>
@@ -535,19 +530,17 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             <div className="space-y-4">
               <div>
                 <label
-                  className={`block text-sm font-medium ${
-                    isDarkMode ? "text-white" : "text-gray-700"
-                  }`}
+                  className={`block text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
+                    }`}
                 >
                   Query Parameters
                 </label>
                 <div className="space-y-2">
                   {queryParams.map((param, index) => (
                     <div
-                      key={index}
-                      className={`flex items-center space-x-2 p-2 rounded-md ${
-                        isDarkMode ? "bg-gray-700" : "bg-gray-50"
-                      }`}
+                      key={`${param.key}-${index}`}
+                      className={`flex items-center space-x-2 p-2 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
+                        }`}
                     >
                       <input
                         type="text"
@@ -556,11 +549,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateQueryParam(index, "key", e.target.value)
                         }
                         placeholder="Key"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                          isDarkMode
-                            ? "bg-gray-800 border-gray-600 text-white"
-                            : "bg-white border-gray-300 text-gray-900"
-                        }`}
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
+                          ? "bg-gray-800 border-gray-600 text-white"
+                          : "bg-white border-gray-300 text-gray-900"
+                          }`}
                       />
                       <input
                         type="text"
@@ -569,11 +561,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateQueryParam(index, "value", e.target.value)
                         }
                         placeholder="Value"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                          isDarkMode
-                            ? "bg-gray-800 border-gray-600 text-white"
-                            : "bg-white border-gray-300 text-gray-900"
-                        }`}
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
+                          ? "bg-gray-800 border-gray-600 text-white"
+                          : "bg-white border-gray-300 text-gray-900"
+                          }`}
                       />
                       <input
                         type="text"
@@ -582,11 +573,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateQueryParam(index, "description", e.target.value)
                         }
                         placeholder="Description (optional)"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                          isDarkMode
-                            ? "bg-gray-800 border-gray-600 text-white"
-                            : "bg-white border-gray-300 text-gray-900"
-                        }`}
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
+                          ? "bg-gray-800 border-gray-600 text-white"
+                          : "bg-white border-gray-300 text-gray-900"
+                          }`}
                       />
                       <div className="flex items-center">
                         <input
@@ -599,27 +589,24 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                               e.target.checked
                             )
                           }
-                          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border rounded ${
-                            isDarkMode
-                              ? "border-gray-600 bg-gray-800"
-                              : "border-gray-300 bg-white"
-                          }`}
+                          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border rounded ${isDarkMode
+                            ? "border-gray-600 bg-gray-800"
+                            : "border-gray-300 bg-white"
+                            }`}
                         />
                         <span
-                          className={`ml-2 text-sm ${
-                            isDarkMode ? "text-gray-400" : "text-gray-500"
-                          }`}
+                          className={`ml-2 text-sm ${isDarkMode ? "text-gray-400" : "text-gray-500"
+                            }`}
                         >
                           Required
                         </span>
                       </div>
                       <button
                         onClick={() => removeQueryParam(index)}
-                        className={`p-2 ${
-                          isDarkMode
-                            ? "text-gray-400 hover:text-gray-300"
-                            : "text-gray-500 hover:text-gray-700"
-                        }`}
+                        className={`p-2 ${isDarkMode
+                          ? "text-gray-400 hover:text-gray-300"
+                          : "text-gray-500 hover:text-gray-700"
+                          }`}
                       >
                         ×
                       </button>
@@ -628,11 +615,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 </div>
                 <button
                   onClick={addQueryParam}
-                  className={`mt-2 inline-flex items-center px-3 py-2 border text-sm leading-4 font-medium rounded-md shadow-sm ${
-                    isDarkMode
-                      ? "border-gray-600 text-gray-300 bg-gray-700 hover:bg-gray-600"
-                      : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
-                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                  className={`mt-2 inline-flex items-center px-3 py-2 border text-sm leading-4 font-medium rounded-md shadow-sm ${isDarkMode
+                    ? "border-gray-600 text-gray-300 bg-gray-700 hover:bg-gray-600"
+                    : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                 >
                   Add Query Parameter
                 </button>
@@ -647,19 +633,17 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             <div className="space-y-4">
               <div>
                 <label
-                  className={`block text-sm font-medium ${
-                    isDarkMode ? "text-white" : "text-gray-700"
-                  }`}
+                  className={`block text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
+                    }`}
                 >
                   Headers
                 </label>
                 <div className="space-y-2">
                   {headers.map((header, index) => (
                     <div
-                      key={index}
-                      className={`flex items-center space-x-2 p-2 rounded-md ${
-                        isDarkMode ? "bg-gray-700" : "bg-gray-50"
-                      }`}
+                      key={`${header.key}-${index}`}
+                      className={`flex items-center space-x-2 p-2 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
+                        }`}
                     >
                       <input
                         type="text"
@@ -668,11 +652,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateHeader(index, "key", e.target.value)
                         }
                         placeholder="Key"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                          isDarkMode
-                            ? "bg-gray-800 border-gray-600 text-white"
-                            : "bg-white border-gray-300 text-gray-900"
-                        }`}
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
+                          ? "bg-gray-800 border-gray-600 text-white"
+                          : "bg-white border-gray-300 text-gray-900"
+                          }`}
                       />
                       <input
                         type="text"
@@ -681,11 +664,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateHeader(index, "value", e.target.value)
                         }
                         placeholder="Value"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                          isDarkMode
-                            ? "bg-gray-800 border-gray-600 text-white"
-                            : "bg-white border-gray-300 text-gray-900"
-                        }`}
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
+                          ? "bg-gray-800 border-gray-600 text-white"
+                          : "bg-white border-gray-300 text-gray-900"
+                          }`}
                       />
                       <input
                         type="text"
@@ -694,11 +676,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateHeader(index, "description", e.target.value)
                         }
                         placeholder="Description (optional)"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                          isDarkMode
-                            ? "bg-gray-800 border-gray-600 text-white"
-                            : "bg-white border-gray-300 text-gray-900"
-                        }`}
+                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
+                          ? "bg-gray-800 border-gray-600 text-white"
+                          : "bg-white border-gray-300 text-gray-900"
+                          }`}
                       />
                       <div className="flex items-center">
                         <input
@@ -707,27 +688,24 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           onChange={(e) =>
                             updateHeader(index, "required", e.target.checked)
                           }
-                          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border rounded ${
-                            isDarkMode
-                              ? "border-gray-600 bg-gray-800"
-                              : "border-gray-300 bg-white"
-                          }`}
+                          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border rounded ${isDarkMode
+                            ? "border-gray-600 bg-gray-800"
+                            : "border-gray-300 bg-white"
+                            }`}
                         />
                         <span
-                          className={`ml-2 text-sm ${
-                            isDarkMode ? "text-gray-400" : "text-gray-500"
-                          }`}
+                          className={`ml-2 text-sm ${isDarkMode ? "text-gray-400" : "text-gray-500"
+                            }`}
                         >
                           Required
                         </span>
                       </div>
                       <button
                         onClick={() => removeHeader(index)}
-                        className={`p-2 ${
-                          isDarkMode
-                            ? "text-gray-400 hover:text-gray-300"
-                            : "text-gray-500 hover:text-gray-700"
-                        }`}
+                        className={`p-2 ${isDarkMode
+                          ? "text-gray-400 hover:text-gray-300"
+                          : "text-gray-500 hover:text-gray-700"
+                          }`}
                       >
                         ×
                       </button>
@@ -736,11 +714,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 </div>
                 <button
                   onClick={addHeader}
-                  className={`mt-2 inline-flex items-center px-3 py-2 border text-sm leading-4 font-medium rounded-md shadow-sm ${
-                    isDarkMode
-                      ? "border-gray-600 text-gray-300 bg-gray-700 hover:bg-gray-600"
-                      : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
-                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                  className={`mt-2 inline-flex items-center px-3 py-2 border text-sm leading-4 font-medium rounded-md shadow-sm ${isDarkMode
+                    ? "border-gray-600 text-gray-300 bg-gray-700 hover:bg-gray-600"
+                    : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                 >
                   Add Header
                 </button>
@@ -754,9 +731,8 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           <div>
             <div className="mb-4">
               <label
-                className={`block text-sm font-medium ${
-                  isDarkMode ? "text-white" : "text-gray-700"
-                } mb-2`}
+                className={`block text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
+                  } mb-2`}
               >
                 Body Type
               </label>
@@ -765,11 +741,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 onChange={(e) =>
                   setBodyType(e.target.value as "none" | "json" | "form")
                 }
-                className={`w-full md:w-1/3 rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500 ${
-                  isDarkMode
-                    ? "bg-gray-800 border-gray-600 text-white"
-                    : "bg-white border-gray-300 text-gray-900"
-                }`}
+                className={`w-full md:w-1/3 rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500 ${isDarkMode
+                  ? "bg-gray-800 border-gray-600 text-white"
+                  : "bg-white border-gray-300 text-gray-900"
+                  }`}
               >
                 <option value="none">None</option>
                 <option value="json">JSON</option>

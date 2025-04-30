@@ -25,20 +25,35 @@ const Modal: React.FC<ModalProps> = ({
     }
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      // Get all open modals
+      const openModals = document.querySelectorAll('.modal-child');
+      const topModal = openModals[openModals.length - 1];
+
+      // Only handle escape if this is the topmost modal
+      if (modalRef.current === topModal && e.key === "Escape") {
         onClose();
       }
     };
 
     const handleEnter = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && showSaveButton) {
+      // Get all open modals
+      const openModals = document.querySelectorAll('.modal-child');
+      const topModal = openModals[openModals.length - 1];
+
+      // Only handle enter if this is the topmost modal
+      if (modalRef.current === topModal && e.key === "Enter" && showSaveButton) {
         e.preventDefault();
         onSave?.();
       }
     };
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      // Get all open modals
+      const openModals = document.querySelectorAll('.modal-child');
+      const topModal = openModals[openModals.length - 1];
+
+      // Only handle click if this is the topmost modal
+      if (modalRef.current === topModal && !modalRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
@@ -85,7 +100,8 @@ const Modal: React.FC<ModalProps> = ({
       <div
         ref={modalRef}
         className={`w-full ${sizeClasses[size]} rounded-lg shadow-lg p-6 ${isDarkMode ? "bg-gray-800" : "bg-white"
-          }`}
+          } modal-child`}
+        style={{ zIndex: 50 + (document.querySelectorAll('.modal-child').length * 10) }}
       >
         <div className="flex items-center justify-between mb-4">
           <h2

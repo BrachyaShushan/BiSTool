@@ -6,7 +6,7 @@ import AITestGenerator from "./components/AITestGenerator";
 import SavedManager from "./components/SavedManager";
 import { AppProvider, useAppContext } from "./context/AppContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
-import { Section, SectionId } from "./types";
+import { Section } from "./types";
 
 const AppContent: React.FC = () => {
     const {

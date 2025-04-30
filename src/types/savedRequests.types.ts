@@ -1,5 +1,3 @@
-import { URLData, RequestConfigData } from "./app.types";
-
 export interface SavedSession {
   id: string;
   name: string;

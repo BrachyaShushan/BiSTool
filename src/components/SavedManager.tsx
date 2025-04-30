@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import Modal from "./Modal";
 import {
@@ -7,7 +6,7 @@ import {
   ExtendedVariable,
   ModalType,
 } from "../types/SavedManager";
-import { URLData, RequestConfigData, Session } from "../types/app.types";
+import { Session } from "../types/app.types";
 
 interface SavedManagerProps {
   activeSession: ExtendedSession | null;
@@ -198,11 +197,10 @@ const SavedManager: React.FC<SavedManagerProps> = ({
     <>
       <button
         onClick={() => setShowModal(true)}
-        className={`px-3 py-1 rounded-md flex items-center space-x-2 ${
-          isDarkMode
-            ? "bg-gray-700 text-white hover:bg-gray-600"
-            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-        }`}
+        className={`px-3 py-1 rounded-md flex items-center space-x-2 ${isDarkMode
+          ? "bg-gray-700 text-white hover:bg-gray-600"
+          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
       >
         <span>{activeSession?.name || "No Session"}</span>
         <svg
@@ -231,25 +229,22 @@ const SavedManager: React.FC<SavedManagerProps> = ({
         <div className="grid h-full grid-cols-2">
           {/* Sessions Section */}
           <div
-            className={`p-4 border-r ${
-              isDarkMode ? "border-gray-700" : "border-gray-200"
-            }`}
+            className={`p-4 border-r ${isDarkMode ? "border-gray-700" : "border-gray-200"
+              }`}
           >
             <div className="flex items-center justify-between mb-4">
               <h3
-                className={`text-lg font-medium ${
-                  isDarkMode ? "text-white" : "text-gray-900"
-                }`}
+                className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"
+                  }`}
               >
                 Sessions
               </h3>
               <button
                 onClick={() => handleSessionAction("new")}
-                className={`px-4 py-2 rounded-md text-sm font-medium ${
-                  isDarkMode
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                }`}
+                className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                  }`}
               >
                 New Session
               </button>
@@ -258,21 +253,19 @@ const SavedManager: React.FC<SavedManagerProps> = ({
               {savedSessions.map((session) => (
                 <div
                   key={session.id}
-                  className={`p-3 rounded-md mb-2 ${
-                    activeSession?.id === session.id
-                      ? isDarkMode
-                        ? "bg-gray-700"
-                        : "bg-blue-50"
-                      : isDarkMode
+                  className={`p-3 rounded-md mb-2 ${activeSession?.id === session.id
+                    ? isDarkMode
+                      ? "bg-gray-700"
+                      : "bg-blue-50"
+                    : isDarkMode
                       ? "hover:bg-gray-700"
                       : "hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span
-                      className={`${
-                        isDarkMode ? "text-white" : "text-gray-900"
-                      }`}
+                      className={`${isDarkMode ? "text-white" : "text-gray-900"
+                        }`}
                     >
                       {session.name}
                     </span>
@@ -281,11 +274,10 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                         onClick={() =>
                           handleLoadSession(session as ExtendedSession)
                         }
-                        className={`px-3 py-1 rounded-md text-sm font-medium ${
-                          isDarkMode
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                        }`}
+                        className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                          : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                          }`}
                       >
                         Load
                       </button>
@@ -296,11 +288,10 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                             session as ExtendedSession
                           )
                         }
-                        className={`px-3 py-1 rounded-md text-sm font-medium ${
-                          isDarkMode
-                            ? "bg-yellow-600 text-white hover:bg-yellow-700"
-                            : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                        }`}
+                        className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                          ? "bg-yellow-600 text-white hover:bg-yellow-700"
+                          : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                          }`}
                       >
                         Rename
                       </button>
@@ -311,21 +302,19 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                             session as ExtendedSession
                           )
                         }
-                        className={`px-3 py-1 rounded-md text-sm font-medium ${
-                          isDarkMode
-                            ? "bg-green-600 text-white hover:bg-green-700"
-                            : "bg-green-100 text-green-700 hover:bg-green-200"
-                        }`}
+                        className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                          ? "bg-green-600 text-white hover:bg-green-700"
+                          : "bg-green-100 text-green-700 hover:bg-green-200"
+                          }`}
                       >
                         Duplicate
                       </button>
                       <button
                         onClick={() => handleDeleteSession(session.id)}
-                        className={`px-3 py-1 rounded-md text-sm font-medium ${
-                          isDarkMode
-                            ? "bg-red-600 text-white hover:bg-red-700"
-                            : "bg-red-100 text-red-700 hover:bg-red-200"
-                        }`}
+                        className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                          ? "bg-red-600 text-white hover:bg-red-700"
+                          : "bg-red-100 text-red-700 hover:bg-red-200"
+                          }`}
                       >
                         Delete
                       </button>
@@ -340,31 +329,28 @@ const SavedManager: React.FC<SavedManagerProps> = ({
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3
-                className={`text-lg font-medium ${
-                  isDarkMode ? "text-white" : "text-gray-900"
-                }`}
+                className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"
+                  }`}
               >
                 Variables
               </h3>
               <div className="flex space-x-2">
                 <button
                   onClick={() => handleVariableAction("new", null, true)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium ${
-                    isDarkMode
-                      ? "bg-green-600 text-white hover:bg-green-700"
-                      : "bg-green-100 text-green-700 hover:bg-green-200"
-                  }`}
+                  className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                    ? "bg-green-600 text-white hover:bg-green-700"
+                    : "bg-green-100 text-green-700 hover:bg-green-200"
+                    }`}
                 >
                   New Global Variable
                 </button>
                 {activeSession && (
                   <button
                     onClick={() => handleVariableAction("new", null, false)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium ${
-                      isDarkMode
-                        ? "bg-blue-600 text-white hover:bg-blue-700"
-                        : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                    }`}
+                    className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      }`}
                   >
                     New Session Variable
                   </button>
@@ -375,25 +361,22 @@ const SavedManager: React.FC<SavedManagerProps> = ({
               {/* Global Variables */}
               <div className="mb-6">
                 <h4
-                  className={`text-md font-medium mb-2 ${
-                    isDarkMode ? "text-white" : "text-gray-900"
-                  }`}
+                  className={`text-md font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-900"
+                    }`}
                 >
                   Global Variables
                 </h4>
                 {Object.entries(globalVariables).map(([key, value]) => (
                   <div
                     key={key}
-                    className={`p-3 rounded-md mb-2 ${
-                      isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
-                    }`}
+                    className={`p-3 rounded-md mb-2 ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0 mr-4">
                         <span
-                          className={`${
-                            isDarkMode ? "text-white" : "text-gray-900"
-                          }`}
+                          className={`${isDarkMode ? "text-white" : "text-gray-900"
+                            }`}
                         >
                           <span className="font-medium">{key}</span>:
                           <span className="block truncate" title={value}>
@@ -406,11 +389,10 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                           onClick={() =>
                             handleVariableAction("edit", [key, value], true)
                           }
-                          className={`px-3 py-1 rounded-md text-sm font-medium ${
-                            isDarkMode
-                              ? "bg-blue-600 text-white hover:bg-blue-700"
-                              : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                          }`}
+                          className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                            ? "bg-blue-600 text-white hover:bg-blue-700"
+                            : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                            }`}
                         >
                           Edit
                         </button>
@@ -424,11 +406,10 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                               }
                             );
                           }}
-                          className={`px-3 py-1 rounded-md text-sm font-medium ${
-                            isDarkMode
-                              ? "bg-red-600 text-white hover:bg-red-700"
-                              : "bg-red-100 text-red-700 hover:bg-red-200"
-                          }`}
+                          className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                            ? "bg-red-600 text-white hover:bg-red-700"
+                            : "bg-red-100 text-red-700 hover:bg-red-200"
+                            }`}
                         >
                           Delete
                         </button>
@@ -442,9 +423,8 @@ const SavedManager: React.FC<SavedManagerProps> = ({
               {activeSession && (
                 <div>
                   <h4
-                    className={`text-md font-medium mb-2 ${
-                      isDarkMode ? "text-white" : "text-gray-900"
-                    }`}
+                    className={`text-md font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
                   >
                     Session Variables ({activeSession.name})
                   </h4>
@@ -452,16 +432,14 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                     ([key, value]) => (
                       <div
                         key={key}
-                        className={`p-3 rounded-md mb-2 ${
-                          isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
-                        }`}
+                        className={`p-3 rounded-md mb-2 ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
+                          }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0 mr-4">
                             <span
-                              className={`${
-                                isDarkMode ? "text-white" : "text-gray-900"
-                              }`}
+                              className={`${isDarkMode ? "text-white" : "text-gray-900"
+                                }`}
                             >
                               <span className="font-medium">{key}</span>:
                               <span
@@ -481,11 +459,10 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                                   false
                                 )
                               }
-                              className={`px-3 py-1 rounded-md text-sm font-medium ${
-                                isDarkMode
-                                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                                  : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                              }`}
+                              className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                }`}
                             >
                               Edit
                             </button>
@@ -529,11 +506,10 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                                   updatedSession
                                 );
                               }}
-                              className={`px-3 py-1 rounded-md text-sm font-medium ${
-                                isDarkMode
-                                  ? "bg-red-600 text-white hover:bg-red-700"
-                                  : "bg-red-100 text-red-700 hover:bg-red-200"
-                              }`}
+                              className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                                ? "bg-red-600 text-white hover:bg-red-700"
+                                : "bg-red-100 text-red-700 hover:bg-red-200"
+                                }`}
                             >
                               Delete
                             </button>
@@ -562,8 +538,8 @@ const SavedManager: React.FC<SavedManagerProps> = ({
           modalType === "new"
             ? "New Session"
             : modalType === "rename"
-            ? "Rename Session"
-            : "Duplicate Session"
+              ? "Rename Session"
+              : "Duplicate Session"
         }
       >
         <input
@@ -571,12 +547,16 @@ const SavedManager: React.FC<SavedManagerProps> = ({
           value={sessionName}
           onChange={(e) => setSessionName(e.target.value)}
           placeholder="Session name"
-          className={`w-full px-3 py-2 rounded-md border mb-4 ${
-            isDarkMode
-              ? "bg-gray-700 border-gray-600 text-white"
-              : "bg-white border-gray-300 text-gray-900"
-          }`}
+          className={`w-full px-3 py-2 rounded-md border mb-4 ${isDarkMode
+            ? "bg-gray-700 border-gray-600 text-white"
+            : "bg-white border-gray-300 text-gray-900"
+            }`}
         />
+        {error && (
+          <p className={`text-sm ${isDarkMode ? "text-red-400" : "text-red-600"} mb-4`}>
+            {error}
+          </p>
+        )}
       </Modal>
 
       {/* Variable Modal */}
@@ -590,17 +570,15 @@ const SavedManager: React.FC<SavedManagerProps> = ({
         title={
           modalType === "new"
             ? `New ${selectedVariable.isGlobal ? "Global" : "Session"} Variable`
-            : `Edit ${
-                selectedVariable.isGlobal ? "Global" : "Session"
-              } Variable`
+            : `Edit ${selectedVariable.isGlobal ? "Global" : "Session"
+            } Variable`
         }
       >
         <div className="space-y-4">
           <div>
             <label
-              className={`block text-sm font-medium mb-1 ${
-                isDarkMode ? "text-gray-300" : "text-gray-700"
-              }`}
+              className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"
+                }`}
             >
               Variable Name
             </label>
@@ -614,18 +592,16 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                 })
               }
               placeholder="Enter variable name"
-              className={`w-full px-3 py-2 rounded-md border ${
-                isDarkMode
-                  ? "bg-gray-700 border-gray-600 text-white"
-                  : "bg-white border-gray-300 text-gray-900"
-              }`}
+              className={`w-full px-3 py-2 rounded-md border ${isDarkMode
+                ? "bg-gray-700 border-gray-600 text-white"
+                : "bg-white border-gray-300 text-gray-900"
+                }`}
             />
           </div>
           <div>
             <label
-              className={`block text-sm font-medium mb-1 ${
-                isDarkMode ? "text-gray-300" : "text-gray-700"
-              }`}
+              className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"
+                }`}
             >
               Value
             </label>
@@ -639,11 +615,10 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                 })
               }
               placeholder="Enter variable value"
-              className={`w-full px-3 py-2 rounded-md border ${
-                isDarkMode
-                  ? "bg-gray-700 border-gray-600 text-white"
-                  : "bg-white border-gray-300 text-gray-900"
-              }`}
+              className={`w-full px-3 py-2 rounded-md border ${isDarkMode
+                ? "bg-gray-700 border-gray-600 text-white"
+                : "bg-white border-gray-300 text-gray-900"
+                }`}
             />
           </div>
         </div>

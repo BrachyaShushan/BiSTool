@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import Modal from "./Modal";
-import { AppContextType, ThemeContextType } from "../types/app.types";
 
 interface TokenConfig {
     domain: string;
@@ -72,16 +71,6 @@ const TokenGenerator: React.FC = () => {
             const requestBody = `username=${encodeURIComponent(
                 globalVariables.username
             )}&password=${globalVariables.password}`;
-
-            console.log("Token Generation Request:", {
-                url: requestUrl,
-                method: "POST",
-                headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: requestBody,
-            });
 
             const response = await fetch(requestUrl, {
                 method: "POST",

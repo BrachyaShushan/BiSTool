@@ -3,7 +3,6 @@ import React, {
   useContext,
   useState,
   useEffect,
-  ReactNode,
   useCallback,
 } from "react";
 import {
@@ -15,32 +14,51 @@ import {
 } from "../types";
 import { ExtendedSession } from "../types/SavedManager";
 
-// Types
-interface QueryParam {
-  key: string;
-  value: string;
-  description: string;
-}
-
-interface Header {
-  key: string;
-  value: string;
-  description: string;
-}
-
-interface RequestConfig {
-  method: string;
-  queryParams: QueryParam[];
-  headers: Header[];
-  bodyType: "none" | "json" | "form";
-  jsonBody: string | null;
-}
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [activeSession, setActiveSession] = useState<ExtendedSession | null>(() => {
+    try {
+      const savedSession = localStorage.getItem("active_session");
+      if (savedSession) {
+        const parsed = safeParseJSON(savedSession);
+        return parsed ?? null;
+      }
+      return null;
+    } catch (err) {
+      setError("Failed to load active session Error: " + err);
+      return null;
+    }
+  });
+
+  const [savedSessions, setSavedSessions] = useState<ExtendedSession[]>(() => {
+    try {
+      const savedSessions = localStorage.getItem("saved_sessions");
+      if (savedSessions) {
+        const parsed = safeParseJSON(savedSessions);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+      return [];
+    } catch (err) {
+      setError("Failed to load saved sessions Error: " + err);
+      return [];
+    }
+  });
+
+  const [globalVariables, setGlobalVariables] = useState<Record<string, string>>(() => {
+    try {
+      const savedState = localStorage.getItem("app_state");
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        return parsed?.globalVariables ?? {};
+      }
+      return {};
+    } catch (err) {
+      setError("Failed to load global variables Error: " + err);
+      return {};
+    }
+  });
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +69,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       if (savedState) {
         const parsed = safeParseJSON(savedState);
         return (
-          parsed?.urlData || {
+          parsed?.urlData ?? {
             baseURL: "",
             segments: "",
             parsedSegments: [],
@@ -78,7 +96,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         environment: "development",
       };
     } catch (err) {
-      setError("Failed to load URL data");
+      setError("Failed to load URL data Error: " + err);
       return {
         baseURL: "",
         segments: "",
@@ -94,33 +112,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     }
   });
 
-  const [globalVariables, setGlobalVariables] = useState<
-    Record<string, string>
-  >(() => {
-    try {
-      const savedState = localStorage.getItem("app_state");
-      if (savedState) {
-        const parsed = safeParseJSON(savedState);
-        return parsed?.globalVariables || {};
-      }
-      return {};
-    } catch (err) {
-      setError("Failed to load global variables");
-      return {};
-    }
-  });
-
   const [requestConfig, setRequestConfig] = useState<RequestConfigData | null>(
     () => {
       try {
         const savedState = localStorage.getItem("app_state");
         if (savedState) {
           const parsed = safeParseJSON(savedState);
-          return parsed?.requestConfig || null;
+          return parsed?.requestConfig ?? null;
         }
         return null;
       } catch (err) {
-        setError("Failed to load request config");
+        setError("Failed to load request config Error: " + err);
         return null;
       }
     }
@@ -131,11 +133,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       const savedState = localStorage.getItem("app_state");
       if (savedState) {
         const parsed = safeParseJSON(savedState);
-        return parsed?.yamlOutput || "";
+        return parsed?.yamlOutput ?? "";
       }
       return "";
     } catch (err) {
-      setError("Failed to load YAML output");
+      setError("Failed to load YAML output Error: " + err);
       return "";
     }
   });
@@ -155,11 +157,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       const savedState = localStorage.getItem("app_state");
       if (savedState) {
         const parsed = safeParseJSON(savedState);
-        return parsed?.activeSection || "url";
+        return parsed?.activeSection ?? "url";
       }
       return "url";
     } catch (err) {
-      setError("Failed to load active section");
+      setError("Failed to load active section ERROR: " + err);
       return "url";
     }
   });
@@ -171,11 +173,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       const savedState = localStorage.getItem("app_state");
       if (savedState) {
         const parsed = safeParseJSON(savedState);
-        return parsed?.segmentVariables || {};
+        return parsed?.segmentVariables ?? {};
       }
       return {};
     } catch (err) {
-      setError("Failed to load segment variables");
+      setError("Failed to load segment variables ERROR: " + err);
       return {};
     }
   });
@@ -185,65 +187,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       const savedState = localStorage.getItem("shared_variables");
       if (savedState) {
         const parsed = safeParseJSON(savedState);
-        return parsed || [];
+        return parsed ?? [];
       }
       return [];
     } catch (err) {
-      setError("Failed to load shared variables");
-      return [];
-    }
-  });
-
-  const [activeSession, setActiveSession] = useState<ExtendedSession | null>(
-    () => {
-      try {
-        const saved = localStorage.getItem("active_session");
-        if (saved) {
-          const parsed = safeParseJSON(saved);
-          if (parsed) {
-            // Ensure all required fields are present
-            return {
-              id: parsed.id || Date.now().toString(),
-              name: parsed.name || "Untitled Session",
-              timestamp: parsed.timestamp || new Date().toISOString(),
-              urlData: parsed.urlData || {
-                baseURL: "",
-                segments: "",
-                queryParams: [],
-                segmentVariables: [],
-                processedURL: "",
-              },
-              requestConfig: parsed.requestConfig || null,
-              yamlOutput: parsed.yamlOutput || "",
-              segmentVariables: parsed.segmentVariables || {},
-              sharedVariables: parsed.sharedVariables || {},
-              activeSection: parsed.activeSection || "url",
-            };
-          }
-        }
-        return null;
-      } catch (err) {
-        setError("Failed to load active session");
-        return null;
-      }
-    }
-  );
-
-  const [savedSessions, setSavedSessions] = useState<ExtendedSession[]>(() => {
-    try {
-      const saved = localStorage.getItem("saved_sessions");
-      if (saved) {
-        const parsed = safeParseJSON(saved);
-        return (parsed || []).map((session: any) => ({
-          ...session,
-          segmentVariables: session.segmentVariables || {},
-          sharedVariables: session.sharedVariables || {},
-          activeSection: session.activeSection || "url",
-        }));
-      }
-      return [];
-    } catch (err) {
-      setError("Failed to load saved sessions");
+      setError("Failed to load shared variables ERROR: " + err);
       return [];
     }
   });
@@ -261,7 +209,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       };
       localStorage.setItem("app_state", JSON.stringify(state));
     } catch (err) {
-      setError("Failed to save app state");
+      setError("Failed to save app state ERROR: " + err);
     }
   }, [
     urlData,
@@ -276,7 +224,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     try {
       localStorage.setItem("shared_variables", JSON.stringify(sharedVariables));
     } catch (err) {
-      setError("Failed to save shared variables");
+      setError("Failed to save shared variables ERROR: " + err);
     }
   }, [sharedVariables]);
 
@@ -284,7 +232,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     try {
       localStorage.setItem("active_session", JSON.stringify(activeSession));
     } catch (err) {
-      setError("Failed to save active session");
+      setError("Failed to save active session ERROR: " + err);
     }
   }, [activeSession]);
 
@@ -292,7 +240,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     try {
       localStorage.setItem("saved_sessions", JSON.stringify(savedSessions));
     } catch (err) {
-      setError("Failed to save sessions");
+      setError("Failed to save sessions ERROR: " + err);
     }
   }, [savedSessions]);
 
@@ -336,7 +284,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         // Save the updated session
         localStorage.setItem("active_session", JSON.stringify(activeSession));
       } catch (err) {
-        setError("Failed to load session data");
+        setError("Failed to load session data ERROR: " + err);
       } finally {
         setIsLoading(false);
       }
@@ -348,7 +296,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     try {
       // Update app state
       const savedState = localStorage.getItem("app_state");
-      const state = savedState ? safeParseJSON(savedState) || {} : {};
+      const state = savedState ? safeParseJSON(savedState) ?? {} : {};
       state.activeSection = activeSection;
       localStorage.setItem("app_state", JSON.stringify(state));
 
@@ -361,7 +309,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         localStorage.setItem("active_session", JSON.stringify(updatedSession));
       }
     } catch (err) {
-      setError("Failed to save active section");
+      setError("Failed to save active section ERROR: " + err);
     }
   }, [activeSection, activeSession]);
 
@@ -462,14 +410,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       );
       setActiveSection((session.activeSection as SectionId) || "url");
     } catch (err) {
-      setError("Failed to load session");
+      setError("Failed to load session ERROR: " + err);
     }
   };
 
   const handleSaveSession = useCallback(
     (name: string, sessionData?: ExtendedSession) => {
       const newSession: ExtendedSession = sessionData || {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         name,
         timestamp: new Date().toISOString(),
         urlData: {
@@ -556,6 +504,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     activeSession,
     savedSessions,
     globalVariables,
+    isLoading,
+    error,
     setUrlData,
     setRequestConfig,
     setYamlOutput,

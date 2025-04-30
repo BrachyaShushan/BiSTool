@@ -1,5 +1,3 @@
-import { EditorProps } from "@monaco-editor/react";
-
 export interface AITestGeneratorProps {
   yamlData: string;
 }

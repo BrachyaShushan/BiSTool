@@ -105,11 +105,10 @@ Additional Requirements:
 ${requirements}
 
 IMPORTANT: Please ensure the response is complete and not cut off. Include all test cases and their implementations.
-IMPORTANT: ${
-        useOOP
+IMPORTANT: ${useOOP
           ? "Please generate the test code in object-oriented style"
           : "Please generate the test code in functional style"
-      }`;
+        }`;
 
       const response: AnthropicResponse = await anthropic.messages.create({
         model: "claude-3-opus-20240229",
@@ -137,8 +136,7 @@ IMPORTANT: ${
     } catch (err) {
       console.error("Error generating test code:", err);
       setError(
-        `Failed to generate test code: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Failed to generate test code: ${err instanceof Error ? err.message : "Unknown error"
         }`
       );
       // Fallback to sample code if there's an error
@@ -259,7 +257,7 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
     try {
       await generatePytestCode();
     } catch (err) {
-      console.log("Using fallback code generation");
+      console.error("Using fallback code generation Error: " + err);
       setGeneratedTest(generateSampleTestCode());
     }
   };
@@ -355,23 +353,20 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
 
   return (
     <div
-      className={`p-4 ${
-        isDarkMode ? "bg-gray-800" : "bg-gray-50"
-      } rounded-lg shadow`}
+      className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-50"
+        } rounded-lg shadow`}
     >
       <h2
-        className={`text-xl font-bold mb-4 ${
-          isDarkMode ? "text-white" : "text-gray-900"
-        }`}
+        className={`text-xl font-bold mb-4 ${isDarkMode ? "text-white" : "text-gray-900"
+          }`}
       >
         AI Test Generator
       </h2>
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${
-            isDarkMode ? "text-white" : "text-gray-700"
-          }`}
+          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
+            }`}
         >
           Additional Test Requirements
         </label>
@@ -381,15 +376,14 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
             setRequirements(e.target.value)
           }
           placeholder="Specify any additional test requirements, edge cases, or specific scenarios you want to test..."
-          className={`w-full h-32 p-2 border rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 ${
-            isDarkMode
-              ? "bg-gray-700 border-gray-600 text-white"
-              : "bg-white border-gray-300 text-gray-900"
-          }`}
+          className={`w-full h-32 p-2 border rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 ${isDarkMode
+            ? "bg-gray-700 border-gray-600 text-white"
+            : "bg-white border-gray-300 text-gray-900"
+            }`}
         />
       </div>
 
-      <div className="mb-4 flex items-center">
+      <div className="flex items-center mb-4">
         <input
           type="checkbox"
           id="use-oop"
@@ -397,15 +391,13 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setUseOOP(e.target.checked)
           }
-          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 rounded ${
-            isDarkMode ? "border-gray-600" : "border-gray-300"
-          }`}
+          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 rounded ${isDarkMode ? "border-gray-600" : "border-gray-300"
+            }`}
         />
         <label
           htmlFor="use-oop"
-          className={`ml-2 block text-sm ${
-            isDarkMode ? "text-white" : "text-gray-700"
-          }`}
+          className={`ml-2 block text-sm ${isDarkMode ? "text-white" : "text-gray-700"
+            }`}
         >
           Use Object-Oriented Programming style for test classes
         </label>
@@ -415,16 +407,15 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
         <button
           onClick={handleGenerateCode}
           disabled={isLoading || !yamlData}
-          className={`w-full inline-flex justify-center items-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
-            isLoading || !yamlData
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          }`}
+          className={`w-full inline-flex justify-center items-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${isLoading || !yamlData
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            }`}
         >
           {isLoading ? (
             <>
               <svg
-                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                className="w-5 h-5 mr-3 -ml-1 text-white animate-spin"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -453,9 +444,8 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
 
       {error && (
         <div
-          className={`mb-4 p-3 rounded ${
-            isDarkMode ? "bg-red-900 text-red-100" : "bg-red-100 text-red-700"
-          }`}
+          className={`mb-4 p-3 rounded ${isDarkMode ? "bg-red-900 text-red-100" : "bg-red-100 text-red-700"
+            }`}
         >
           {error}
         </div>
@@ -463,29 +453,26 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
 
       {generatedTest && (
         <div>
-          <div className="mt-4 flex justify-between">
+          <div className="flex justify-between mt-4">
             <h3
-              className={`text-lg font-medium mb-2 ${
-                isDarkMode ? "text-white" : "text-gray-700"
-              }`}
+              className={`text-lg font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
+                }`}
             >
               Generated Pytest Code
             </h3>
             <button
               onClick={() => navigator.clipboard.writeText(generatedTest)}
-              className={`inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md ${
-                isDarkMode
-                  ? "bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+              className={`inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md ${isDarkMode
+                ? "bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
             >
               Copy Code
             </button>
           </div>
           <div
-            className={`border rounded-md overflow-hidden ${
-              isDarkMode ? "border-gray-600" : "border-gray-300"
-            }`}
+            className={`border rounded-md overflow-hidden ${isDarkMode ? "border-gray-600" : "border-gray-300"
+              }`}
           >
             <Editor
               height={getEditorHeight()}

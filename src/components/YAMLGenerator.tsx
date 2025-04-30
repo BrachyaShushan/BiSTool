@@ -1,12 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
-import Editor from "@monaco-editor/react";
+import { Editor } from "@monaco-editor/react";
 import {
   YAMLGeneratorProps,
-  QueryParam,
-  RequestConfig,
-  URLData,
   EditorOptions,
   ResponseData,
 } from "../types/yamlGenerator.types";
@@ -28,12 +25,11 @@ const extractVariables = (url: string): string[] => {
   });
 };
 
-const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
+const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   const {
     urlData,
     requestConfig,
     setYamlOutput,
-    setActiveSection,
     globalVariables,
     segmentVariables,
     activeSession,
@@ -44,21 +40,20 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedQueries, setSelectedQueries] = useState<
-    Record<string, boolean>
-  >({});
+  const [selectedQueries, setSelectedQueries] = useState<Record<string, boolean>>(() => {
+    if (requestConfig?.queryParams) {
+      const initialQueries: Record<string, boolean> = {};
+      requestConfig.queryParams.forEach((param) => {
+        initialQueries[param.key] = false;
+      });
+      return initialQueries;
+    }
+    return {};
+  });
   const [openApiVersion, setOpenApiVersion] = useState<string>("1.0.0");
   const [customResponse, setCustomResponse] = useState<string>("");
-  const [isCustomResponseValid, setIsCustomResponseValid] =
-    useState<boolean>(true);
-  const [variableValues] = useState<Record<string, string>>(() => {
-    const initialVariables: Record<string, string> = {};
-    const variables = extractVariables((urlData as URLData)?.builtUrl || "");
-    variables.forEach((variable) => {
-      initialVariables[variable] = "";
-    });
-    return initialVariables;
-  });
+  const [isYamlExpanded, setIsYamlExpanded] = useState<boolean>(false);
+  const [editorHeight, setEditorHeight] = useState<number>(400);
 
   const editorRef = useRef<any>(null);
   const yamlEditorRef = useRef<any>(null);
@@ -70,18 +65,13 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
     if (requestConfig?.queryParams) {
       const initialQueries: Record<string, boolean> = {};
       requestConfig.queryParams.forEach((param) => {
-        initialQueries[param.key] = false;
+        initialQueries[param.key] = selectedQueries[param.key] ?? false;
       });
       setSelectedQueries(initialQueries);
+    } else {
+      setSelectedQueries({});
     }
   }, [requestConfig]);
-
-  // Add useEffect to log variables when they change
-  useEffect(() => {
-    console.log("Global Variables:", globalVariables);
-    console.log("Segment Variables:", segmentVariables);
-    console.log("Active Session:", activeSession);
-  }, [globalVariables, segmentVariables, activeSession]);
 
   // Helper function to get value from variables
   const getValueFromVariables = useCallback(
@@ -95,17 +85,14 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
       // Handle ${variable} format
       if (value.startsWith("${") && value.endsWith("}")) {
         const varName = value.slice(2, -1);
-        console.log("Looking for variable:", varName);
 
         // Check global variables first
         if (globalVariables && varName in globalVariables) {
-          console.log("Found in global variables:", globalVariables[varName]);
           return globalVariables[varName] ?? null;
         }
 
         // Then check segment variables
         if (segmentVariables && varName in segmentVariables) {
-          console.log("Found in segment variables:", segmentVariables[varName]);
           return segmentVariables[varName] ?? null;
         }
 
@@ -114,31 +101,23 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
           activeSession?.sharedVariables &&
           varName in activeSession.sharedVariables
         ) {
-          console.log(
-            "Found in session variables:",
-            activeSession.sharedVariables[varName]
-          );
           return activeSession.sharedVariables[varName] ?? null;
         }
 
-        console.log("Variable not found:", varName);
         return value;
       }
 
       // Handle {variable} format
       if (value.startsWith("{") && value.endsWith("}")) {
         const varName = value.slice(1, -1);
-        console.log("Looking for variable:", varName);
 
         // Check global variables first
         if (globalVariables && varName in globalVariables) {
-          console.log("Found in global variables:", globalVariables[varName]);
           return globalVariables[varName] ?? null;
         }
 
         // Then check segment variables
         if (segmentVariables && varName in segmentVariables) {
-          console.log("Found in segment variables:", segmentVariables[varName]);
           return segmentVariables[varName] ?? null;
         }
 
@@ -147,28 +126,18 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
           activeSession?.sharedVariables &&
           varName in activeSession.sharedVariables
         ) {
-          console.log(
-            "Found in session variables:",
-            activeSession.sharedVariables[varName]
-          );
           return activeSession.sharedVariables[varName] ?? null;
         }
 
-        console.log("Variable not found:", varName);
         return value;
       }
 
       // If the value is a direct variable name, try to find it
       if (globalVariables && value in globalVariables) {
-        console.log("Found direct variable in global:", globalVariables[value]);
         return globalVariables[value] ?? null;
       }
 
       if (segmentVariables && value in segmentVariables) {
-        console.log(
-          "Found direct variable in segment:",
-          segmentVariables[value]
-        );
         return segmentVariables[value] ?? null;
       }
 
@@ -176,10 +145,6 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
         activeSession?.sharedVariables &&
         value in activeSession.sharedVariables
       ) {
-        console.log(
-          "Found direct variable in session:",
-          activeSession.sharedVariables[value]
-        );
         return activeSession.sharedVariables[value] ?? null;
       }
 
@@ -187,37 +152,6 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
     },
     [globalVariables, segmentVariables, activeSession]
   );
-
-  // Helper function to get domain value
-  const getDomainValue = useCallback((): string => {
-    if (!urlData?.domain) return "";
-    let domain = (urlData as URLData).domain;
-    const domainVars = domain.match(/(?:{([^}]+)}|%7B([^%]+)%7D)/g) || [];
-    console.log("Domain variables found:", domainVars);
-
-    domainVars.forEach((varMatch: string) => {
-      const varName = varMatch.startsWith("{")
-        ? varMatch.slice(1, -1)
-        : varMatch.slice(3, -3);
-      console.log("Processing domain variable:", varName);
-
-      const value = getValueFromVariables(varName);
-      if (value && value !== varName) {
-        domain = domain.replace(varMatch, value as string);
-        console.log("Replaced domain variable:", varName, "with:", value);
-      }
-    });
-
-    console.log("Final domain:", domain);
-    return domain;
-  }, [urlData?.domain, getValueFromVariables]);
-
-  const handleQueryToggle = (queryKey: string): void => {
-    setSelectedQueries((prev) => ({
-      ...prev,
-      [queryKey]: !prev[queryKey],
-    }));
-  };
 
   const handleEditorDidMount = (editor: any, monaco: any): void => {
     editorRef.current = editor;
@@ -240,16 +174,6 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
     });
   };
 
-  const handleEditorChange = (value: string | undefined): void => {
-    if (value === undefined) return;
-    setCustomResponse(value);
-    try {
-      JSON.parse(value);
-      setIsCustomResponseValid(true);
-    } catch (e) {
-      setIsCustomResponseValid(false);
-    }
-  };
 
   const handleMouseDown = (e: React.MouseEvent): void => {
     e.preventDefault();
@@ -374,7 +298,6 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
   const handleGenerateFromCustomResponse = () => {
     try {
       const responseData = JSON.parse(customResponse);
-      console.log(responseData);
       if (!requestConfig) {
         setError("No request configuration available");
         return;
@@ -470,7 +393,6 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
 
     // Generate schema from response data
     const schema = generateSchema(responseData, "      ");
-    console.log(responseData);
     let yaml = "";
 
     if (openApiVersion === "1.0.0") {
@@ -539,7 +461,7 @@ ${schema}`;
         setTimeout(() => setCopySuccess(false), 2000);
       })
       .catch((err) => {
-        setError("Failed to copy YAML to clipboard");
+        setError("Failed to copy YAML to clipboard ERROR: " + err);
       });
   };
 
@@ -667,31 +589,59 @@ ${schema}`;
       data_effective_tstamp: getCurrentTimestamp(),
     };
     setCustomResponse(JSON.stringify(initialData, null, 2));
-  }, [getCurrentTimestamp]);
+  }, []);
+
+  const handleQueryToggle = (queryKey: string): void => {
+    setSelectedQueries((prev) => ({
+      ...prev,
+      [queryKey]: !prev[queryKey],
+    }));
+  };
+
+  const calculateEditorHeight = useCallback(() => {
+    if (!yamlOutput) return 400;
+    const lineCount = yamlOutput.split('\n').length;
+    const lineHeight = 20; // Approximate line height in pixels
+    const padding = 40; // Additional padding for editor UI
+    const minHeight = 400;
+    const calculatedHeight = Math.max(minHeight, lineCount * lineHeight + padding);
+    return calculatedHeight;
+  }, [yamlOutput]);
+
+  useEffect(() => {
+    const newHeight = calculateEditorHeight();
+    setEditorHeight(newHeight);
+  }, [yamlOutput, calculateEditorHeight]);
+
+  const handleYamlExpand = () => {
+    setIsYamlExpanded(!isYamlExpanded);
+    // Force editor to resize after state change
+    setTimeout(() => {
+      if (yamlEditorRef.current) {
+        yamlEditorRef.current.layout();
+      }
+    }, 0);
+  };
 
   if (!requestConfig) {
     return <div>No request configuration available</div>;
   }
 
-  // After this point, requestConfig is guaranteed to be non-null
-  const config = requestConfig as RequestConfig;
 
   return (
     <div
-      className={`p-4 ${
-        isDarkMode ? "bg-gray-800" : "bg-white"
-      } rounded-lg shadow`}
+      className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
+        } rounded-lg shadow`}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
           <button
             onClick={handleFetchRequest}
             disabled={isGenerating}
-            className={`px-4 py-2 rounded-md ${
-              isDarkMode
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-blue-500 text-white hover:bg-blue-600"
-            } ${isGenerating ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`px-4 py-2 rounded-md ${isDarkMode
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+              } ${isGenerating ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {isGenerating ? "Generating..." : "Fetch & Generate YAML"}
           </button>
@@ -699,11 +649,10 @@ ${schema}`;
           <select
             value={openApiVersion}
             onChange={(e) => setOpenApiVersion(e.target.value)}
-            className={`px-3 py-2 border rounded-md ${
-              isDarkMode
-                ? "bg-gray-700 border-gray-600 text-white"
-                : "bg-white border-gray-300 text-gray-900"
-            }`}
+            className={`px-3 py-2 border rounded-md ${isDarkMode
+              ? "bg-gray-700 border-gray-600 text-white"
+              : "bg-white border-gray-300 text-gray-900"
+              }`}
           >
             <option value="3.0.0">OpenAPI 3.0.0</option>
             <option value="2.0.0">OpenAPI 2.0.0</option>
@@ -715,30 +664,28 @@ ${schema}`;
           <button
             onClick={handleCopyYAML}
             disabled={!yamlOutput}
-            className={`px-4 py-2 rounded-md ${
-              isDarkMode
-                ? yamlOutput
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
-                : yamlOutput
+            className={`px-4 py-2 rounded-md ${isDarkMode
+              ? yamlOutput
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed"
+              : yamlOutput
                 ? "bg-blue-500 text-white hover:bg-blue-600"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            }`}
+              }`}
           >
             {copySuccess ? "Copied!" : "Copy YAML"}
           </button>
           <button
             onClick={handleDownloadYAML}
             disabled={!yamlOutput}
-            className={`px-4 py-2 rounded-md ${
-              isDarkMode
-                ? yamlOutput
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
-                : yamlOutput
+            className={`px-4 py-2 rounded-md ${isDarkMode
+              ? yamlOutput
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed"
+              : yamlOutput
                 ? "bg-blue-500 text-white hover:bg-blue-600"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            }`}
+              }`}
           >
             Download YAML
           </button>
@@ -746,47 +693,44 @@ ${schema}`;
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+        <div className="p-3 mb-4 text-red-700 bg-red-100 rounded-md">
           {error}
         </div>
       )}
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${
-            isDarkMode ? "text-white" : "text-gray-700"
-          }`}
+          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
+            }`}
         >
           Custom Response
         </label>
         <div
           ref={containerRef}
-          className={`border ${
-            isDarkMode ? "border-gray-600" : "border-gray-300"
-          } rounded-lg overflow-hidden relative`}
+          className={`border ${isDarkMode ? "border-gray-600" : "border-gray-300"
+            } rounded-lg overflow-hidden relative`}
           style={{ height: "200px" }}
         >
           <Editor
             height="100%"
             defaultLanguage="json"
-            value={customResponse}
+            value={customResponse || ""}
             onChange={(value) => setCustomResponse(value || "")}
             onMount={handleEditorDidMount}
             theme={isDarkMode ? "vs-dark" : "light"}
             options={editorOptions}
           />
           <div
-            className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+            className="absolute bottom-0 left-0 right-0 h-2 bg-gray-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
             onMouseDown={handleMouseDown}
           />
         </div>
         <button
           onClick={handleGenerateFromCustomResponse}
-          className={`mt-2 px-4 py-2 rounded-md ${
-            isDarkMode
-              ? "bg-green-600 text-white hover:bg-green-700"
-              : "bg-green-500 text-white hover:bg-green-600"
-          }`}
+          className={`mt-2 px-4 py-2 rounded-md ${isDarkMode
+            ? "bg-green-600 text-white hover:bg-green-700"
+            : "bg-green-500 text-white hover:bg-green-600"
+            }`}
         >
           Generate from Custom Response
         </button>
@@ -794,16 +738,14 @@ ${schema}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${
-            isDarkMode ? "text-white" : "text-gray-700"
-          }`}
+          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
+            }`}
         >
           Query Parameters
         </label>
         <div
-          className={`p-4 rounded-lg ${
-            isDarkMode ? "bg-gray-700" : "bg-gray-50"
-          }`}
+          className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
+            }`}
         >
           {requestConfig?.queryParams?.map((param) => (
             <div key={param.key} className="flex items-center mb-2">
@@ -811,9 +753,8 @@ ${schema}`;
                 type="checkbox"
                 checked={selectedQueries[param.key]}
                 onChange={() => handleQueryToggle(param.key)}
-                className={`mr-2 ${
-                  isDarkMode ? "text-blue-500" : "text-blue-600"
-                }`}
+                className={`mr-2 ${isDarkMode ? "text-blue-500" : "text-blue-600"
+                  }`}
               />
               <span
                 className={`${isDarkMode ? "text-white" : "text-gray-700"}`}
@@ -827,16 +768,14 @@ ${schema}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${
-            isDarkMode ? "text-white" : "text-gray-700"
-          }`}
+          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
+            }`}
         >
           Request URL
         </label>
         <div
-          className={`p-3 rounded-lg ${
-            isDarkMode ? "bg-gray-700" : "bg-gray-50"
-          }`}
+          className={`p-3 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
+            }`}
         >
           <div className="flex items-center space-x-2">
             <code
@@ -849,19 +788,28 @@ ${schema}`;
       </div>
 
       <div className="mt-4">
-        <label
-          className={`block text-sm font-medium mb-2 ${
-            isDarkMode ? "text-white" : "text-gray-700"
-          }`}
-        >
-          Generated YAML
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label
+            className={`block text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
+              }`}
+          >
+            Generated YAML
+          </label>
+          <button
+            onClick={handleYamlExpand}
+            className={`px-2 py-1 text-sm rounded-md ${isDarkMode
+              ? "bg-gray-700 text-white hover:bg-gray-600"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+          >
+            {isYamlExpanded ? "Expand" : "Collapse"}
+          </button>
+        </div>
         <div
           ref={yamlContainerRef}
-          className={`border ${
-            isDarkMode ? "border-gray-600" : "border-gray-300"
-          } rounded-lg overflow-hidden relative`}
-          style={{ height: "400px" }}
+          className={`border ${isDarkMode ? "border-gray-600" : "border-gray-300"
+            } rounded-lg overflow-hidden relative`}
+          style={{ height: isYamlExpanded ? "calc(100vh - 200px)" : editorHeight }}
         >
           <Editor
             height="100%"
@@ -869,10 +817,15 @@ ${schema}`;
             value={yamlOutput}
             onMount={handleYamlEditorDidMount}
             theme={isDarkMode ? "vs-dark" : "light"}
-            options={{ ...editorOptions, readOnly: true }}
+            options={{
+              ...editorOptions,
+              readOnly: true,
+              scrollBeyondLastLine: false,
+              minimap: { enabled: false }
+            }}
           />
           <div
-            className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+            className="absolute bottom-0 left-0 right-0 h-2 bg-gray-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
             onMouseDown={handleYamlMouseDown}
           />
         </div>
