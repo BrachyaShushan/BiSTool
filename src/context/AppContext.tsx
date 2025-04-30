@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AppContextType, URLData, Variable } from '../types';
+import { AppContextType, URLData, RequestConfigData, Variable, SectionId } from '../types';
+import { ExtendedSession } from '../types/SavedManager';
 
 // Types
 interface QueryParam {
@@ -22,167 +23,431 @@ interface RequestConfig {
   jsonBody: string | null;
 }
 
-interface Session {
-  id: string;
-  name: string;
-  timestamp: string;
-  urlData?: URLData;
-  requestConfig?: RequestConfig;
-  yamlOutput?: string;
-}
-
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Initialize state from localStorage if available
-  const [urlData, setUrlData] = useState<URLData>({
-    baseURL: '',
-    segments: '',
-    queryParams: [],
-    segmentVariables: [],
-    processedURL: '',
+  const [urlData, setUrlData] = useState<URLData>(() => {
+    try {
+      const savedState = localStorage.getItem('app_state');
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        return parsed?.urlData || {
+          baseURL: '',
+          segments: '',
+          queryParams: [],
+          segmentVariables: [],
+          processedURL: '',
+        };
+      }
+      return {
+        baseURL: '',
+        segments: '',
+        queryParams: [],
+        segmentVariables: [],
+        processedURL: '',
+      };
+    } catch (err) {
+      setError('Failed to load URL data');
+      return {
+        baseURL: '',
+        segments: '',
+        queryParams: [],
+        segmentVariables: [],
+        processedURL: '',
+      };
+    }
   });
 
-  const [requestConfig, setRequestConfig] = useState<RequestConfig | null>(() => {
-    const savedState = localStorage.getItem('app_state');
-    if (savedState) {
-      const parsed = safeParseJSON(savedState);
-      return parsed?.requestConfig || null;
+  const [globalVariables, setGlobalVariables] = useState<Record<string, string>>(() => {
+    try {
+      const savedState = localStorage.getItem('app_state');
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        return parsed?.globalVariables || {};
+      }
+      return {};
+    } catch (err) {
+      setError('Failed to load global variables');
+      return {};
     }
-    return null;
+  });
+
+  const [requestConfig, setRequestConfig] = useState<RequestConfigData | null>(() => {
+    try {
+      const savedState = localStorage.getItem('app_state');
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        return parsed?.requestConfig || null;
+      }
+      return null;
+    } catch (err) {
+      setError('Failed to load request config');
+      return null;
+    }
   });
 
   const [yamlOutput, setYamlOutput] = useState<string>(() => {
-    const savedState = localStorage.getItem('app_state');
-    if (savedState) {
-      const parsed = safeParseJSON(savedState);
-      return parsed?.yamlOutput || '';
+    try {
+      const savedState = localStorage.getItem('app_state');
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        return parsed?.yamlOutput || '';
+      }
+      return '';
+    } catch (err) {
+      setError('Failed to load YAML output');
+      return '';
     }
-    return '';
   });
 
-  const [activeSection, setActiveSection] = useState<'url' | 'request' | 'yaml' | 'ai'>(() => {
-    const savedState = localStorage.getItem('app_state');
-    if (savedState) {
-      const parsed = safeParseJSON(savedState);
-      return parsed?.activeSection || 'url';
+  const [activeSection, setActiveSection] = useState<SectionId>(() => {
+    try {
+      // First try to get from active session
+      const activeSessionStr = localStorage.getItem('active_session');
+      if (activeSessionStr) {
+        const activeSession = safeParseJSON(activeSessionStr);
+        if (activeSession?.activeSection) {
+          return activeSession.activeSection as SectionId;
+        }
+      }
+
+      // Then try to get from app state
+      const savedState = localStorage.getItem('app_state');
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        return parsed?.activeSection || 'url';
+      }
+      return 'url';
+    } catch (err) {
+      setError('Failed to load active section');
+      return 'url';
     }
-    return 'url';
   });
 
   const [segmentVariables, setSegmentVariables] = useState<Record<string, string>>(() => {
-    const savedState = localStorage.getItem('app_state');
-    if (savedState) {
-      const parsed = safeParseJSON(savedState);
-      return parsed?.segmentVariables || {};
+    try {
+      const savedState = localStorage.getItem('app_state');
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        return parsed?.segmentVariables || {};
+      }
+      return {};
+    } catch (err) {
+      setError('Failed to load segment variables');
+      return {};
     }
-    return {};
   });
 
-  const [sharedVariables, setSharedVariables] = useState<Variable[]>([]);
-
-  const [activeSession, setActiveSession] = useState<Session | null>(() => {
-    const saved = localStorage.getItem('active_session');
-    if (saved) {
-      const parsed = safeParseJSON(saved);
-      return parsed || null;
+  const [sharedVariables, setSharedVariables] = useState<Variable[]>(() => {
+    try {
+      const savedState = localStorage.getItem('shared_variables');
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        return parsed || [];
+      }
+      return [];
+    } catch (err) {
+      setError('Failed to load shared variables');
+      return [];
     }
-    return null;
   });
 
-  const [savedSessions, setSavedSessions] = useState<Session[]>(() => {
-    const saved = localStorage.getItem('saved_sessions');
-    if (saved) {
-      const parsed = safeParseJSON(saved);
-      return parsed || [];
+  const [activeSession, setActiveSession] = useState<ExtendedSession | null>(() => {
+    try {
+      const saved = localStorage.getItem('active_session');
+      if (saved) {
+        const parsed = safeParseJSON(saved);
+        if (parsed) {
+          // Ensure all required fields are present
+          return {
+            id: parsed.id || Date.now().toString(),
+            name: parsed.name || 'Untitled Session',
+            timestamp: parsed.timestamp || new Date().toISOString(),
+            urlData: parsed.urlData || {
+              baseURL: '',
+              segments: '',
+              queryParams: [],
+              segmentVariables: [],
+              processedURL: '',
+            },
+            requestConfig: parsed.requestConfig || null,
+            yamlOutput: parsed.yamlOutput || '',
+            segmentVariables: parsed.segmentVariables || {},
+            sharedVariables: parsed.sharedVariables || {},
+            activeSection: parsed.activeSection || 'url'
+          };
+        }
+      }
+      return null;
+    } catch (err) {
+      setError('Failed to load active session');
+      return null;
     }
-    return [];
+  });
+
+  const [savedSessions, setSavedSessions] = useState<ExtendedSession[]>(() => {
+    try {
+      const saved = localStorage.getItem('saved_sessions');
+      if (saved) {
+        const parsed = safeParseJSON(saved);
+        return (parsed || []).map((session: any) => ({
+          ...session,
+          segmentVariables: session.segmentVariables || {},
+          sharedVariables: session.sharedVariables || {},
+          activeSection: session.activeSection || 'url'
+        }));
+      }
+      return [];
+    } catch (err) {
+      setError('Failed to load saved sessions');
+      return [];
+    }
   });
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
-    const state = {
-      urlData,
-      requestConfig,
-      yamlOutput,
-      activeSection,
-      segmentVariables
-    };
-    localStorage.setItem('app_state', JSON.stringify(state));
-  }, [urlData, requestConfig, yamlOutput, activeSection, segmentVariables]);
+    try {
+      const state = {
+        urlData,
+        requestConfig,
+        yamlOutput,
+        activeSection,
+        segmentVariables,
+        globalVariables
+      };
+      localStorage.setItem('app_state', JSON.stringify(state));
+    } catch (err) {
+      setError('Failed to save app state');
+    }
+  }, [urlData, requestConfig, yamlOutput, activeSection, segmentVariables, globalVariables]);
 
   useEffect(() => {
-    localStorage.setItem('shared_variables', JSON.stringify(sharedVariables));
+    try {
+      localStorage.setItem('shared_variables', JSON.stringify(sharedVariables));
+    } catch (err) {
+      setError('Failed to save shared variables');
+    }
   }, [sharedVariables]);
 
   useEffect(() => {
-    localStorage.setItem('active_session', JSON.stringify(activeSession));
+    try {
+      localStorage.setItem('active_session', JSON.stringify(activeSession));
+    } catch (err) {
+      setError('Failed to save active session');
+    }
   }, [activeSession]);
 
   useEffect(() => {
-    localStorage.setItem('saved_sessions', JSON.stringify(savedSessions));
+    try {
+      localStorage.setItem('saved_sessions', JSON.stringify(savedSessions));
+    } catch (err) {
+      setError('Failed to save sessions');
+    }
   }, [savedSessions]);
 
+  // Effect to handle session changes and load configurations
+  useEffect(() => {
+    if (activeSession) {
+      setIsLoading(true);
+      try {
+        // Load URL data
+        setUrlData(activeSession.urlData || {
+          baseURL: '',
+          segments: '',
+          queryParams: [],
+          segmentVariables: [],
+          processedURL: '',
+        });
+
+        // Load request config
+        setRequestConfig(activeSession.requestConfig || null);
+
+        // Load YAML output
+        setYamlOutput(activeSession.yamlOutput || '');
+
+        // Load segment variables
+        setSegmentVariables(activeSession.segmentVariables || {});
+
+        // Load shared variables
+        setSharedVariables(Object.entries(activeSession.sharedVariables || {}).map(([key, value]) => ({ key, value })));
+
+        // Set active section from session
+        if (activeSession.activeSection) {
+          setActiveSection(activeSession.activeSection as SectionId);
+        }
+
+        // Save the updated session
+        localStorage.setItem('active_session', JSON.stringify(activeSession));
+      } catch (err) {
+        setError('Failed to load session data');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [activeSession?.id]); // Only run when session ID changes
+
+  // Save active section to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      // Update app state
+      const savedState = localStorage.getItem('app_state');
+      const state = savedState ? safeParseJSON(savedState) || {} : {};
+      state.activeSection = activeSection;
+      localStorage.setItem('app_state', JSON.stringify(state));
+
+      // Update active session if exists
+      if (activeSession) {
+        const updatedSession = {
+          ...activeSession,
+          activeSection
+        };
+        localStorage.setItem('active_session', JSON.stringify(updatedSession));
+      }
+    } catch (err) {
+      setError('Failed to save active section');
+    }
+  }, [activeSection, activeSession]);
+
   const updateSharedVariable = (key: string, value: string) => {
-    setSharedVariables(prev => ({ ...prev, [key]: value }));
+    setSharedVariables(prev => {
+      const existingIndex = prev.findIndex(v => v.key === key);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = { key, value };
+        return updated;
+      }
+      return [...prev, { key, value }];
+    });
   };
 
   const deleteSharedVariable = (key: string) => {
-    setSharedVariables(prev => {
-      const newVars = { ...prev };
-      delete newVars[key];
-      return newVars;
-    });
+    setSharedVariables(prev => prev.filter(v => v.key !== key));
+  };
+
+  const updateGlobalVariable = (key: string, value: string) => {
+    setGlobalVariables(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const updateSessionVariable = (key: string, value: string) => {
+    if (activeSession) {
+      const updatedSession: ExtendedSession = {
+        ...activeSession,
+        sharedVariables: {
+          ...activeSession.sharedVariables,
+          [key]: value
+        }
+      };
+      setActiveSession(updatedSession);
+      handleSaveSession(activeSession.name, updatedSession);
+    }
   };
 
   const handleNewSession = () => {
-    setActiveSession(null);
-    setUrlData({
-      baseURL: '',
-      segments: '',
-      queryParams: [],
-      segmentVariables: [],
-      processedURL: '',
-    });
-    setRequestConfig(null);
-    setYamlOutput('');
-    setSegmentVariables({});
+    try {
+      setActiveSession(null);
+      setUrlData({
+        baseURL: '',
+        segments: '',
+        queryParams: [],
+        segmentVariables: [],
+        processedURL: '',
+      });
+      setRequestConfig(null);
+      setYamlOutput('');
+      setSegmentVariables({});
+      setSharedVariables([]);
+      setActiveSection('url');
+    } catch (err) {
+      setError('Failed to create new session');
+    }
   };
 
-  const handleLoadSession = (session: Session) => {
-    setActiveSession(session);
-    setUrlData(session.urlData || {
-      baseURL: '',
-      segments: '',
-      queryParams: [],
-      segmentVariables: [],
-      processedURL: '',
-    });
-    setRequestConfig(session.requestConfig || null);
-    setYamlOutput(session.yamlOutput || '');
-  };
-
-  const handleSaveSession = (name: string, sessionData?: Session) => {
-    const newSession: Session = sessionData || {
-      id: Date.now().toString(),
-      name,
-      timestamp: new Date().toISOString(),
-      urlData: urlData || undefined,
-      requestConfig: requestConfig || undefined,
-      yamlOutput: yamlOutput || undefined
-    };
-
-    setSavedSessions(prev => {
-      const existingIndex = prev.findIndex(s => s.id === newSession.id);
-      if (existingIndex >= 0) {
-        const updated = [...prev];
-        updated[existingIndex] = newSession;
-        return updated;
+  const handleLoadSession = (session: ExtendedSession) => {
+    try {
+      if (!session || typeof session !== 'object') {
+        throw new Error('Invalid session data');
       }
-      return [...prev, newSession];
-    });
 
-    setActiveSession(newSession);
+      // Validate required session properties
+      const requiredProps = ['id', 'name', 'timestamp'];
+      const missingProps = requiredProps.filter(prop => !(prop in session));
+      if (missingProps.length > 0) {
+        throw new Error(`Missing required session properties: ${missingProps.join(', ')}`);
+      }
+
+      setActiveSession(session);
+      setUrlData(session.urlData || {
+        baseURL: '',
+        segments: '',
+        queryParams: [],
+        segmentVariables: [],
+        processedURL: '',
+      });
+      setRequestConfig(session.requestConfig || null);
+      setYamlOutput(session.yamlOutput || '');
+      setSegmentVariables(session.segmentVariables || {});
+      setSharedVariables(Object.entries(session.sharedVariables || {}).map(([key, value]) => ({ key, value })));
+      setActiveSection((session.activeSection as SectionId) || 'url');
+    } catch (err) {
+      setError('Failed to load session');
+    }
+  };
+
+  const handleSaveSession = (name: string, sessionData?: ExtendedSession) => {
+    try {
+      if (!name.trim()) {
+        throw new Error('Session name cannot be empty');
+      }
+
+      const newSession: ExtendedSession = sessionData || {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name,
+        timestamp: new Date().toISOString(),
+        urlData: urlData,
+        requestConfig: requestConfig || {
+          method: "GET",
+          queryParams: [],
+          headers: [],
+          bodyType: "none",
+          jsonBody: null,
+          formData: null
+        },
+        yamlOutput: yamlOutput,
+        segmentVariables: segmentVariables,
+        sharedVariables: Object.fromEntries(sharedVariables.map(v => [v.key, v.value])),
+        activeSection: activeSection
+      };
+
+      // Validate session data
+      if (!newSession.id || !newSession.name || !newSession.timestamp) {
+        throw new Error('Invalid session data');
+      }
+
+      setSavedSessions(prev => {
+        const existingIndex = prev.findIndex(s => s.id === newSession.id);
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = newSession;
+          return updated;
+        }
+        return [...prev, newSession];
+      });
+
+      setActiveSession(newSession);
+
+      // Save to localStorage immediately
+      localStorage.setItem('active_session', JSON.stringify(newSession));
+      localStorage.setItem('saved_sessions', JSON.stringify(savedSessions));
+    } catch (err) {
+      setError('Failed to save session');
+    }
   };
 
   const handleDeleteSession = (id: string) => {
@@ -197,7 +462,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setActiveSection('request');
   };
 
-  const handleRequestConfigSubmit = (config: RequestConfig) => {
+  const handleRequestConfigSubmit = (config: RequestConfigData) => {
     setRequestConfig(config);
     setActiveSection('yaml');
   };
@@ -207,7 +472,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setActiveSection('ai');
   };
 
-  const value = {
+  const value: AppContextType = {
     urlData,
     requestConfig,
     yamlOutput,
@@ -216,6 +481,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     sharedVariables,
     activeSession,
     savedSessions,
+    globalVariables,
     setUrlData,
     setRequestConfig,
     setYamlOutput,
@@ -223,6 +489,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setSegmentVariables,
     updateSharedVariable,
     deleteSharedVariable,
+    updateGlobalVariable,
+    updateSessionVariable,
     handleNewSession,
     handleLoadSession,
     handleSaveSession,
@@ -235,7 +503,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
-export const useAppContext = () => {
+export const useAppContext = (): AppContextType => {
   const context = useContext(AppContext);
   if (context === undefined) {
     throw new Error('useAppContext must be used within an AppProvider');
@@ -249,7 +517,7 @@ export { AppContext };
 const safeParseJSON = (str: string): any => {
   try {
     return JSON.parse(str);
-  } catch (e) {
+  } catch {
     return null;
   }
 }; 
