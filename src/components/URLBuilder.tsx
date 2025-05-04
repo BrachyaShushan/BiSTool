@@ -154,17 +154,18 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
   // Effect to update builtUrl when segments, domain, or protocol changes
   useEffect(() => {
-    const newUrl = `${protocol}://${domain}${segments.length > 0
+    const newUrl = `${protocol}://${domain}${
+      segments.length > 0
         ? "/" +
-        segments
-          .map((segment) =>
-            segment.isDynamic && segment.paramName
-              ? `{${segment.paramName}}`
-              : segment.value
-          )
-          .join("/")
+          segments
+            .map((segment) =>
+              segment.isDynamic && segment.paramName
+                ? `{${segment.paramName}}`
+                : segment.value
+            )
+            .join("/")
         : ""
-      }`;
+    }`;
     setBuiltUrl(newUrl);
   }, [segments, domain, protocol]);
 
@@ -372,25 +373,28 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
   return (
     <>
       <div
-        className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
-          } rounded-lg shadow`}
+        className={`p-4 ${
+          isDarkMode ? "bg-gray-800" : "bg-white"
+        } rounded-lg shadow`}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <label
-                className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-                  }`}
+                className={`block text-sm font-medium mb-1 ${
+                  isDarkMode ? "text-white" : "text-gray-700"
+                }`}
               >
                 Protocol
               </label>
               <select
                 value={protocol}
                 onChange={(e) => setProtocol(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode
                     ? "bg-gray-700 border-gray-600 text-white"
                     : "bg-white border-gray-300 text-gray-900"
-                  }`}
+                }`}
               >
                 <option value="http">HTTP</option>
                 <option value="https">HTTPS</option>
@@ -398,8 +402,9 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
             </div>
             <div className="flex-1 ml-4">
               <label
-                className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-                  }`}
+                className={`block text-sm font-medium mb-1 ${
+                  isDarkMode ? "text-white" : "text-gray-700"
+                }`}
               >
                 Domain
               </label>
@@ -408,26 +413,29 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="example.com"
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode
                     ? "bg-gray-700 border-gray-600 text-white"
                     : "bg-white border-gray-300 text-gray-900"
-                  }`}
+                }`}
               />
             </div>
             <div className="flex-1 ml-4">
               <label
-                className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-                  }`}
+                className={`block text-sm font-medium mb-1 ${
+                  isDarkMode ? "text-white" : "text-gray-700"
+                }`}
               >
                 Environment
               </label>
               <select
                 value={environment}
                 onChange={(e) => setEnvironment(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode
                     ? "bg-gray-700 border-gray-600 text-white"
                     : "bg-white border-gray-300 text-gray-900"
-                  }`}
+                }`}
               >
                 <option value="development">Development</option>
                 <option value="staging">Staging</option>
@@ -438,8 +446,9 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
           <div>
             <label
-              className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-                }`}
+              className={`block text-sm font-medium mb-1 ${
+                isDarkMode ? "text-white" : "text-gray-700"
+              }`}
             >
               Session Description
             </label>
@@ -447,18 +456,20 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
               value={sessionDescription}
               onChange={(e) => setSessionDescription(e.target.value)}
               placeholder="Enter a description for this API endpoint"
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                isDarkMode
                   ? "bg-gray-700 border-gray-600 text-white"
                   : "bg-white border-gray-300 text-gray-900"
-                }`}
+              }`}
               rows={3}
             />
           </div>
 
           <div>
             <label
-              className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-                }`}
+              className={`block text-sm font-medium mb-1 ${
+                isDarkMode ? "text-white" : "text-gray-700"
+              }`}
             >
               Path Segments
             </label>
@@ -474,21 +485,23 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                     }
                     onChange={(e) => handleSegmentChange(index, e.target.value)}
                     placeholder="Segment"
-                    className={`flex-1 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                    className={`flex-1 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      isDarkMode
                         ? "bg-gray-700 border-gray-600 text-white"
                         : "bg-white border-gray-300 text-gray-900"
-                      }`}
+                    }`}
                     disabled={segment.isDynamic}
                   />
                   <button
                     type="button"
                     onClick={() => handleEditSegment(segment, index)}
-                    className={`px-3 py-1 rounded-md ${segment.isDynamic
+                    className={`px-3 py-1 rounded-md ${
+                      segment.isDynamic
                         ? "bg-purple-600 text-white hover:bg-purple-700"
                         : isDarkMode
-                          ? "bg-gray-700 text-white hover:bg-gray-600"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
+                        ? "bg-gray-700 text-white hover:bg-gray-600"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                   >
                     Edit
                   </button>
@@ -505,34 +518,39 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
             <button
               type="button"
               onClick={handleSegmentAdd}
-              className={`mt-2 px-3 py-2 rounded-md ${isDarkMode
+              className={`mt-2 px-3 py-2 rounded-md ${
+                isDarkMode
                   ? "bg-gray-700 text-white hover:bg-gray-600"
                   : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
+              }`}
             >
               Add Segment
             </button>
           </div>
 
           <div
-            className={`p-4 ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
-              } rounded-md`}
+            className={`p-4 ${
+              isDarkMode ? "bg-gray-700" : "bg-gray-50"
+            } rounded-md`}
           >
             <h3
-              className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
-                }`}
+              className={`text-sm font-medium ${
+                isDarkMode ? "text-white" : "text-gray-700"
+              }`}
             >
               URL Preview
             </h3>
             <div
-              className={`mt-2 p-2 ${isDarkMode
+              className={`mt-2 p-2 ${
+                isDarkMode
                   ? "bg-gray-800 border-gray-600"
                   : "bg-white border-gray-200"
-                } rounded border`}
+              } rounded border`}
             >
               <code
-                className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-900"
-                  }`}
+                className={`text-sm ${
+                  isDarkMode ? "text-gray-300" : "text-gray-900"
+                }`}
               >
                 {builtUrl}
               </code>
@@ -540,8 +558,9 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
             {segments.some((s) => s.isDynamic) && (
               <div className="mt-4">
                 <h4
-                  className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
-                    }`}
+                  className={`text-sm font-medium ${
+                    isDarkMode ? "text-white" : "text-gray-700"
+                  }`}
                 >
                   Variable Values
                 </h4>
@@ -558,8 +577,9 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                           className="flex items-center space-x-2 text-sm"
                         >
                           <span
-                            className={`font-mono ${isDarkMode ? "text-gray-300" : "text-gray-900"
-                              }`}
+                            className={`font-mono ${
+                              isDarkMode ? "text-gray-300" : "text-gray-900"
+                            }`}
                           >
                             {segment.paramName}:
                           </span>
@@ -581,10 +601,11 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
           <div className="flex justify-end">
             <button
               type="submit"
-              className={`px-4 py-2 rounded-md ${isDarkMode
+              className={`px-4 py-2 rounded-md ${
+                isDarkMode
                   ? "bg-gray-700 text-white hover:bg-gray-600"
                   : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
+              }`}
             >
               Continue to Request Configuration
             </button>
@@ -613,12 +634,14 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                     isDynamic: e.target.checked,
                   })
                 }
-                className={`h-4 w-4 text-blue-600 focus:ring-blue-500 rounded ${isDarkMode ? "border-gray-600" : "border-gray-300"
-                  }`}
+                className={`h-4 w-4 text-blue-600 focus:ring-blue-500 rounded ${
+                  isDarkMode ? "border-gray-600" : "border-gray-300"
+                }`}
               />
               <label
-                className={`ml-2 block text-sm ${isDarkMode ? "text-gray-300" : "text-gray-700"
-                  }`}
+                className={`ml-2 block text-sm ${
+                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                }`}
               >
                 Dynamic Segment
               </label>
@@ -626,8 +649,9 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
             {editingSegment.isDynamic ? (
               <div>
                 <label
-                  className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"
-                    }`}
+                  className={`block text-sm font-medium ${
+                    isDarkMode ? "text-gray-300" : "text-gray-700"
+                  }`}
                 >
                   Parameter Name
                 </label>
@@ -640,17 +664,19 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                       paramName: e.target.value,
                     })
                   }
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                    isDarkMode
                       ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
                       : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                    }`}
+                  }`}
                 />
               </div>
             ) : (
               <div>
                 <label
-                  className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"
-                    }`}
+                  className={`block text-sm font-medium ${
+                    isDarkMode ? "text-gray-300" : "text-gray-700"
+                  }`}
                 >
                   Value
                 </label>
@@ -663,17 +689,19 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                       value: e.target.value,
                     })
                   }
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
+                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                    isDarkMode
                       ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
                       : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                    }`}
+                  }`}
                 />
               </div>
             )}
             <div>
               <label
-                className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"
-                  }`}
+                className={`block text-sm font-medium ${
+                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                }`}
               >
                 Description
               </label>
@@ -686,10 +714,11 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                   })
                 }
                 rows={3}
-                className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
+                className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
+                  isDarkMode
                     ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
                     : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                  }`}
+                }`}
               />
             </div>
           </div>

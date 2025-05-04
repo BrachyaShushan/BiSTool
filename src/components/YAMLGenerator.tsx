@@ -40,7 +40,9 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedQueries, setSelectedQueries] = useState<Record<string, boolean>>(() => {
+  const [selectedQueries, setSelectedQueries] = useState<
+    Record<string, boolean>
+  >(() => {
     if (requestConfig?.queryParams) {
       const initialQueries: Record<string, boolean> = {};
       requestConfig.queryParams.forEach((param) => {
@@ -62,6 +64,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
   // Initialize selectedQueries when requestConfig changes
   useEffect(() => {
+    console.log(requestConfig);
     if (requestConfig?.queryParams) {
       const initialQueries: Record<string, boolean> = {};
       requestConfig.queryParams.forEach((param) => {
@@ -173,7 +176,6 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
       ],
     });
   };
-
 
   const handleMouseDown = (e: React.MouseEvent): void => {
     e.preventDefault();
@@ -325,6 +327,33 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
     // Use active session name or fallback to endpoint name
     const title = activeSession?.name || "API Endpoint";
+    const description = activeSession?.urlData.sessionDescription || "";
+    let token: string[] = [];
+    if (globalVariables?.tokenName) {
+      token = [
+        `  - name: ${globalVariables.tokenName}
+    in: header
+    type: string
+    required: true
+    description: ${globalVariables.tokenDescription || ""}
+    example: ${globalVariables[globalVariables.tokenName]
+      .split(".")
+      .map(() => "xxx")
+      .join(".")}`,
+      ];
+    }
+    // Generate path parameters from dynamic segments
+    const pathParameters = urlData?.parsedSegments
+      ?.filter((segment) => segment.isDynamic)
+      .map((segment) => {
+        return `  - name: ${segment.paramName}
+    in: path
+    type: string
+    example: ${activeSession?.sharedVariables[segment.paramName]}
+    required: true${
+      segment.description ? `\n    description: ${segment.description}` : ""
+    }`;
+      });
 
     // Generate header parameters
     const headerParameters = headers?.map((header) => {
@@ -358,6 +387,8 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
     // Combine all parameters
     const allParameters = [
+      ...(token || []),
+      ...(pathParameters || []),
       ...(headerParameters || []),
       ...(queryParameters || []),
       ...(formParameters || []),
@@ -401,6 +432,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 ---
 tags:
   - ${title}
+description: ${description}
 parameters:
 ${allParameters}
 responses:
@@ -600,11 +632,14 @@ ${schema}`;
 
   const calculateEditorHeight = useCallback(() => {
     if (!yamlOutput) return 400;
-    const lineCount = yamlOutput.split('\n').length;
+    const lineCount = yamlOutput.split("\n").length;
     const lineHeight = 20; // Approximate line height in pixels
     const padding = 40; // Additional padding for editor UI
     const minHeight = 400;
-    const calculatedHeight = Math.max(minHeight, lineCount * lineHeight + padding);
+    const calculatedHeight = Math.max(
+      minHeight,
+      lineCount * lineHeight + padding
+    );
     return calculatedHeight;
   }, [yamlOutput]);
 
@@ -627,21 +662,22 @@ ${schema}`;
     return <div>No request configuration available</div>;
   }
 
-
   return (
     <div
-      className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
-        } rounded-lg shadow`}
+      className={`p-4 ${
+        isDarkMode ? "bg-gray-800" : "bg-white"
+      } rounded-lg shadow`}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
           <button
             onClick={handleFetchRequest}
             disabled={isGenerating}
-            className={`px-4 py-2 rounded-md ${isDarkMode
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-blue-500 text-white hover:bg-blue-600"
-              } ${isGenerating ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`px-4 py-2 rounded-md ${
+              isDarkMode
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            } ${isGenerating ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {isGenerating ? "Generating..." : "Fetch & Generate YAML"}
           </button>
@@ -649,10 +685,11 @@ ${schema}`;
           <select
             value={openApiVersion}
             onChange={(e) => setOpenApiVersion(e.target.value)}
-            className={`px-3 py-2 border rounded-md ${isDarkMode
-              ? "bg-gray-700 border-gray-600 text-white"
-              : "bg-white border-gray-300 text-gray-900"
-              }`}
+            className={`px-3 py-2 border rounded-md ${
+              isDarkMode
+                ? "bg-gray-700 border-gray-600 text-white"
+                : "bg-white border-gray-300 text-gray-900"
+            }`}
           >
             <option value="3.0.0">OpenAPI 3.0.0</option>
             <option value="2.0.0">OpenAPI 2.0.0</option>
@@ -664,28 +701,30 @@ ${schema}`;
           <button
             onClick={handleCopyYAML}
             disabled={!yamlOutput}
-            className={`px-4 py-2 rounded-md ${isDarkMode
-              ? yamlOutput
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-700 text-gray-400 cursor-not-allowed"
-              : yamlOutput
+            className={`px-4 py-2 rounded-md ${
+              isDarkMode
+                ? yamlOutput
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                : yamlOutput
                 ? "bg-blue-500 text-white hover:bg-blue-600"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
+            }`}
           >
             {copySuccess ? "Copied!" : "Copy YAML"}
           </button>
           <button
             onClick={handleDownloadYAML}
             disabled={!yamlOutput}
-            className={`px-4 py-2 rounded-md ${isDarkMode
-              ? yamlOutput
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-700 text-gray-400 cursor-not-allowed"
-              : yamlOutput
+            className={`px-4 py-2 rounded-md ${
+              isDarkMode
+                ? yamlOutput
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                : yamlOutput
                 ? "bg-blue-500 text-white hover:bg-blue-600"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
+            }`}
           >
             Download YAML
           </button>
@@ -700,15 +739,17 @@ ${schema}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
-            }`}
+          className={`block text-sm font-medium mb-2 ${
+            isDarkMode ? "text-white" : "text-gray-700"
+          }`}
         >
           Custom Response
         </label>
         <div
           ref={containerRef}
-          className={`border ${isDarkMode ? "border-gray-600" : "border-gray-300"
-            } rounded-lg overflow-hidden relative`}
+          className={`border ${
+            isDarkMode ? "border-gray-600" : "border-gray-300"
+          } rounded-lg overflow-hidden relative`}
           style={{ height: "200px" }}
         >
           <Editor
@@ -727,10 +768,11 @@ ${schema}`;
         </div>
         <button
           onClick={handleGenerateFromCustomResponse}
-          className={`mt-2 px-4 py-2 rounded-md ${isDarkMode
-            ? "bg-green-600 text-white hover:bg-green-700"
-            : "bg-green-500 text-white hover:bg-green-600"
-            }`}
+          className={`mt-2 px-4 py-2 rounded-md ${
+            isDarkMode
+              ? "bg-green-600 text-white hover:bg-green-700"
+              : "bg-green-500 text-white hover:bg-green-600"
+          }`}
         >
           Generate from Custom Response
         </button>
@@ -738,14 +780,16 @@ ${schema}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
-            }`}
+          className={`block text-sm font-medium mb-2 ${
+            isDarkMode ? "text-white" : "text-gray-700"
+          }`}
         >
           Query Parameters
         </label>
         <div
-          className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
-            }`}
+          className={`p-4 rounded-lg ${
+            isDarkMode ? "bg-gray-700" : "bg-gray-50"
+          }`}
         >
           {requestConfig?.queryParams?.map((param) => (
             <div key={param.key} className="flex items-center mb-2">
@@ -753,8 +797,9 @@ ${schema}`;
                 type="checkbox"
                 checked={selectedQueries[param.key]}
                 onChange={() => handleQueryToggle(param.key)}
-                className={`mr-2 ${isDarkMode ? "text-blue-500" : "text-blue-600"
-                  }`}
+                className={`mr-2 ${
+                  isDarkMode ? "text-blue-500" : "text-blue-600"
+                }`}
               />
               <span
                 className={`${isDarkMode ? "text-white" : "text-gray-700"}`}
@@ -768,14 +813,16 @@ ${schema}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
-            }`}
+          className={`block text-sm font-medium mb-2 ${
+            isDarkMode ? "text-white" : "text-gray-700"
+          }`}
         >
           Request URL
         </label>
         <div
-          className={`p-3 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
-            }`}
+          className={`p-3 rounded-lg ${
+            isDarkMode ? "bg-gray-700" : "bg-gray-50"
+          }`}
         >
           <div className="flex items-center space-x-2">
             <code
@@ -790,26 +837,31 @@ ${schema}`;
       <div className="mt-4">
         <div className="flex items-center justify-between mb-2">
           <label
-            className={`block text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
-              }`}
+            className={`block text-sm font-medium ${
+              isDarkMode ? "text-white" : "text-gray-700"
+            }`}
           >
             Generated YAML
           </label>
           <button
             onClick={handleYamlExpand}
-            className={`px-2 py-1 text-sm rounded-md ${isDarkMode
-              ? "bg-gray-700 text-white hover:bg-gray-600"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
+            className={`px-2 py-1 text-sm rounded-md ${
+              isDarkMode
+                ? "bg-gray-700 text-white hover:bg-gray-600"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
           >
             {isYamlExpanded ? "Expand" : "Collapse"}
           </button>
         </div>
         <div
           ref={yamlContainerRef}
-          className={`border ${isDarkMode ? "border-gray-600" : "border-gray-300"
-            } rounded-lg overflow-hidden relative`}
-          style={{ height: isYamlExpanded ? "calc(100vh - 200px)" : editorHeight }}
+          className={`border ${
+            isDarkMode ? "border-gray-600" : "border-gray-300"
+          } rounded-lg overflow-hidden relative`}
+          style={{
+            height: isYamlExpanded ? "calc(100vh - 200px)" : editorHeight,
+          }}
         >
           <Editor
             height="100%"
@@ -821,7 +873,7 @@ ${schema}`;
               ...editorOptions,
               readOnly: true,
               scrollBeyondLastLine: false,
-              minimap: { enabled: false }
+              minimap: { enabled: false },
             }}
           />
           <div
