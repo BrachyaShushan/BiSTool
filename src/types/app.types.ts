@@ -77,6 +77,10 @@ export interface Session {
   urlData?: URLData;
   requestConfig?: RequestConfigData;
   yamlOutput?: string;
+  include204?: boolean;
+  include400?: boolean;
+  response204Condition?: string;
+  response400Condition?: string;
 }
 
 export interface AppContextType {

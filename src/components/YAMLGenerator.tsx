@@ -8,14 +8,14 @@ import {
   ResponseData,
 } from "../types/yamlGenerator.types";
 import { RequestConfigData } from "../types/app.types";
+import { ExtendedSession } from "../types/SavedManager";
 
 // Extract variables from URL in {variable} format, excluding the base URL
 const extractVariables = (url: string): string[] => {
   if (!url) return [];
-  // Remove the base URL part before looking for variables
-  const pathPart = url.split("/api/")[1] || "";
+  url = url.split("//")[1]
   // Handle both {variable} and %7Bvariable%7D formats
-  const matches = pathPart.match(/(?:{([^}]+)}|%7B([^%]+)%7D)/g) || [];
+  const matches = url.match(/(?:{([^}]+)}|%7B([^%]+)%7D)/g) || [];
   return matches.map((match) => {
     if (match.startsWith("{")) {
       return match.slice(1, -1);
@@ -33,6 +33,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     globalVariables,
     segmentVariables,
     activeSession,
+    handleSaveSession,
   } = useAppContext();
 
   const { isDarkMode } = useTheme();
@@ -56,10 +57,18 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   const [customResponse, setCustomResponse] = useState<string>("");
   const [isYamlExpanded, setIsYamlExpanded] = useState<boolean>(false);
   const [editorHeight, setEditorHeight] = useState<number>(400);
-  const [include204, setInclude204] = useState<boolean>(false);
-  const [include400, setInclude400] = useState<boolean>(false);
-  const [response204Condition, setResponse204Condition] = useState<string>("");
-  const [response400Condition, setResponse400Condition] = useState<string>("");
+  const [include204, setInclude204] = useState<boolean>(() => {
+    return activeSession?.include204 ?? false;
+  });
+  const [include400, setInclude400] = useState<boolean>(() => {
+    return activeSession?.include400 ?? false;
+  });
+  const [response204Condition, setResponse204Condition] = useState<string>(() => {
+    return activeSession?.response204Condition ?? "";
+  });
+  const [response400Condition, setResponse400Condition] = useState<string>(() => {
+    return activeSession?.response400Condition ?? "";
+  });
 
   const editorRef = useRef<any>(null);
   const yamlEditorRef = useRef<any>(null);
@@ -68,7 +77,6 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
   // Initialize selectedQueries when requestConfig changes
   useEffect(() => {
-    console.log(requestConfig);
     if (requestConfig?.queryParams) {
       const initialQueries: Record<string, boolean> = {};
       requestConfig.queryParams.forEach((param) => {
@@ -255,22 +263,29 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     setError(null);
     try {
       // Build URL with selected query parameters
+      // Add selected query parameters
       const selectedParams =
         requestConfig?.queryParams?.filter(
           (param) => selectedQueries[param.key]
         ) || [];
-
       const queryString = selectedParams
-        .map(
-          (param) =>
-            `${param.key}=${param.value}`
-        )
+        .map((param) => {
+          const resolvedValue = getValueFromVariables(param.value);
+          return `${param.key}=${resolvedValue}`;
+        })
         .join("&");
-
-      const url = queryString
-        ? `${urlData.builtUrl}?${queryString}`
-        : urlData.builtUrl;
-
+      let url = urlData.builtUrl;
+      const variables = extractVariables(url);
+      variables.forEach((variable) => {
+        const value = getValueFromVariables(variable);
+        if (value) {
+          url = url.replace(`{${variable}}`, value as string);
+          url = url.replace(`%7B${variable}%7D`, value as string);
+        }
+      });
+      url = queryString
+        ? `${url}?${queryString}`
+        : url;
       // Make the API request
       const response = await fetch(url, {
         method: requestConfig?.method || "GET",
@@ -339,9 +354,9 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     required: true
     description: ${globalVariables.tokenDescription || ""}
     example: ${globalVariables[globalVariables.tokenName]
-      .split(".")
-      .map(() => "xxx")
-      .join(".")}`,
+          .split(".")
+          .map(() => "xxx")
+          .join(".")}`,
       ];
     }
     // Generate path parameters from dynamic segments
@@ -352,9 +367,8 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     in: path
     type: string
     example: ${activeSession?.sharedVariables[segment.paramName]}
-    required: true${
-      segment.description ? `\n    description: ${segment.description}` : ""
-    }`;
+    required: true${segment.description ? `\n    description: ${segment.description}` : ""
+          }`;
       });
 
     // Generate header parameters
@@ -680,26 +694,64 @@ ${generateResponses()}`;
     }, 0);
   };
 
+  // Save response conditions to session when they change
+  useEffect(() => {
+    if (activeSession) {
+      const updatedSession: ExtendedSession = {
+        ...activeSession,
+        include204,
+        include400,
+        response204Condition,
+        response400Condition,
+      };
+      // Only save if the values have actually changed
+      if (
+        activeSession.include204 !== include204 ||
+        activeSession.include400 !== include400 ||
+        activeSession.response204Condition !== response204Condition ||
+        activeSession.response400Condition !== response400Condition
+      ) {
+        handleSaveSession(activeSession.name, updatedSession);
+      }
+    }
+  }, [include204, include400, response204Condition, response400Condition, activeSession?.id]);
+
+  // Load response conditions when session changes
+  useEffect(() => {
+    if (activeSession) {
+      if (activeSession.include204 !== include204) {
+        setInclude204(activeSession.include204 ?? false);
+      }
+      if (activeSession.include400 !== include400) {
+        setInclude400(activeSession.include400 ?? false);
+      }
+      if (activeSession.response204Condition !== response204Condition) {
+        setResponse204Condition(activeSession.response204Condition ?? "");
+      }
+      if (activeSession.response400Condition !== response400Condition) {
+        setResponse400Condition(activeSession.response400Condition ?? "");
+      }
+    }
+  }, [activeSession?.id]);
+
   if (!requestConfig) {
     return <div>No request configuration available</div>;
   }
 
   return (
     <div
-      className={`p-4 ${
-        isDarkMode ? "bg-gray-800" : "bg-white"
-      } rounded-lg shadow`}
+      className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
+        } rounded-lg shadow`}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
           <button
             onClick={handleFetchRequest}
             disabled={isGenerating}
-            className={`px-4 py-2 rounded-md ${
-              isDarkMode
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-blue-500 text-white hover:bg-blue-600"
-            } ${isGenerating ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`px-4 py-2 rounded-md ${isDarkMode
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+              } ${isGenerating ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {isGenerating ? "Generating..." : "Fetch & Generate YAML"}
           </button>
@@ -707,11 +759,10 @@ ${generateResponses()}`;
           <select
             value={openApiVersion}
             onChange={(e) => setOpenApiVersion(e.target.value)}
-            className={`px-3 py-2 border rounded-md ${
-              isDarkMode
-                ? "bg-gray-700 border-gray-600 text-white"
-                : "bg-white border-gray-300 text-gray-900"
-            }`}
+            className={`px-3 py-2 border rounded-md ${isDarkMode
+              ? "bg-gray-700 border-gray-600 text-white"
+              : "bg-white border-gray-300 text-gray-900"
+              }`}
           >
             <option value="3.0.0">OpenAPI 3.0.0</option>
             <option value="2.0.0">OpenAPI 2.0.0</option>
@@ -723,30 +774,28 @@ ${generateResponses()}`;
           <button
             onClick={handleCopyYAML}
             disabled={!yamlOutput}
-            className={`px-4 py-2 rounded-md ${
-              isDarkMode
-                ? yamlOutput
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
-                : yamlOutput
+            className={`px-4 py-2 rounded-md ${isDarkMode
+              ? yamlOutput
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed"
+              : yamlOutput
                 ? "bg-blue-500 text-white hover:bg-blue-600"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            }`}
+              }`}
           >
             {copySuccess ? "Copied!" : "Copy YAML"}
           </button>
           <button
             onClick={handleDownloadYAML}
             disabled={!yamlOutput}
-            className={`px-4 py-2 rounded-md ${
-              isDarkMode
-                ? yamlOutput
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
-                : yamlOutput
+            className={`px-4 py-2 rounded-md ${isDarkMode
+              ? yamlOutput
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed"
+              : yamlOutput
                 ? "bg-blue-500 text-white hover:bg-blue-600"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            }`}
+              }`}
           >
             Download YAML
           </button>
@@ -761,17 +810,15 @@ ${generateResponses()}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${
-            isDarkMode ? "text-white" : "text-gray-700"
-          }`}
+          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
+            }`}
         >
           Custom Response
         </label>
         <div
           ref={containerRef}
-          className={`border ${
-            isDarkMode ? "border-gray-600" : "border-gray-300"
-          } rounded-lg overflow-hidden relative`}
+          className={`border ${isDarkMode ? "border-gray-600" : "border-gray-300"
+            } rounded-lg overflow-hidden relative`}
           style={{ height: "200px" }}
         >
           <Editor
@@ -790,11 +837,10 @@ ${generateResponses()}`;
         </div>
         <button
           onClick={handleGenerateFromCustomResponse}
-          className={`mt-2 px-4 py-2 rounded-md ${
-            isDarkMode
-              ? "bg-green-600 text-white hover:bg-green-700"
-              : "bg-green-500 text-white hover:bg-green-600"
-          }`}
+          className={`mt-2 px-4 py-2 rounded-md ${isDarkMode
+            ? "bg-green-600 text-white hover:bg-green-700"
+            : "bg-green-500 text-white hover:bg-green-600"
+            }`}
         >
           Generate from Custom Response
         </button>
@@ -802,16 +848,14 @@ ${generateResponses()}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${
-            isDarkMode ? "text-white" : "text-gray-700"
-          }`}
+          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
+            }`}
         >
           Query Parameters
         </label>
         <div
-          className={`p-4 rounded-lg ${
-            isDarkMode ? "bg-gray-700" : "bg-gray-50"
-          }`}
+          className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
+            }`}
         >
           {requestConfig?.queryParams?.map((param) => (
             <div key={param.key} className="flex items-center mb-2">
@@ -819,9 +863,8 @@ ${generateResponses()}`;
                 type="checkbox"
                 checked={selectedQueries[param.key]}
                 onChange={() => handleQueryToggle(param.key)}
-                className={`mr-2 ${
-                  isDarkMode ? "text-blue-500" : "text-blue-600"
-                }`}
+                className={`mr-2 ${isDarkMode ? "text-blue-500" : "text-blue-600"
+                  }`}
               />
               <span
                 className={`${isDarkMode ? "text-white" : "text-gray-700"}`}
@@ -835,16 +878,14 @@ ${generateResponses()}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${
-            isDarkMode ? "text-white" : "text-gray-700"
-          }`}
+          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
+            }`}
         >
           Request URL
         </label>
         <div
-          className={`p-3 rounded-lg ${
-            isDarkMode ? "bg-gray-700" : "bg-gray-50"
-          }`}
+          className={`p-3 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
+            }`}
         >
           <div className="flex items-center space-x-2">
             <code
@@ -858,16 +899,14 @@ ${generateResponses()}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${
-            isDarkMode ? "text-white" : "text-gray-700"
-          }`}
+          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
+            }`}
         >
           Response Conditions
         </label>
         <div
-          className={`p-4 rounded-lg ${
-            isDarkMode ? "bg-gray-700" : "bg-gray-50"
-          }`}
+          className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
+            }`}
         >
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
@@ -875,9 +914,8 @@ ${generateResponses()}`;
                 type="checkbox"
                 checked={include204}
                 onChange={(e) => setInclude204(e.target.checked)}
-                className={`${
-                  isDarkMode ? "text-blue-500" : "text-blue-600"
-                }`}
+                className={`${isDarkMode ? "text-blue-500" : "text-blue-600"
+                  }`}
               />
               <span className={`${isDarkMode ? "text-white" : "text-gray-700"}`}>
                 Include 204 (No Content) Response
@@ -890,11 +928,10 @@ ${generateResponses()}`;
                   value={response204Condition}
                   onChange={(e) => setResponse204Condition(e.target.value)}
                   placeholder="Condition for 204 response (e.g., 'when resource is deleted')"
-                  className={`w-full px-3 py-2 rounded-md ${
-                    isDarkMode
-                      ? "bg-gray-600 border-gray-500 text-white"
-                      : "bg-white border-gray-300"
-                  } border`}
+                  className={`w-full px-3 py-2 rounded-md ${isDarkMode
+                    ? "bg-gray-600 border-gray-500 text-white"
+                    : "bg-white border-gray-300"
+                    } border`}
                 />
               </div>
             )}
@@ -904,9 +941,8 @@ ${generateResponses()}`;
                 type="checkbox"
                 checked={include400}
                 onChange={(e) => setInclude400(e.target.checked)}
-                className={`${
-                  isDarkMode ? "text-blue-500" : "text-blue-600"
-                }`}
+                className={`${isDarkMode ? "text-blue-500" : "text-blue-600"
+                  }`}
               />
               <span className={`${isDarkMode ? "text-white" : "text-gray-700"}`}>
                 Include 400 (Bad Request) Response
@@ -919,11 +955,10 @@ ${generateResponses()}`;
                   value={response400Condition}
                   onChange={(e) => setResponse400Condition(e.target.value)}
                   placeholder="Condition for 400 response (e.g., 'when required parameters are missing')"
-                  className={`w-full px-3 py-2 rounded-md ${
-                    isDarkMode
-                      ? "bg-gray-600 border-gray-500 text-white"
-                      : "bg-white border-gray-300"
-                  } border`}
+                  className={`w-full px-3 py-2 rounded-md ${isDarkMode
+                    ? "bg-gray-600 border-gray-500 text-white"
+                    : "bg-white border-gray-300"
+                    } border`}
                 />
               </div>
             )}
@@ -934,28 +969,25 @@ ${generateResponses()}`;
       <div className="mt-4">
         <div className="flex items-center justify-between mb-2">
           <label
-            className={`block text-sm font-medium ${
-              isDarkMode ? "text-white" : "text-gray-700"
-            }`}
+            className={`block text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
+              }`}
           >
             Generated YAML
           </label>
           <button
             onClick={handleYamlExpand}
-            className={`px-2 py-1 text-sm rounded-md ${
-              isDarkMode
-                ? "bg-gray-700 text-white hover:bg-gray-600"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
+            className={`px-2 py-1 text-sm rounded-md ${isDarkMode
+              ? "bg-gray-700 text-white hover:bg-gray-600"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
           >
             {isYamlExpanded ? "Expand" : "Collapse"}
           </button>
         </div>
         <div
           ref={yamlContainerRef}
-          className={`border ${
-            isDarkMode ? "border-gray-600" : "border-gray-300"
-          } rounded-lg overflow-hidden relative`}
+          className={`border ${isDarkMode ? "border-gray-600" : "border-gray-300"
+            } rounded-lg overflow-hidden relative`}
           style={{
             height: isYamlExpanded ? "calc(100vh - 200px)" : editorHeight,
           }}
