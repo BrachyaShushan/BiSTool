@@ -56,6 +56,10 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   const [customResponse, setCustomResponse] = useState<string>("");
   const [isYamlExpanded, setIsYamlExpanded] = useState<boolean>(false);
   const [editorHeight, setEditorHeight] = useState<number>(400);
+  const [include204, setInclude204] = useState<boolean>(false);
+  const [include400, setInclude400] = useState<boolean>(false);
+  const [response204Condition, setResponse204Condition] = useState<string>("");
+  const [response400Condition, setResponse400Condition] = useState<string>("");
 
   const editorRef = useRef<any>(null);
   const yamlEditorRef = useRef<any>(null);
@@ -259,9 +263,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
       const queryString = selectedParams
         .map(
           (param) =>
-            `${encodeURIComponent(param.key)}=${encodeURIComponent(
-              param.value
-            )}`
+            `${param.key}=${param.value}`
         )
         .join("&");
 
@@ -426,6 +428,39 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     const schema = generateSchema(responseData, "      ");
     let yaml = "";
 
+    // Generate responses section
+    const generateResponses = (): string => {
+      let responses = `  200:
+    description: Successful response
+    schema:
+${schema}`;
+
+      if (include204) {
+        responses += `
+  204:
+    description: No content
+    ${response204Condition ? `condition: ${response204Condition}` : ''}`;
+      }
+
+      if (include400) {
+        responses += `
+  400:
+    description: Bad request
+    ${response400Condition ? `condition: ${response400Condition}` : ''}
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Invalid request parameters"
+        message:
+          type: string
+          example: "The request could not be processed due to invalid parameters"`;
+      }
+
+      return responses;
+    };
+
     if (openApiVersion === "1.0.0") {
       // Generate OpenAPI 1.0 YAML with generic template structure
       yaml = `${method} ${title}
@@ -436,10 +471,7 @@ description: ${description}
 parameters:
 ${allParameters}
 responses:
-  200:
-    description: Successful response
-    schema:
-${schema}`;
+${generateResponses()}`;
     } else if (openApiVersion === "2.0.0") {
       // Generate OpenAPI 2.0 YAML
       yaml = `swagger: '2.0'
@@ -456,10 +488,7 @@ paths:
       parameters:
 ${allParameters}
       responses:
-        200:
-          description: Successful response
-          schema:
-${schema}`;
+${generateResponses()}`;
     } else {
       // Generate OpenAPI 3.0 YAML
       yaml = `openapi: 3.0.0
@@ -474,12 +503,7 @@ paths:
       parameters:
 ${allParameters}
       responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-${schema}`;
+${generateResponses()}`;
     }
 
     return yaml;
@@ -551,9 +575,7 @@ ${schema}`;
     const queryString = selectedParams
       .map((param) => {
         const resolvedValue = getValueFromVariables(param.value);
-        return `${encodeURIComponent(param.key)}=${encodeURIComponent(
-          resolvedValue as string
-        )}`;
+        return `${param.key}=${resolvedValue}`;
       })
       .join("&");
 
@@ -830,6 +852,81 @@ ${schema}`;
             >
               {getColoredUrl()}
             </code>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <label
+          className={`block text-sm font-medium mb-2 ${
+            isDarkMode ? "text-white" : "text-gray-700"
+          }`}
+        >
+          Response Conditions
+        </label>
+        <div
+          className={`p-4 rounded-lg ${
+            isDarkMode ? "bg-gray-700" : "bg-gray-50"
+          }`}
+        >
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <input
+                type="checkbox"
+                checked={include204}
+                onChange={(e) => setInclude204(e.target.checked)}
+                className={`${
+                  isDarkMode ? "text-blue-500" : "text-blue-600"
+                }`}
+              />
+              <span className={`${isDarkMode ? "text-white" : "text-gray-700"}`}>
+                Include 204 (No Content) Response
+              </span>
+            </div>
+            {include204 && (
+              <div className="ml-6">
+                <input
+                  type="text"
+                  value={response204Condition}
+                  onChange={(e) => setResponse204Condition(e.target.value)}
+                  placeholder="Condition for 204 response (e.g., 'when resource is deleted')"
+                  className={`w-full px-3 py-2 rounded-md ${
+                    isDarkMode
+                      ? "bg-gray-600 border-gray-500 text-white"
+                      : "bg-white border-gray-300"
+                  } border`}
+                />
+              </div>
+            )}
+
+            <div className="flex items-center space-x-4">
+              <input
+                type="checkbox"
+                checked={include400}
+                onChange={(e) => setInclude400(e.target.checked)}
+                className={`${
+                  isDarkMode ? "text-blue-500" : "text-blue-600"
+                }`}
+              />
+              <span className={`${isDarkMode ? "text-white" : "text-gray-700"}`}>
+                Include 400 (Bad Request) Response
+              </span>
+            </div>
+            {include400 && (
+              <div className="ml-6">
+                <input
+                  type="text"
+                  value={response400Condition}
+                  onChange={(e) => setResponse400Condition(e.target.value)}
+                  placeholder="Condition for 400 response (e.g., 'when required parameters are missing')"
+                  className={`w-full px-3 py-2 rounded-md ${
+                    isDarkMode
+                      ? "bg-gray-600 border-gray-500 text-white"
+                      : "bg-white border-gray-300"
+                  } border`}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

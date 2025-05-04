@@ -73,10 +73,10 @@ const TokenGenerator: React.FC = () => {
             )}&password=${globalVariables.password}`;
 
             const response = await fetch(requestUrl, {
-                method: "POST",
+                method: tokenConfig.method,
                 headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/x-www-form-urlencoded",
+                    'Accept': '*/*',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: requestBody,
                 credentials: "same-origin",

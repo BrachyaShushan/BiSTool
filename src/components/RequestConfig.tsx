@@ -134,16 +134,21 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
     // Only update if the config has actually changed
     if (JSON.stringify(config) !== JSON.stringify(savedConfig)) {
-      setRequestConfig(config);
+      // Debounce the context update
+      const timeoutId = setTimeout(() => {
+        setRequestConfig(config);
 
-      // Save to active session if exists
-      if (activeSession) {
-        const updatedSession = {
-          ...activeSession,
-          requestConfig: config,
-        };
-        handleSaveSession(activeSession.name, updatedSession);
-      }
+        // Save to active session if exists
+        if (activeSession) {
+          const updatedSession = {
+            ...activeSession,
+            requestConfig: config,
+          };
+          handleSaveSession(activeSession.name, updatedSession);
+        }
+      }, 500); // 500ms debounce
+
+      return () => clearTimeout(timeoutId);
     }
   }, [
     method,
@@ -370,7 +375,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             <div className="space-y-2">
               {formData.map((field, index) => (
                 <div
-                  key={`${field.key}-${index}`}
+                  key={`form-field-${index}`}
                   className="flex items-center p-2 space-x-2 rounded-md bg-gray-50 dark:bg-gray-700"
                 >
                   <input
@@ -538,7 +543,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 <div className="space-y-2">
                   {queryParams.map((param, index) => (
                     <div
-                      key={`${param.key}-${index}`}
+                      key={`query-param-${index}`}
                       className={`flex items-center space-x-2 p-2 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
                         }`}
                     >
@@ -641,7 +646,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 <div className="space-y-2">
                   {headers.map((header, index) => (
                     <div
-                      key={`${header.key}-${index}`}
+                      key={`header-${index}`}
                       className={`flex items-center space-x-2 p-2 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
                         }`}
                     >
