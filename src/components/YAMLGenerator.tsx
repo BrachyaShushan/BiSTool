@@ -7,7 +7,7 @@ import {
   EditorOptions,
   ResponseData,
 } from "../types/yamlGenerator.types";
-import { RequestConfigData } from "../types/app.types";
+import { Header, RequestConfigData } from "../types/app.types";
 import { ExtendedSession } from "../types/SavedManager";
 
 // Extract variables from URL in {variable} format, excluding the base URL
@@ -47,7 +47,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     if (requestConfig?.queryParams) {
       const initialQueries: Record<string, boolean> = {};
       requestConfig.queryParams.forEach((param) => {
-        initialQueries[param.key] = false;
+        initialQueries[param.key] = param.required ?? false;
       });
       return initialQueries;
     }
@@ -263,17 +263,18 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     setError(null);
     try {
       // Build URL with selected query parameters
-      // Add selected query parameters
       const selectedParams =
         requestConfig?.queryParams?.filter(
           (param) => selectedQueries[param.key]
         ) || [];
+
       const queryString = selectedParams
         .map((param) => {
           const resolvedValue = getValueFromVariables(param.value);
           return `${param.key}=${resolvedValue}`;
         })
         .join("&");
+
       let url = urlData.builtUrl;
       const variables = extractVariables(url);
       variables.forEach((variable) => {
@@ -286,14 +287,28 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
       url = queryString
         ? `${url}?${queryString}`
         : url;
+      const tokenName = getValueFromVariables("tokenName") as string;
+      let tokenHeader: Header | null = null;
+      if (tokenName != null) {
+        tokenHeader = {
+          key: tokenName,
+          type: "string",
+          in: "header",
+          required: true,
+          description: tokenName,
+          value: getValueFromVariables(tokenName) as string,
+        }
+      }
+      const combinedHeaders = [tokenHeader, ...(requestConfig?.headers ?? [])]
+      const headers = combinedHeaders.reduce((acc, header) => {
+        acc[header?.key ?? ""] = getValueFromVariables(header?.value) as string;
+        return acc;
+      }, {} as Record<string, string>) || {}
+
       // Make the API request
       const response = await fetch(url, {
         method: requestConfig?.method || "GET",
-        headers:
-          requestConfig?.headers?.reduce((acc, header) => {
-            acc[header.key] = header.value;
-            return acc;
-          }, {} as Record<string, string>) || {},
+        headers: headers,
         body:
           requestConfig?.bodyType === "json"
             ? requestConfig.jsonBody
@@ -306,7 +321,8 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
       const data = await response.json();
       const yaml = generateYAML(data, requestConfig);
-      setYamlOutput(yaml);
+      setLocalYamlOutput(yaml); // Set local state
+      setYamlOutput(yaml); // Set global state
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -344,21 +360,21 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
     // Use active session name or fallback to endpoint name
     const title = activeSession?.name || "API Endpoint";
-    const description = activeSession?.urlData.sessionDescription || "";
-    let token: string[] = [];
-    if (globalVariables?.tokenName) {
-      token = [
-        `  - name: ${globalVariables.tokenName}
-    in: header
-    type: string
-    required: true
-    description: ${globalVariables.tokenDescription || ""}
-    example: ${globalVariables[globalVariables.tokenName]
-          .split(".")
-          .map(() => "xxx")
-          .join(".")}`,
-      ];
-    }
+    const description = activeSession?.urlData.sessionDescription?.split("\n").map(line => line.trim()).join(". ") || "";
+    // let token: string[] = [];
+    // if (globalVariables?.tokenName) {
+    //   token = [
+    //     `  - name: ${globalVariables.tokenName}
+    // in: header
+    // type: string
+    // required: true
+    // description: ${globalVariables.tokenDescription || ""}
+    // example: ${globalVariables[globalVariables.tokenName]
+    //       .split(".")
+    //       .map(() => "xxx")
+    //       .join(".")}`,
+    //   ];
+    // }
     // Generate path parameters from dynamic segments
     const pathParameters = urlData?.parsedSegments
       ?.filter((segment) => segment.isDynamic)
@@ -403,7 +419,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
     // Combine all parameters
     const allParameters = [
-      ...(token || []),
+      // ...(token || []),
       ...(pathParameters || []),
       ...(headerParameters || []),
       ...(queryParameters || []),
@@ -430,8 +446,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
         if (data.length === 0) {
           return `${indent}type: array\n${indent}items:\n${indent}    type: string`;
         }
-        const itemSchema = generateSchema(data[0], `${indent}    `);
-        return `${indent}type: array\n${indent}items:\n${itemSchema}`;
+        return `${indent}type: array\n${indent}items:\n${generateSchema(data[0], `${indent}  `)}`;
       } else {
         const example = type === "string" ? `"${data}"` : data;
         return `${indent}type: ${type}\n${indent}example: ${example}`;
@@ -464,9 +479,6 @@ ${schema}`;
     schema:
       type: object
       properties:
-        error:
-          type: string
-          example: "Invalid request parameters"
         message:
           type: string
           example: "The request could not be processed due to invalid parameters"`;
@@ -482,6 +494,9 @@ ${schema}`;
 tags:
   - ${title}
 description: ${description}
+url: ${url}
+security:
+  - ApiKeyAuth: []
 parameters:
 ${allParameters}
 responses:
@@ -862,6 +877,7 @@ ${generateResponses()}`;
               <input
                 type="checkbox"
                 checked={selectedQueries[param.key]}
+                disabled={param.required}
                 onChange={() => handleQueryToggle(param.key)}
                 className={`mr-2 ${isDarkMode ? "text-blue-500" : "text-blue-600"
                   }`}
