@@ -474,6 +474,43 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     const schema = generateSchema(responseData, "      ");
     let yaml = "";
 
+    // Generate request body schema if method is not GET
+    const generateRequestBody = (): string => {
+      if (method === "GET") return "";
+
+      let bodySchema = "";
+      if (config.bodyType === "json" && config.jsonBody) {
+        try {
+          const jsonBody = JSON.parse(config.jsonBody);
+          bodySchema = `  - in: body
+    name: body
+    required: true
+${generateSchema(jsonBody, "    ")}`;
+        } catch (e) {
+          console.error("Error parsing JSON body:", e);
+        }
+      } else if (config.bodyType === "form" && config.formData) {
+        bodySchema = `  - in: body
+    name: body
+    required: true
+    type: object
+    properties:
+${config.formData.map(field => `      ${field.key}:
+        type: ${field.type}
+        required: ${field.required}
+        description: ${field.description || ""}
+        example: ${field.value}`).join("\n")}`;
+      } else if (config.bodyType === "text") {
+        bodySchema = `  - in: body
+    name: body
+    required: true
+    type: string
+    example: "${config.jsonBody}"`;
+      }
+
+      return bodySchema;
+    };
+
     // Generate responses section
     const generateResponses = (): string => {
       let responses = `  200:
@@ -516,6 +553,7 @@ security:
   - ApiKeyAuth: []
 parameters:
 ${allParameters}
+${generateRequestBody()}
 responses:
 ${generateResponses()}`;
     } else if (openApiVersion === "2.0.0") {
@@ -533,6 +571,7 @@ paths:
         - application/json
       parameters:
 ${allParameters}
+${generateRequestBody()}
       responses:
 ${generateResponses()}`;
     } else {
@@ -548,6 +587,7 @@ paths:
         - ${title}
       parameters:
 ${allParameters}
+${generateRequestBody()}
       responses:
 ${generateResponses()}`;
     }
