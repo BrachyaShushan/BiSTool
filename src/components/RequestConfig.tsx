@@ -16,6 +16,7 @@ import {
   RequestConfigData,
 } from "../types/app.types";
 import { editor } from "monaco-editor";
+import { FiPlus, FiTrash2 } from "react-icons/fi";
 
 const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   const {
@@ -57,7 +58,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     return "GET";
   });
 
-  const [bodyType, setBodyType] = useState<"none" | "json" | "form">(() => {
+  const [bodyType, setBodyType] = useState<"none" | "json" | "form" | "text">(() => {
     if (activeSession?.requestConfig?.bodyType)
       return activeSession.requestConfig.bodyType;
     if (savedConfig?.bodyType) return savedConfig.bodyType;
@@ -78,6 +79,8 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     return [{ key: "", value: "", type: "text", required: false }];
   });
 
+  const [textBody, setTextBody] = useState<string>("");
+
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
   const decodeString = useCallback((encodedString: string): string | null => {
@@ -92,16 +95,22 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   const checkTokenExpiration = useCallback((): boolean => {
     if (!globalVariables) return false;
 
-    const tokenName = globalVariables.tokenName;
-    const token = globalVariables[tokenName];
+    const tokenName = globalVariables['tokenName'];
+    if (!tokenName) return false;
 
-    if (!token || token.trim() === "") {
+    const tokenValue = globalVariables[tokenName as keyof typeof globalVariables];
+    if (typeof tokenValue !== 'string' || !tokenValue) return false;
+
+    const token = tokenValue as string;
+    if (token.trim() === "") {
       setTokenExpiration(null);
       return false;
     }
 
     try {
-      const payload = JSON.parse(decodeString(token.split(".")[1]) || "{}");
+      const tokenPart = token.split(".")[1];
+      if (!tokenPart) return false;
+      const payload = JSON.parse(decodeString(tokenPart) || "{}");
       const now = Math.floor(Date.now() / 1000);
       const exp = payload.exp;
       const duration = (exp - now) / 60; // duration in minutes
@@ -128,8 +137,9 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
       queryParams,
       headers,
       bodyType,
-      jsonBody: bodyType === "json" ? jsonBody : undefined,
-      formData: bodyType === "form" ? formData : undefined,
+      ...(bodyType === "json" && { jsonBody }),
+      ...(bodyType === "form" && { formData }),
+      ...(bodyType === "text" && { textBody }),
     };
 
     // Only update if the config has actually changed
@@ -150,13 +160,15 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [
-    method,
+
+    return undefined;
+  }, [method,
     queryParams,
     headers,
     bodyType,
     jsonBody,
     formData,
+    textBody,
     savedConfig,
     activeSession,
     setRequestConfig,
@@ -178,6 +190,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           bodyType,
           jsonBody: bodyType === "json" ? jsonBody : undefined,
           formData: bodyType === "form" ? formData : undefined,
+          textBody: bodyType === "text" ? textBody : undefined,
         })
       ) {
         setMethod(sessionConfig.method || "GET");
@@ -190,11 +203,13 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             { key: "", value: "", type: "text", required: false },
           ]
         );
+        setTextBody(sessionConfig.textBody || "");
 
         // Update active tab based on body type
         if (
           sessionConfig.bodyType === "json" ||
-          sessionConfig.bodyType === "form"
+          sessionConfig.bodyType === "form" ||
+          sessionConfig.bodyType === "text"
         ) {
           setActiveTab("body");
         } else {
@@ -221,19 +236,16 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     value: string | boolean
   ): void => {
     const updatedParams = [...queryParams];
-    updatedParams[index] = {
-      ...updatedParams[index],
-      [field]: value,
-      description:
-        field === "description"
-          ? (value as string)
-          : updatedParams[index]?.description || "",
-      required:
-        field === "required"
-          ? (value as boolean)
-          : updatedParams[index]?.required || false,
-    };
-    setQueryParams(updatedParams);
+    const currentParam = updatedParams[index];
+    if (currentParam) {
+      updatedParams[index] = {
+        key: field === "key" ? value as string : currentParam.key || "",
+        value: field === "value" ? value as string : currentParam.value || "",
+        description: field === "description" ? value as string : currentParam.description || "",
+        required: field === "required" ? value as boolean : currentParam.required || false,
+      };
+      setQueryParams(updatedParams);
+    }
   };
 
   const addHeader = (): void => {
@@ -253,19 +265,17 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     value: string | boolean
   ): void => {
     const updatedHeaders = [...headers];
-    updatedHeaders[index] = {
-      ...updatedHeaders[index],
-      [field]: value,
-      description:
-        field === "description"
-          ? (value as string)
-          : updatedHeaders[index]?.description || "",
-      required:
-        field === "required"
-          ? (value as boolean)
-          : updatedHeaders[index]?.required || false,
-    };
-    setHeaders(updatedHeaders);
+    const currentHeader = updatedHeaders[index];
+    if (currentHeader) {
+      updatedHeaders[index] = {
+        key: field === "key" ? value as string : currentHeader.key || "",
+        value: field === "value" ? value as string : currentHeader.value || "",
+        description: field === "description" ? value as string : currentHeader.description || "",
+        required: field === "required" ? value as boolean : currentHeader.required || false,
+        in: field === "in" ? value as "header" | "path" | "query" : currentHeader.in || "header",
+      };
+      setHeaders(updatedHeaders);
+    }
   };
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
@@ -309,19 +319,27 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     value: string | boolean
   ): void => {
     const updatedFormData = [...formData];
-    if (field === "required") {
-      updatedFormData[index] = {
-        ...updatedFormData[index],
-        required: value as boolean,
-      };
-    } else {
-      updatedFormData[index] = {
-        ...updatedFormData[index],
-        [field]: value,
-        required: updatedFormData[index].required || false,
-      };
+    const currentField = updatedFormData[index];
+    if (currentField) {
+      if (field === "required") {
+        updatedFormData[index] = {
+          key: currentField.key || "",
+          value: currentField.value || "",
+          type: currentField.type || "text",
+          required: value as boolean,
+          description: currentField.description || "",
+        };
+      } else {
+        updatedFormData[index] = {
+          key: field === "key" ? value as string : currentField.key || "",
+          value: field === "value" ? value as string : currentField.value || "",
+          type: field === "type" ? value as "text" | "file" : currentField.type || "text",
+          required: currentField.required || false,
+          description: field === "description" ? value as string : currentField.description || "",
+        };
+      }
+      setFormData(updatedFormData);
     }
-    setFormData(updatedFormData);
   };
 
   const getBodyContent = (): React.ReactElement => {
@@ -426,6 +444,23 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             </button>
           </div>
         );
+      case "text":
+        return (
+          <div className="mt-4">
+            <label
+              className={`block text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
+                }`}
+            >
+              Text Body
+            </label>
+            <textarea
+              value={textBody}
+              onChange={(e) => setTextBody(e.target.value)}
+              placeholder="Enter text body"
+              className={`mt-2 block w-full rounded-md border-gray-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}`}
+            />
+          </div>
+        );
       case "none":
       default:
         return (
@@ -442,8 +477,9 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
       queryParams,
       headers,
       bodyType,
-      jsonBody: bodyType === "json" ? jsonBody : undefined,
-      formData: bodyType === "form" ? formData : undefined,
+      ...(bodyType === "json" && { jsonBody }),
+      ...(bodyType === "form" && { formData }),
+      ...(bodyType === "text" && { textBody }),
     };
 
     onSubmit(config);
@@ -619,13 +655,14 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   ))}
                 </div>
                 <button
-                  onClick={addQueryParam}
-                  className={`mt-2 inline-flex items-center px-3 py-2 border text-sm leading-4 font-medium rounded-md shadow-sm ${isDarkMode
-                    ? "border-gray-600 text-gray-300 bg-gray-700 hover:bg-gray-600"
-                    : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
-                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                  onClick={() => addQueryParam()}
+                  className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                    }`}
                 >
-                  Add Query Parameter
+                  <FiPlus />
+                  <span>Add Query Parameter</span>
                 </button>
               </div>
             </div>
@@ -707,24 +744,26 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                       </div>
                       <button
                         onClick={() => removeHeader(index)}
-                        className={`p-2 ${isDarkMode
-                          ? "text-gray-400 hover:text-gray-300"
-                          : "text-gray-500 hover:text-gray-700"
+                        className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                          ? "bg-red-600 text-white hover:bg-red-700"
+                          : "bg-red-100 text-red-700 hover:bg-red-200"
                           }`}
                       >
-                        ×
+                        <FiTrash2 />
+                        <span>Remove</span>
                       </button>
                     </div>
                   ))}
                 </div>
                 <button
-                  onClick={addHeader}
-                  className={`mt-2 inline-flex items-center px-3 py-2 border text-sm leading-4 font-medium rounded-md shadow-sm ${isDarkMode
-                    ? "border-gray-600 text-gray-300 bg-gray-700 hover:bg-gray-600"
-                    : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
-                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                  onClick={() => addHeader()}
+                  className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                    }`}
                 >
-                  Add Header
+                  <FiPlus />
+                  <span>Add Header</span>
                 </button>
               </div>
             </div>
@@ -744,7 +783,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
               <select
                 value={bodyType}
                 onChange={(e) =>
-                  setBodyType(e.target.value as "none" | "json" | "form")
+                  setBodyType(e.target.value as "none" | "json" | "form" | "text")
                 }
                 className={`w-full md:w-1/3 rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500 ${isDarkMode
                   ? "bg-gray-800 border-gray-600 text-white"
@@ -754,6 +793,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 <option value="none">None</option>
                 <option value="json">JSON</option>
                 <option value="form">Form Data</option>
+                <option value="text">Text</option>
               </select>
             </div>
 

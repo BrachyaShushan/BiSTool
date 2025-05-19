@@ -59,9 +59,10 @@ export interface RequestConfigData {
   method: string;
   headers: Header[];
   queryParams: QueryParam[];
-  bodyType: "none" | "json" | "form";
+  bodyType: "none" | "json" | "form" | "text"
   jsonBody?: string;
   formData?: FormDataField[];
+  textBody?: string;
   body?: Record<string, any>;
 }
 

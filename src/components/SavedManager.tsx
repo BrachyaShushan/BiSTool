@@ -6,7 +6,7 @@ import {
   ExtendedVariable,
   ModalType,
 } from "../types/SavedManager";
-import { Session } from "../types/app.types";
+import { FiPlus, FiEdit2, FiCopy, FiTrash2, FiChevronDown, FiGlobe, FiFolder } from "react-icons/fi";
 
 interface SavedManagerProps {
   activeSession: ExtendedSession | null;
@@ -203,19 +203,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
           }`}
       >
         <span>{activeSession?.name || "No Session"}</span>
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
+        <FiChevronDown size={16} />
       </button>
 
       {/* Main Modal */}
@@ -228,95 +216,73 @@ const SavedManager: React.FC<SavedManagerProps> = ({
       >
         <div className="grid h-full grid-cols-2">
           {/* Sessions Section */}
-          <div
-            className={`p-4 border-r ${isDarkMode ? "border-gray-700" : "border-gray-200"
-              }`}
-          >
+          <div className={`p-4 border-r ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
             <div className="flex items-center justify-between mb-4">
-              <h3
-                className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"
-                  }`}
-              >
+              <h3 className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                 Sessions
               </h3>
               <button
                 onClick={() => handleSessionAction("new")}
-                className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                   ? "bg-blue-600 text-white hover:bg-blue-700"
                   : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                   }`}
               >
-                New Session
+                <FiPlus />
+                <span>New Session</span>
               </button>
             </div>
-            <div className="h-[calc(100%-3rem)] overflow-y-auto">
+
+            {/* Session List */}
+            <div className="space-y-2">
               {savedSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className={`p-3 rounded-md mb-2 ${activeSession?.id === session.id
-                    ? isDarkMode
-                      ? "bg-gray-700"
-                      : "bg-blue-50"
-                    : isDarkMode
-                      ? "hover:bg-gray-700"
-                      : "hover:bg-gray-50"
-                    }`}
-                >
+                <div key={session.id} className={`p-3 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                   <div className="flex items-center justify-between">
-                    <span
-                      className={`${isDarkMode ? "text-white" : "text-gray-900"
-                        }`}
-                    >
-                      {session.name}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className={`font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                        {session.name}
+                      </span>
+                    </div>
                     <div className="flex space-x-2">
                       <button
-                        onClick={() =>
-                          handleLoadSession(session as ExtendedSession)
-                        }
-                        className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                        onClick={() => handleLoadSession(session as ExtendedSession)}
+                        className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                           ? "bg-blue-600 text-white hover:bg-blue-700"
                           : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                           }`}
                       >
-                        Load
+                        <FiFolder />
+                        <span>Load</span>
                       </button>
                       <button
-                        onClick={() =>
-                          handleSessionAction(
-                            "rename",
-                            session as ExtendedSession
-                          )
-                        }
-                        className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                        onClick={() => handleSessionAction("rename", session as ExtendedSession)}
+                        className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                           ? "bg-yellow-600 text-white hover:bg-yellow-700"
                           : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
                           }`}
                       >
-                        Rename
+                        <FiEdit2 />
+                        <span>Rename</span>
                       </button>
                       <button
-                        onClick={() =>
-                          handleSessionAction(
-                            "duplicate",
-                            session as ExtendedSession
-                          )
-                        }
-                        className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                        onClick={() => handleSessionAction("duplicate", session as ExtendedSession)}
+                        className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                           ? "bg-green-600 text-white hover:bg-green-700"
                           : "bg-green-100 text-green-700 hover:bg-green-200"
                           }`}
                       >
-                        Duplicate
+                        <FiCopy />
+                        <span>Duplicate</span>
                       </button>
                       <button
                         onClick={() => handleDeleteSession(session.id)}
-                        className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                        className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                           ? "bg-red-600 text-white hover:bg-red-700"
                           : "bg-red-100 text-red-700 hover:bg-red-200"
                           }`}
                       >
-                        Delete
+                        <FiTrash2 />
+                        <span>Delete</span>
                       </button>
                     </div>
                   </div>
@@ -328,199 +294,141 @@ const SavedManager: React.FC<SavedManagerProps> = ({
           {/* Variables Section */}
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3
-                className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"
-                  }`}
-              >
+              <h3 className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                 Variables
               </h3>
               <div className="flex space-x-2">
                 <button
                   onClick={() => handleVariableAction("new", null, true)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                  className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                     ? "bg-green-600 text-white hover:bg-green-700"
                     : "bg-green-100 text-green-700 hover:bg-green-200"
                     }`}
                 >
-                  New Global Variable
+                  <FiGlobe />
+                  <span>New Global Variable</span>
                 </button>
                 {activeSession && (
                   <button
                     onClick={() => handleVariableAction("new", null, false)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+                    className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                       ? "bg-blue-600 text-white hover:bg-blue-700"
                       : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                       }`}
                   >
-                    New Session Variable
+                    <FiFolder />
+                    <span>New Session Variable</span>
                   </button>
                 )}
               </div>
             </div>
-            <div className="h-[calc(100vh-300px)] overflow-y-auto">
-              {/* Global Variables */}
-              <div className="mb-6">
-                <h4
-                  className={`text-md font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-900"
-                    }`}
-                >
-                  Global Variables
-                </h4>
+
+            {/* Global Variables */}
+            <div className="mb-6">
+              <h4 className={`text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                Global Variables
+              </h4>
+              <div className="space-y-2">
                 {Object.entries(globalVariables).map(([key, value]) => (
-                  <div
-                    key={key}
-                    className={`p-3 rounded-md mb-2 ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
-                      }`}
-                  >
+                  <div key={key} className={`p-3 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0 mr-4">
-                        <span
-                          className={`${isDarkMode ? "text-white" : "text-gray-900"
-                            }`}
-                        >
-                          <span className="font-medium">{key}</span>:
-                          <span className="block truncate" title={value}>
-                            {value}
-                          </span>
+                      <div>
+                        <span className={`font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                          {key}
+                        </span>
+                        <span className={`ml-2 truncate block w-40 max-w-60 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                          {value}
                         </span>
                       </div>
                       <div className="flex space-x-2 shrink-0">
                         <button
-                          onClick={() =>
-                            handleVariableAction("edit", [key, value], true)
-                          }
-                          className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                          onClick={() => handleVariableAction("edit", [key, value], true)}
+                          className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                             ? "bg-blue-600 text-white hover:bg-blue-700"
                             : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                             }`}
                         >
-                          Edit
+                          <FiEdit2 />
+                          <span>Edit</span>
                         </button>
                         <button
                           onClick={() => {
                             const newGlobalVariables = { ...globalVariables };
                             delete newGlobalVariables[key];
-                            Object.entries(newGlobalVariables).forEach(
-                              ([k, v]) => {
-                                updateGlobalVariable(k, v);
-                              }
-                            );
+                            Object.entries(newGlobalVariables).forEach(([k, v]) => {
+                              updateGlobalVariable(k, v);
+                            });
                           }}
-                          className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
+                          className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                             ? "bg-red-600 text-white hover:bg-red-700"
                             : "bg-red-100 text-red-700 hover:bg-red-200"
                             }`}
                         >
-                          Delete
+                          <FiTrash2 />
+                          <span>Delete</span>
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
 
-              {/* Session Variables */}
-              {activeSession && (
-                <div>
-                  <h4
-                    className={`text-md font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-900"
-                      }`}
-                  >
-                    Session Variables ({activeSession.name})
-                  </h4>
-                  {Object.entries(activeSession.sharedVariables || {}).map(
-                    ([key, value]) => (
-                      <div
-                        key={key}
-                        className={`p-3 rounded-md mb-2 ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
-                          }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0 mr-4">
-                            <span
-                              className={`${isDarkMode ? "text-white" : "text-gray-900"
-                                }`}
-                            >
-                              <span className="font-medium">{key}</span>:
-                              <span
-                                className="block truncate"
-                                title={value as string}
-                              >
-                                {value as string}
-                              </span>
-                            </span>
-                          </div>
-                          <div className="flex space-x-2 shrink-0">
-                            <button
-                              onClick={() =>
-                                handleVariableAction(
-                                  "edit",
-                                  [key, value as string],
-                                  false
-                                )
-                              }
-                              className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
-                                ? "bg-blue-600 text-white hover:bg-blue-700"
-                                : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                }`}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => {
-                                const updatedSession: ExtendedSession = {
-                                  ...(activeSession as Session),
-                                  urlData: activeSession.urlData || {
-                                    baseURL: "",
-                                    segments: "",
-                                    parsedSegments: [],
-                                    queryParams: [],
-                                    segmentVariables: [],
-                                    processedURL: "",
-                                    domain: "",
-                                    protocol: "https",
-                                    builtUrl: "",
-                                    environment: "development",
-                                  },
-                                  requestConfig:
-                                    activeSession.requestConfig || {
-                                      method: "GET",
-                                      queryParams: [],
-                                      headers: [],
-                                      bodyType: "none",
-                                      jsonBody: "{\n  \n}",
-                                      formData: [],
-                                    },
-                                  yamlOutput: activeSession.yamlOutput || "",
-                                  segmentVariables:
-                                    activeSession.segmentVariables || {},
-                                  sharedVariables: {
-                                    ...(activeSession.sharedVariables || {}),
-                                  },
-                                  activeSection:
-                                    activeSession.activeSection || "url",
-                                };
-                                delete updatedSession.sharedVariables[key];
-                                handleSaveSession(
-                                  activeSession.name,
-                                  updatedSession
-                                );
-                              }}
-                              className={`px-3 py-1 rounded-md text-sm font-medium ${isDarkMode
-                                ? "bg-red-600 text-white hover:bg-red-700"
-                                : "bg-red-100 text-red-700 hover:bg-red-200"
-                                }`}
-                            >
-                              Delete
-                            </button>
-                          </div>
+            {/* Session Variables */}
+            {activeSession && (
+              <div>
+                <h4 className={`text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  Session Variables
+                </h4>
+                <div className="space-y-2">
+                  {Object.entries(activeSession.sharedVariables || {}).map(([key, value]) => (
+                    <div key={key} className={`p-3 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className={`font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                            {key}
+                          </span>
+                          <span className={`ml-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                            {value}
+                          </span>
+                        </div>
+                        <div className="flex space-x-2 shrink-0">
+                          <button
+                            onClick={() => handleVariableAction("edit", [key, value as string], false)}
+                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                              ? "bg-blue-600 text-white hover:bg-blue-700"
+                              : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                              }`}
+                          >
+                            <FiEdit2 />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              const updatedSession: ExtendedSession = {
+                                ...activeSession,
+                                sharedVariables: {
+                                  ...activeSession.sharedVariables,
+                                },
+                              };
+                              delete updatedSession.sharedVariables[key];
+                              handleSaveSession(activeSession.name, updatedSession);
+                            }}
+                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                              ? "bg-red-600 text-white hover:bg-red-700"
+                              : "bg-red-100 text-red-700 hover:bg-red-200"
+                              }`}
+                          >
+                            <FiTrash2 />
+                            <span>Delete</span>
+                          </button>
                         </div>
                       </div>
-                    )
-                  )}
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </Modal>

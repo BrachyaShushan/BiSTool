@@ -4,6 +4,7 @@ import { useTheme } from "../context/ThemeContext";
 import Modal from "./Modal";
 import { URLBuilderProps } from "../types/components.types";
 import { URLData } from "../types/app.types";
+import { FiEdit2, FiTrash2, FiPlus } from "react-icons/fi";
 
 interface Segment {
   value: string;
@@ -46,18 +47,18 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
       return activeSession.urlData.parsedSegments.map((segment) => ({
         value: segment.value || "",
         isDynamic: segment.isDynamic,
-        paramName: segment.paramName,
-        description: segment.description,
-        required: segment.required,
+        paramName: segment.paramName || "",
+        description: segment.description || "",
+        required: segment.required || false,
       }));
     }
     if (urlData?.parsedSegments) {
       return urlData.parsedSegments.map((segment) => ({
         value: segment.value || "",
         isDynamic: segment.isDynamic,
-        paramName: segment.paramName,
-        description: segment.description,
-        required: segment.required,
+        paramName: segment.paramName || "",
+        description: segment.description || "",
+        required: segment.required || false,
       }));
     }
     return [];
@@ -332,16 +333,22 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
   const handleSegmentChange = (index: number, value: string) => {
     const newSegments = [...segments];
-    newSegments[index] = {
-      ...newSegments[index],
-      value,
-      isDynamic: value.startsWith("{") && value.endsWith("}"),
-    };
-    setSegments(newSegments);
+    const currentSegment = newSegments[index];
+    if (currentSegment) {
+      newSegments[index] = {
+        ...currentSegment,
+        value,
+        isDynamic: value.startsWith("{") && value.endsWith("}"),
+        paramName: currentSegment.paramName || "",
+        description: currentSegment.description || "",
+        required: currentSegment.required || false,
+      };
+      setSegments(newSegments);
+    }
   };
 
   const handleSegmentAdd = () => {
-    setSegments([...segments, { value: "", isDynamic: false, paramName: "" }]);
+    setSegments([...segments, { value: "", isDynamic: false, paramName: "", description: "", required: false }]);
   };
 
   const handleSegmentRemove = (index: number) => {
@@ -361,7 +368,8 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         value: editingSegment.value,
         isDynamic: editingSegment.isDynamic,
         paramName: editingSegment.paramName,
-        description: editingSegment.description,
+        description: editingSegment.description || "",
+        required: editingSegment.required || false,
       };
       setSegments(updatedSegments);
       setShowSegmentEditor(false);
@@ -481,33 +489,37 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                     disabled={segment.isDynamic}
                   />
                   <button
-                    type="button"
                     onClick={() => handleEditSegment(segment, index)}
-                    className={`px-3 py-1 rounded-md ${segment.isDynamic
-                      ? "bg-purple-600 text-white hover:bg-purple-700"
-                      : isDarkMode
-                        ? "bg-gray-700 text-white hover:bg-gray-600"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                       }`}
                   >
-                    Edit
+                    <FiEdit2 />
+                    <span>Edit</span>
                   </button>
                   <button
-                    type="button"
                     onClick={() => handleSegmentRemove(index)}
-                    className="px-3 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"
+                    className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                      ? "bg-red-600 text-white hover:bg-red-700"
+                      : "bg-red-100 text-red-700 hover:bg-red-200"
+                      }`}
                   >
-                    Remove
+                    <FiTrash2 />
+                    <span>Remove</span>
                   </button>
                 </div>
               ))}
             </div>
             <button
-              type="button"
-              onClick={handleSegmentAdd}
-              className={`mt-2 px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700`}
+              onClick={() => handleSegmentAdd()}
+              className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                }`}
             >
-              Add Segment
+              <FiPlus />
+              <span>Add Segment</span>
             </button>
           </div>
 

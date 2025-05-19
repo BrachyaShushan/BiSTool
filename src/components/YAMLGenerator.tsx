@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import { Editor } from "@monaco-editor/react";
+import { FiDownload, FiCopy, FiMaximize2, FiMinimize2, FiPlay, FiCheck } from "react-icons/fi";
 import {
   YAMLGeneratorProps,
   EditorOptions,
@@ -13,7 +14,7 @@ import { ExtendedSession } from "../types/SavedManager";
 // Extract variables from URL in {variable} format, excluding the base URL
 const extractVariables = (url: string): string[] => {
   if (!url) return [];
-  url = url.split("//")[1]
+  url = url.split("//")[1] || url;
   // Handle both {variable} and %7Bvariable%7D formats
   const matches = url.match(/(?:{([^}]+)}|%7B([^%]+)%7D)/g) || [];
   return matches.map((match) => {
@@ -289,30 +290,46 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
         : url;
       const tokenName = getValueFromVariables("tokenName") as string;
       let tokenHeader: Header | null = null;
-      if (tokenName != null) {
-        tokenHeader = {
-          key: tokenName,
-          type: "string",
-          in: "header",
-          required: true,
-          description: tokenName,
-          value: getValueFromVariables(tokenName) as string,
+      if (tokenName) {
+        const tokenValue = getValueFromVariables(tokenName);
+        if (tokenValue) {
+          tokenHeader = {
+            key: tokenName,
+            type: "string",
+            in: "header",
+            required: true,
+            description: tokenName,
+            value: tokenValue as string,
+          };
         }
       }
-      const combinedHeaders = [tokenHeader, ...(requestConfig?.headers ?? [])]
+
+      // Combine headers and ensure token is included
+      const combinedHeaders = [
+        ...(tokenHeader ? [tokenHeader] : []),
+        ...(requestConfig?.headers ?? [])
+      ].filter(Boolean);
+
+      // Convert headers to the format expected by fetch
       const headers = combinedHeaders.reduce((acc, header) => {
-        acc[header?.key ?? ""] = getValueFromVariables(header?.value) as string;
+        if (header && header.key) {
+          const value = getValueFromVariables(header.value);
+          if (value !== null && value !== undefined) {
+            acc[header.key] = value as string;
+          }
+        }
         return acc;
-      }, {} as Record<string, string>) || {}
+      }, {} as Record<string, string>);
+
+      console.log('Request headers:', headers); // Debug log
 
       // Make the API request
       const response = await fetch(url, {
         method: requestConfig?.method || "GET",
         headers: headers,
-        body:
-          requestConfig?.bodyType === "json"
-            ? requestConfig.jsonBody
-            : undefined,
+        body: requestConfig?.bodyType === "json" && requestConfig.jsonBody
+          ? requestConfig.jsonBody
+          : null
       });
 
       if (!response.ok) {
@@ -763,12 +780,24 @@ ${generateResponses()}`;
           <button
             onClick={handleFetchRequest}
             disabled={isGenerating}
-            className={`px-4 py-2 rounded-md ${isDarkMode
+            className={`px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
               ? "bg-blue-600 text-white hover:bg-blue-700"
               : "bg-blue-500 text-white hover:bg-blue-600"
               } ${isGenerating ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            {isGenerating ? "Generating..." : "Fetch & Generate YAML"}
+            {isGenerating ? (
+              <>
+                <div className="animate-spin">
+                  <FiPlay size={16} />
+                </div>
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <FiPlay />
+                <span>Fetch & Generate YAML</span>
+              </>
+            )}
           </button>
 
           <select
@@ -783,37 +812,6 @@ ${generateResponses()}`;
             <option value="2.0.0">OpenAPI 2.0.0</option>
             <option value="1.0.0">OpenAPI 1.0.0</option>
           </select>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleCopyYAML}
-            disabled={!yamlOutput}
-            className={`px-4 py-2 rounded-md ${isDarkMode
-              ? yamlOutput
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-700 text-gray-400 cursor-not-allowed"
-              : yamlOutput
-                ? "bg-blue-500 text-white hover:bg-blue-600"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
-          >
-            {copySuccess ? "Copied!" : "Copy YAML"}
-          </button>
-          <button
-            onClick={handleDownloadYAML}
-            disabled={!yamlOutput}
-            className={`px-4 py-2 rounded-md ${isDarkMode
-              ? yamlOutput
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-700 text-gray-400 cursor-not-allowed"
-              : yamlOutput
-                ? "bg-blue-500 text-white hover:bg-blue-600"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
-          >
-            Download YAML
-          </button>
         </div>
       </div>
 
@@ -852,12 +850,13 @@ ${generateResponses()}`;
         </div>
         <button
           onClick={handleGenerateFromCustomResponse}
-          className={`mt-2 px-4 py-2 rounded-md ${isDarkMode
+          className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
             ? "bg-green-600 text-white hover:bg-green-700"
             : "bg-green-500 text-white hover:bg-green-600"
             }`}
         >
-          Generate from Custom Response
+          <FiPlay />
+          <span>Generate from Custom Response</span>
         </button>
       </div>
 
@@ -991,13 +990,62 @@ ${generateResponses()}`;
             Generated YAML
           </label>
           <button
+            onClick={handleCopyYAML}
+            disabled={!yamlOutput}
+            className={`px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
+              ? yamlOutput
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed"
+              : yamlOutput
+                ? "bg-blue-500 text-white hover:bg-blue-600"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
+          >
+            {copySuccess ? (
+              <>
+                <FiCheck />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <FiCopy />
+                <span>Copy YAML</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleDownloadYAML}
+            disabled={!yamlOutput}
+            className={`px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
+              ? yamlOutput
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed"
+              : yamlOutput
+                ? "bg-blue-500 text-white hover:bg-blue-600"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
+          >
+            <FiDownload />
+            <span>Download YAML</span>
+          </button>
+          <button
             onClick={handleYamlExpand}
-            className={`px-2 py-1 text-sm rounded-md ${isDarkMode
+            className={`px-2 py-1 text-sm rounded-md flex items-center space-x-2 ${isDarkMode
               ? "bg-gray-700 text-white hover:bg-gray-600"
               : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
           >
-            {isYamlExpanded ? "Expand" : "Collapse"}
+            {isYamlExpanded ? (
+              <>
+                <FiMinimize2 />
+                <span>Collapse</span>
+              </>
+            ) : (
+              <>
+                <FiMaximize2 />
+                <span>Expand</span>
+              </>
+            )}
           </button>
         </div>
         <div
@@ -1016,7 +1064,6 @@ ${generateResponses()}`;
             theme={isDarkMode ? "vs-dark" : "light"}
             options={{
               ...editorOptions,
-              readOnly: true,
               scrollBeyondLastLine: false,
               minimap: { enabled: false },
             }}

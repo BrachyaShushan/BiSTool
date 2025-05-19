@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import Modal from "./Modal";
+import { FiKey } from "react-icons/fi";
 
 interface TokenConfig {
     domain: string;
@@ -58,7 +59,7 @@ const TokenGenerator: React.FC = () => {
         setSuccessMessage("");
 
         try {
-            if (!globalVariables.username || !globalVariables.password) {
+            if (!globalVariables['username'] || !globalVariables['password']) {
                 throw new Error("Please set username and password in global variables");
             }
 
@@ -69,8 +70,8 @@ const TokenGenerator: React.FC = () => {
 
             const requestUrl = `${domain}${tokenConfig.path}`;
             const requestBody = `username=${encodeURIComponent(
-                globalVariables.username
-            )}&password=${globalVariables.password}`;
+                globalVariables['username']
+            )}&password=${globalVariables['password']}`;
 
             const response = await fetch(requestUrl, {
                 method: tokenConfig.method,
@@ -79,11 +80,9 @@ const TokenGenerator: React.FC = () => {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: requestBody,
-                credentials: "same-origin",
             });
-
+            console.log(response);
             const responseText = await response.text();
-
             let jsonData: any;
             try {
                 jsonData = JSON.parse(responseText);
@@ -126,7 +125,7 @@ const TokenGenerator: React.FC = () => {
         if (!globalVariables) return false;
 
         const tokenName = tokenConfig.tokenName;
-        const token = globalVariables[tokenName];
+        const token = globalVariables[tokenName] as string;
 
         if (!token || token.trim() === "") {
             setTokenDuration(0);
@@ -134,7 +133,7 @@ const TokenGenerator: React.FC = () => {
         }
 
         try {
-            const payload = JSON.parse(decodeString(token.split(".")[1]) || "{}");
+            const payload = JSON.parse(decodeString(token.split(".")[1] as string) ?? "{}");
             const now = Math.floor(Date.now() / 1000);
             const exp = payload.exp;
             const duration = (exp - now) / 60;
@@ -176,12 +175,13 @@ const TokenGenerator: React.FC = () => {
         <>
             <button
                 onClick={() => setIsModalOpen(true)}
-                className={`px-4 py-2 rounded-md ${isDarkMode
+                className={`px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
                     ? "bg-gray-700 text-white hover:bg-gray-600"
                     : "bg-white text-gray-700 hover:bg-gray-50"
                     } border border-gray-300 shadow-sm`}
             >
-                Generate Token
+                <FiKey />
+                <span>Generate Token</span>
             </button>
 
             <Modal

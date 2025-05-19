@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { ModalProps } from "../types/Modal.types";
+import { FiX, FiSave, FiXCircle } from "react-icons/fi";
 
 const Modal: React.FC<ModalProps> = ({
   isOpen,
@@ -115,7 +116,7 @@ const Modal: React.FC<ModalProps> = ({
             className={`p-2 rounded-full close-button ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
               }`}
           >
-            ✕
+            <FiX size={5} />
           </button>
         </div>
 
@@ -125,23 +126,25 @@ const Modal: React.FC<ModalProps> = ({
           {showCancelButton && (
             <button
               onClick={onClose}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+              className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                 ? "bg-gray-600 text-white hover:bg-gray-700"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
             >
-              {cancelButtonText}
+              <FiXCircle />
+              <span>{cancelButtonText}</span>
             </button>
           )}
           {showSaveButton && (
             <button
               onClick={onSave}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${isDarkMode
+              className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                 }`}
             >
-              {saveButtonText}
+              <FiSave />
+              <span>{saveButtonText}</span>
             </button>
           )}
         </div>
