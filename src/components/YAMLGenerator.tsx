@@ -1060,6 +1060,7 @@ ${generateResponses()}`;
             height="100%"
             defaultLanguage="yaml"
             value={yamlOutput}
+            onChange={(value) => setYamlOutput(value || "")}
             onMount={handleYamlEditorDidMount}
             theme={isDarkMode ? "vs-dark" : "light"}
             options={{
