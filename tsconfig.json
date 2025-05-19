@@ -28,6 +28,15 @@
   "include": [
     "src"
   ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    ".next",
+    "coverage",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ],
   "references": [
     {
       "path": "./tsconfig.node.json"

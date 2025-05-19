@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import Editor from "@monaco-editor/react";
 import Anthropic from "@anthropic-ai/sdk/index.mjs";
@@ -17,6 +17,17 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const [generatedTest, setGeneratedTest] = useState<string>("");
   const [error, setError] = useState<string>("");
   const editorRef = useRef<EditorRef["current"]>(null);
+  const [lastYamlData, setLastYamlData] = useState<string>("");
+
+  useEffect(() => {
+    // Only update lastYamlData if yamlData has actually changed
+    if (yamlData !== lastYamlData) {
+      setLastYamlData(yamlData);
+      // Clear generated test when yamlData changes
+      setGeneratedTest("");
+      setError("");
+    }
+  }, [yamlData]);
 
   const generatePytestCode = async (): Promise<void> => {
     setIsLoading(true);
