@@ -7,6 +7,7 @@ import {
   ModalType,
 } from "../types/SavedManager";
 import { FiPlus, FiEdit2, FiCopy, FiTrash2, FiChevronDown, FiGlobe, FiFolder, FiDownload, FiUpload, FiCheckSquare, FiSquare } from "react-icons/fi";
+import { Disclosure, DisclosureButton, DisclosurePanel, Transition } from '@headlessui/react';
 
 interface SavedManagerProps {
   activeSession: ExtendedSession | null;
@@ -444,14 +445,33 @@ const SavedManager: React.FC<SavedManagerProps> = ({
             {/* Session List */}
             {divideBy === 'category' ? (
               Object.entries(groupByCategory(orderSessions(savedSessions))).map(([cat, sessions]) => (
-                <div key={cat} className="mb-4">
-                  <div className={`text-xs font-semibold mb-2 ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>{cat}</div>
-                  <div className="space-y-2">
-                    {sessions.map((session) => (
-                      sessionCard(session)
-                    ))}
-                  </div>
-                </div>
+                <Disclosure key={cat} defaultOpen>
+                  {({ open }: { open: boolean }) => (
+                    <div className="mb-4">
+                      <DisclosureButton className={`flex items-center w-full text-left font-semibold mb-2 focus:outline-none ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                        <FiChevronDown
+                          className={`transition-transform duration-200 mr-2 ${open ? 'rotate-180' : ''}`}
+                        />
+                        {cat}
+                      </DisclosureButton>
+                      <Transition
+                        show={open}
+                        enter="transition-all duration-500 ease-in-out"
+                        enterFrom="max-h-0 opacity-0"
+                        enterTo="max-h-96 opacity-100"
+                        leave="transition-all duration-500 ease-in-out"
+                        leaveFrom="max-h-96 opacity-100"
+                        leaveTo="max-h-0 opacity-0"
+                      >
+                        <DisclosurePanel>
+                          <div className="space-y-2">
+                            {sessions.map((session) => sessionCard(session))}
+                          </div>
+                        </DisclosurePanel>
+                      </Transition>
+                    </div>
+                  )}
+                </Disclosure>
               ))
             ) : (
               <div className="space-y-2">
