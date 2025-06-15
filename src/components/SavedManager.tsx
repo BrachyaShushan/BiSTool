@@ -6,7 +6,7 @@ import {
   ExtendedVariable,
   ModalType,
 } from "../types/SavedManager";
-import { FiPlus, FiEdit2, FiCopy, FiTrash2, FiChevronDown, FiGlobe, FiFolder } from "react-icons/fi";
+import { FiPlus, FiEdit2, FiCopy, FiTrash2, FiChevronDown, FiGlobe, FiFolder, FiDownload, FiUpload, FiCheckSquare, FiSquare } from "react-icons/fi";
 
 interface SavedManagerProps {
   activeSession: ExtendedSession | null;
@@ -45,8 +45,14 @@ const SavedManager: React.FC<SavedManagerProps> = ({
   });
   const [error, setError] = useState<string | null>(null);
   const [sessionCategory, setSessionCategory] = useState<string>("");
-  const [divideBy, setDivideBy] = useState<'none' | 'category'>("none");
-  const [orderBy, setOrderBy] = useState<'date' | 'name'>("date");
+  const [divideBy, setDivideBy] = useState<'none' | 'category'>("category");
+  const [orderBy, setOrderBy] = useState<'date' | 'name'>("name");
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<any>(null);
+  const [importStep, setImportStep] = useState<'options' | 'choose'>('options');
+  const [selectedImportSessions, setSelectedImportSessions] = useState<string[]>([]);
+  const [selectedImportVariables, setSelectedImportVariables] = useState<string[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -262,6 +268,90 @@ const SavedManager: React.FC<SavedManagerProps> = ({
       </div>
     )
   }
+
+  // Export logic
+  const handleExport = () => {
+    const safeGlobalVariables = Object.fromEntries(Object.entries(globalVariables).map(([key, _]) => [key, '']));
+    const data = {
+      savedSessions,
+      globalVariables: safeGlobalVariables,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'saved_manager_export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Import logic
+  const handleImportClick = () => {
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    fileInputRef.current?.click();
+  };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        setImportData(data);
+        setImportStep('options');
+        setShowImportModal(true);
+        setSelectedImportSessions(data.savedSessions?.map((s: any) => s.id) || []);
+        setSelectedImportVariables(Object.keys(data.globalVariables || {}));
+      } catch (err) {
+        setError('Invalid import file');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportOption = (option: 'add' | 'override' | 'choose') => {
+    if (!importData) return;
+    if (option === 'add') {
+      // Merge sessions (skip duplicates by id)
+      const newSessions = importData.savedSessions?.filter((s: any) => !savedSessions.some(sess => sess.id === s.id)) || [];
+      const mergedSessions = [...savedSessions, ...newSessions];
+      // Merge variables (skip duplicates by key)
+      const newVars = Object.entries(importData.globalVariables || {}).filter(([k]) => !(k in globalVariables));
+      const mergedVars = { ...globalVariables, ...Object.fromEntries(newVars) };
+      // Save
+      mergedSessions.forEach(s => handleSaveSession(s.name, s));
+      Object.entries(mergedVars).forEach(([k, v]) => updateGlobalVariable(k, v as string));
+      setShowImportModal(false);
+    } else if (option === 'override') {
+      // Replace all
+      (importData.savedSessions || []).forEach((s: any) => handleSaveSession(s.name, s));
+      Object.entries(importData.globalVariables || {}).forEach(([k, v]) => updateGlobalVariable(k, v as string));
+      setShowImportModal(false);
+    } else if (option === 'choose') {
+      setImportStep('choose');
+    }
+  };
+
+  const handleChooseImport = () => {
+    if (!importData) return;
+    // Sessions
+    const chosenSessions = (importData.savedSessions || []).filter((s: any) => selectedImportSessions.includes(s.id));
+    chosenSessions.forEach((s: any) => handleSaveSession(s.name, s));
+    // Variables
+    const chosenVars = Object.fromEntries(
+      Object.entries(importData.globalVariables || {}).filter(([k]) => selectedImportVariables.includes(k))
+    );
+    Object.entries(chosenVars).forEach(([k, v]) => updateGlobalVariable(k, v as string));
+    setShowImportModal(false);
+  };
+
+  const toggleSession = (id: string) => {
+    setSelectedImportSessions(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+  const toggleVariable = (key: string) => {
+    setSelectedImportVariables(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  };
+
   return (
     <>
       <button
@@ -291,6 +381,45 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                 Sessions
               </h3>
               <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleSessionAction("new")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                    }`}
+                >
+                  <FiPlus />
+                  <span>New Session</span>
+                </button>
+                <button
+                  onClick={handleExport}
+                  className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                    ? "bg-gray-700 text-white hover:bg-gray-600"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                >
+                  <FiDownload />
+                  <span>Export</span>
+                </button>
+                <button
+                  onClick={handleImportClick}
+                  className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                    ? "bg-gray-700 text-white hover:bg-gray-600"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                >
+                  <FiUpload />
+                  <span>Import</span>
+                </button>
+                <input
+                  type="file"
+                  accept="application/json"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleFileChange}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
                 <label className="text-sm">Divide By:</label>
                 <select
                   value={divideBy}
@@ -309,16 +438,6 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                   <option value="date">Date</option>
                   <option value="name">Name</option>
                 </select>
-                <button
-                  onClick={() => handleSessionAction("new")}
-                  className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                    }`}
-                >
-                  <FiPlus />
-                  <span>New Session</span>
-                </button>
               </div>
             </div>
 
@@ -600,6 +719,81 @@ const SavedManager: React.FC<SavedManagerProps> = ({
           </div>
         </div>
       </Modal>
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <Modal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          title={importStep === 'options' ? 'Import Sessions & Variables' : 'Choose What to Import'}
+          showSaveButton={false}
+        >
+          {importStep === 'options' ? (
+            <div className="space-y-4">
+              <button
+                className="w-full px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => handleImportOption('add')}
+              >
+                Import and Add (merge, skip duplicates)
+              </button>
+              <button
+                className="w-full px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                onClick={() => handleImportOption('override')}
+              >
+                Import and Override (replace all)
+              </button>
+              <button
+                className="w-full px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600"
+                onClick={() => handleImportOption('choose')}
+              >
+                Import and Choose What to Import
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-semibold mb-2">Sessions</h4>
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {(importData.savedSessions || []).map((s: any) => (
+                    <div key={s.id} className="flex items-center space-x-2">
+                      <button onClick={() => toggleSession(s.id)} className="focus:outline-none">
+                        {selectedImportSessions.includes(s.id) ? <FiCheckSquare /> : <FiSquare />}
+                      </button>
+                      <span>{s.name}</span>
+                      {savedSessions.some(sess => sess.id === s.id) && (
+                        <span className="text-xs text-red-500 ml-2">(already exists)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Global Variables</h4>
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {Object.entries(importData.globalVariables || {}).map(([k, _]) => (
+                    <div key={k} className="flex items-center space-x-2">
+                      <button onClick={() => toggleVariable(k)} className="focus:outline-none">
+                        {selectedImportVariables.includes(k) ? <FiCheckSquare /> : <FiSquare />}
+                      </button>
+                      <span>{k}</span>
+                      {globalVariables[k] !== undefined && (
+                        <span className="text-xs text-red-500 ml-2">(already exists)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button
+                className="w-full px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 mt-4"
+                onClick={handleChooseImport}
+              >
+                Import Selected
+              </button>
+            </div>
+          )}
+          {error && <p className="text-red-500 mt-2">{error}</p>}
+        </Modal>
+      )}
     </>
   );
 };

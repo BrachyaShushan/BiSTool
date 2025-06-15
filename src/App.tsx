@@ -49,6 +49,20 @@ const AppContent: React.FC = () => {
         { id: "ai", label: "AI Test Generator" },
     ];
 
+    const methodColor = {
+        dark: {
+            GET: "bg-blue-100 text-blue-700",
+            POST: "bg-green-100 text-green-700",
+            PUT: "bg-yellow-100 text-yellow-700",
+            DELETE: "bg-red-100 text-red-700",
+        },
+        light: {
+            GET: "bg-blue-100 text-blue-700",
+            POST: "bg-green-100 text-green-700",
+            PUT: "bg-yellow-100 text-yellow-700",
+            DELETE: "bg-red-100 text-red-700",
+        }
+    }
     return (
         <div
             className={`min-h-screen transition-colors duration-200 ${isDarkMode ? "bg-gray-900 text-gray-100" : "bg-gray-100 text-gray-900"
@@ -71,6 +85,8 @@ const AppContent: React.FC = () => {
                                 </h1>
                             </div>
                             <div className="flex items-center space-x-4">
+                                {activeSession && <span className={`ml-2 px-2 py-2 rounded text-xs ${isDarkMode ? methodColor.dark[activeSession?.requestConfig.method as keyof typeof methodColor.dark] : methodColor.light[activeSession?.requestConfig.method as keyof typeof methodColor.light]}`}>{activeSession?.requestConfig.method}</span>}
+
                                 <SavedManager
                                     activeSession={activeSession}
                                     savedSessions={savedSessions}
