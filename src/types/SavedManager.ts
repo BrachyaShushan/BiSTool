@@ -3,12 +3,15 @@ import { Session, Variable, URLData, RequestConfigData } from "./app.types";
 export type ModalType = "new" | "rename" | "duplicate" | "edit";
 
 export interface ExtendedSession extends Session {
+  category?: string;
   urlData: URLData;
   requestConfig: RequestConfigData;
   yamlOutput: string;
   segmentVariables: Record<string, string>;
   sharedVariables: Record<string, string>;
   activeSection: string;
+  customResponse?: string;
+  requirements?: string;
 }
 
 export interface ExtendedVariable extends Variable {

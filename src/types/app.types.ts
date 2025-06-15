@@ -75,6 +75,7 @@ export interface Session {
   id: string;
   name: string;
   timestamp: string;
+  category?: string;
   urlData?: URLData;
   requestConfig?: RequestConfigData;
   yamlOutput?: string;

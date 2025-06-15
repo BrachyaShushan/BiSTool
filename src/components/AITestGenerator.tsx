@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
+import { useAppContext } from "../context/AppContext";
 import Editor from "@monaco-editor/react";
 import Anthropic from "@anthropic-ai/sdk/index.mjs";
 import {
@@ -11,6 +12,7 @@ import {
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
+  const { activeSession, handleSaveSession } = useAppContext();
   const [requirements, setRequirements] = useState<string>("");
   const [useOOP, setUseOOP] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -18,6 +20,15 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const [error, setError] = useState<string>("");
   const editorRef = useRef<EditorRef["current"]>(null);
   const [lastYamlData, setLastYamlData] = useState<string>("");
+
+  // Load requirements from session on mount/session change
+  useEffect(() => {
+    if (activeSession && typeof activeSession.requirements === "string") {
+      setRequirements(activeSession.requirements);
+    } else {
+      setRequirements("");
+    }
+  }, [activeSession?.id]);
 
   useEffect(() => {
     // Only update lastYamlData if yamlData has actually changed
@@ -28,6 +39,18 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
       setError("");
     }
   }, [yamlData]);
+
+  // Save requirements to session when it changes
+  useEffect(() => {
+    if (activeSession && requirements !== activeSession.requirements) {
+      const updatedSession = {
+        ...activeSession,
+        requirements,
+      };
+      handleSaveSession(activeSession.name, updatedSession);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requirements]);
 
   const generatePytestCode = async (): Promise<void> => {
     setIsLoading(true);

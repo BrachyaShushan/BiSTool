@@ -347,15 +347,33 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     }
   };
 
-  const handleGenerateFromCustomResponse = () => {
+  const handleGenerateFromCustomResponse = (token: boolean) => {
     try {
       const responseData = JSON.parse(customResponse);
       if (!requestConfig) {
         setError("No request configuration available");
         return;
       }
-
-      const yaml = generateYAML(responseData, requestConfig);
+      const copiedRequestConfig = { ...requestConfig };
+      if (token) {
+        const tokenName = getValueFromVariables("tokenName") as string;
+        let tokenHeader: Header | null = null;
+        if (tokenName) {
+          const tokenValue = getValueFromVariables(tokenName);
+          if (tokenValue) {
+            tokenHeader = {
+              key: tokenName,
+              type: "string",
+              in: "header",
+              required: true,
+              description: tokenName,
+              value: (tokenValue as string).split(".").map(() => "xxx").join("."),
+            };
+          }
+        }
+        copiedRequestConfig.headers = [...(tokenHeader ? [tokenHeader] : []), ...(requestConfig?.headers ?? [])].filter(Boolean);
+      }
+      const yaml = generateYAML(responseData, copiedRequestConfig);
       setLocalYamlOutput(yaml);
       setYamlOutput(yaml);
     } catch (err) {
@@ -377,21 +395,9 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
     // Use active session name or fallback to endpoint name
     const title = activeSession?.name || "API Endpoint";
+    const category = activeSession?.category || "API";
     const description = activeSession?.urlData.sessionDescription?.split("\n").map(line => line.trim()).join(". ") || "";
-    // let token: string[] = [];
-    // if (globalVariables?.tokenName) {
-    //   token = [
-    //     `  - name: ${globalVariables.tokenName}
-    // in: header
-    // type: string
-    // required: true
-    // description: ${globalVariables.tokenDescription || ""}
-    // example: ${globalVariables[globalVariables.tokenName]
-    //       .split(".")
-    //       .map(() => "xxx")
-    //       .join(".")}`,
-    //   ];
-    // }
+
     // Generate path parameters from dynamic segments
     const pathParameters = urlData?.parsedSegments
       ?.filter((segment) => segment.isDynamic)
@@ -436,7 +442,6 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
     // Combine all parameters
     const allParameters = [
-      // ...(token || []),
       ...(pathParameters || []),
       ...(headerParameters || []),
       ...(queryParameters || []),
@@ -478,11 +483,11 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     const generateRequestBody = (): string => {
       if (method === "GET") return "";
 
-      let bodySchema = "";
+      let bodySchema = "\n";
       if (config.bodyType === "json" && config.jsonBody) {
         try {
           const jsonBody = JSON.parse(config.jsonBody);
-          bodySchema = `  - in: body
+          bodySchema += `  - in: body
     name: body
     required: true
 ${generateSchema(jsonBody, "    ")}`;
@@ -490,7 +495,7 @@ ${generateSchema(jsonBody, "    ")}`;
           console.error("Error parsing JSON body:", e);
         }
       } else if (config.bodyType === "form" && config.formData) {
-        bodySchema = `  - in: body
+        bodySchema += `  - in: body
     name: body
     required: true
     type: object
@@ -501,11 +506,14 @@ ${config.formData.map(field => `      ${field.key}:
         description: ${field.description || ""}
         example: ${field.value}`).join("\n")}`;
       } else if (config.bodyType === "text") {
-        bodySchema = `  - in: body
+        bodySchema += `  - in: body
     name: body
     required: true
     type: string
     example: "${config.jsonBody}"`;
+      }
+      else {
+        return "";
       }
 
       return bodySchema;
@@ -535,7 +543,7 @@ ${schema}`;
       properties:
         message:
           type: string
-          example: "The request could not be processed due to invalid parameters"`;
+          example: "some error message"`;
       }
 
       return responses;
@@ -546,14 +554,13 @@ ${schema}`;
       yaml = `${method} ${title}
 ---
 tags:
-  - ${title}
+  - ${category}
 description: ${description}
 url: ${url}
 security:
   - ApiKeyAuth: []
 parameters:
-${allParameters}
-${generateRequestBody()}
+${allParameters}${generateRequestBody()}
 responses:
 ${generateResponses()}`;
     } else if (openApiVersion === "2.0.0") {
@@ -709,27 +716,58 @@ ${generateResponses()}`;
     });
   }, [getResolvedUrl, getValueFromVariables]);
 
-  const getCurrentTimestamp = useCallback(() => {
+
+  // Helper to get the default custom response
+  const getDefaultCustomResponse = useCallback(() => {
     const now = new Date();
-    const year = now.getFullYear(); // Next year
+    const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const day = String(now.getDate()).padStart(2, "0");
     const hours = String(now.getHours()).padStart(2, "0");
     const minutes = String(now.getMinutes()).padStart(2, "0");
     const seconds = String(now.getSeconds()).padStart(2, "0");
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return JSON.stringify({
+      data: { Hello: "World" },
+      token: "xxx.xxx.xxx",
+      data_effective_tstamp: `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`,
+    }, null, 2);
   }, []);
 
+  // Load custom response from session or default when session changes
   useEffect(() => {
-    const initialData = {
-      data: {
-        Hello: "World",
-      },
-      token: "xxx.xxx.xxx",
-      data_effective_tstamp: getCurrentTimestamp(),
-    };
-    setCustomResponse(JSON.stringify(initialData, null, 2));
-  }, []);
+    if (activeSession && activeSession.customResponse) {
+      setCustomResponse(activeSession.customResponse);
+    } else {
+      setCustomResponse(getDefaultCustomResponse());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSession?.id]);
+
+  // Save custom response to session when it changes
+  useEffect(() => {
+    if (activeSession && customResponse !== undefined) {
+      const updatedSession: ExtendedSession = {
+        ...activeSession,
+        customResponse,
+      };
+      if (activeSession.customResponse !== customResponse) {
+        handleSaveSession(activeSession.name, updatedSession);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customResponse, activeSession?.id]);
+
+  const handleResetCustomResponse = () => {
+    const defaultResponse = getDefaultCustomResponse();
+    setCustomResponse(defaultResponse);
+    if (activeSession) {
+      const updatedSession: ExtendedSession = {
+        ...activeSession,
+        customResponse: defaultResponse,
+      };
+      handleSaveSession(activeSession.name, updatedSession);
+    }
+  };
 
   const handleQueryToggle = (queryKey: string): void => {
     setSelectedQueries((prev) => ({
@@ -888,16 +926,38 @@ ${generateResponses()}`;
             onMouseDown={handleMouseDown}
           />
         </div>
-        <button
-          onClick={handleGenerateFromCustomResponse}
-          className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
-            ? "bg-green-600 text-white hover:bg-green-700"
-            : "bg-green-500 text-white hover:bg-green-600"
-            }`}
-        >
-          <FiPlay />
-          <span>Generate from Custom Response</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => handleGenerateFromCustomResponse(false)}
+            className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
+              ? "bg-green-600 text-white hover:bg-green-700"
+              : "bg-green-500 text-white hover:bg-green-600"
+              }`}
+          >
+            <FiPlay />
+            <span>Generate from Custom Response</span>
+          </button>
+          <button
+            onClick={() => handleGenerateFromCustomResponse(true)}
+            className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
+              ? "bg-green-600 text-white hover:bg-green-700"
+              : "bg-green-500 text-white hover:bg-green-600"
+              }`}
+          >
+            <FiPlay />
+            <span>Generate from Custom Response with Token</span>
+          </button>
+          <button
+            onClick={handleResetCustomResponse}
+            className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
+              ? "bg-yellow-600 text-white hover:bg-yellow-700"
+              : "bg-yellow-400 text-white hover:bg-yellow-500"
+              }`}
+            type="button"
+          >
+            <span>Reset to Default</span>
+          </button>
+        </div>
       </div>
 
       <div className="mb-4">

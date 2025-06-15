@@ -44,6 +44,9 @@ const SavedManager: React.FC<SavedManagerProps> = ({
     isGlobal: false,
   });
   const [error, setError] = useState<string | null>(null);
+  const [sessionCategory, setSessionCategory] = useState<string>("");
+  const [divideBy, setDivideBy] = useState<'none' | 'category'>("none");
+  const [orderBy, setOrderBy] = useState<'date' | 'name'>("date");
 
   // Cleanup on unmount
   useEffect(() => {
@@ -82,11 +85,16 @@ const SavedManager: React.FC<SavedManagerProps> = ({
     setModalType(action);
     if (action === "duplicate" && session) {
       setSessionName(`${session.name} (Copy)`);
+      setSessionCategory(session.category || "");
     } else {
       setSessionName(action === "rename" && session ? session.name : "");
+      setSessionCategory(action === "rename" && session ? session.category || "" : "");
     }
     setShowSessionModal(true);
   };
+
+  // Get unique categories from savedSessions
+  const existingCategories = Array.from(new Set(savedSessions.map(s => (s.category || '').trim()).filter(Boolean)));
 
   const handleSessionModalSubmit = (): void => {
     if (!validateSessionName(sessionName)) {
@@ -100,6 +108,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
             const newSession: ExtendedSession = {
               id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               name: sessionName,
+              category: sessionCategory,
               timestamp: new Date().toISOString(),
               urlData: {
                 baseURL: "",
@@ -133,6 +142,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
               const renamedSession: ExtendedSession = {
                 ...selectedSession,
                 name: sessionName,
+                category: sessionCategory,
               };
               handleSaveSession(sessionName, renamedSession);
             }
@@ -143,6 +153,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                 ...selectedSession,
                 id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 name: sessionName,
+                category: sessionCategory,
                 timestamp: new Date().toISOString(),
               };
               handleSaveSession(sessionName, newSession);
@@ -154,6 +165,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
         }
         setShowSessionModal(false);
         setSessionName("");
+        setSessionCategory("");
         setSelectedSession(null);
         setError(null);
       } catch (err) {
@@ -193,6 +205,63 @@ const SavedManager: React.FC<SavedManagerProps> = ({
     }
   };
 
+  // Helper to order sessions
+  const orderSessions = (sessions: ExtendedSession[]) => {
+    return [...sessions].sort((a, b) => {
+      if (orderBy === "name") {
+        return a.name.localeCompare(b.name);
+      } else {
+        // date (descending)
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      }
+    });
+  };
+
+  // Helper to group sessions by category
+  const groupByCategory = (sessions: ExtendedSession[]) => {
+    const groups: Record<string, ExtendedSession[]> = {};
+    sessions.forEach((session) => {
+      const cat = session.category?.trim() || "Uncategorized";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(session);
+    });
+    return groups;
+  };
+  const methodColor = {
+    dark: {
+      GET: "bg-blue-100 text-blue-700",
+      POST: "bg-green-100 text-green-700",
+      PUT: "bg-yellow-100 text-yellow-700",
+      DELETE: "bg-red-100 text-red-700",
+    },
+    light: {
+      GET: "bg-blue-100 text-blue-700",
+      POST: "bg-green-100 text-green-700",
+      PUT: "bg-yellow-100 text-yellow-700",
+      DELETE: "bg-red-100 text-red-700",
+    }
+  }
+  const sessionCard = (session: ExtendedSession) => {
+    return (
+      <div key={session.id} className={`p-3 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center space-x-2">
+            <span className={`font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>{session.name}</span>
+            {session.category && (
+              <span className="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">{session.category}</span>
+            )}
+            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${isDarkMode ? methodColor.dark[session.requestConfig.method as keyof typeof methodColor.dark] : methodColor.light[session.requestConfig.method as keyof typeof methodColor.light]}`}>{session.requestConfig.method}</span>
+          </div>
+          <div className="flex space-x-4 flex-wrap">
+            <button onClick={() => { handleLoadSession(session as ExtendedSession); setShowModal(false) }} className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-blue-100 text-blue-700 hover:bg-blue-200"}`}><FiFolder /><span>Load</span></button>
+            <button onClick={() => handleSessionAction("rename", session as ExtendedSession)} className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode ? "bg-yellow-600 text-white hover:bg-yellow-700" : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"}`}><FiEdit2 /><span>Rename</span></button>
+            <button onClick={() => handleSessionAction("duplicate", session as ExtendedSession)} className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode ? "bg-green-600 text-white hover:bg-green-700" : "bg-green-100 text-green-700 hover:bg-green-200"}`}><FiCopy /><span>Duplicate</span></button>
+            <button onClick={() => handleDeleteSession(session.id)} className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode ? "bg-red-600 text-white hover:bg-red-700" : "bg-red-100 text-red-700 hover:bg-red-200"}`}><FiTrash2 /><span>Delete</span></button>
+          </div>
+        </div>
+      </div>
+    )
+  }
   return (
     <>
       <button
@@ -217,83 +286,66 @@ const SavedManager: React.FC<SavedManagerProps> = ({
         <div className="grid h-full grid-cols-2">
           {/* Sessions Section */}
           <div className={`p-4 border-r ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col items-center justify-between mb-4 gap-2">
               <h3 className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                 Sessions
               </h3>
-              <button
-                onClick={() => handleSessionAction("new")}
-                className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                  }`}
-              >
-                <FiPlus />
-                <span>New Session</span>
-              </button>
+              <div className="flex items-center space-x-2">
+                <label className="text-sm">Divide By:</label>
+                <select
+                  value={divideBy}
+                  onChange={e => setDivideBy(e.target.value as 'none' | 'category')}
+                  className={`px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                >
+                  <option value="none">None</option>
+                  <option value="category">Category</option>
+                </select>
+                <label className="text-sm ml-2">Order By:</label>
+                <select
+                  value={orderBy}
+                  onChange={e => setOrderBy(e.target.value as 'date' | 'name')}
+                  className={`px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                >
+                  <option value="date">Date</option>
+                  <option value="name">Name</option>
+                </select>
+                <button
+                  onClick={() => handleSessionAction("new")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                    }`}
+                >
+                  <FiPlus />
+                  <span>New Session</span>
+                </button>
+              </div>
             </div>
 
             {/* Session List */}
-            <div className="space-y-2">
-              {savedSessions.map((session) => (
-                <div key={session.id} className={`p-3 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className={`font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-                        {session.name}
-                      </span>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleLoadSession(session as ExtendedSession)}
-                        className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
-                          : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                          }`}
-                      >
-                        <FiFolder />
-                        <span>Load</span>
-                      </button>
-                      <button
-                        onClick={() => handleSessionAction("rename", session as ExtendedSession)}
-                        className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                          ? "bg-yellow-600 text-white hover:bg-yellow-700"
-                          : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                          }`}
-                      >
-                        <FiEdit2 />
-                        <span>Rename</span>
-                      </button>
-                      <button
-                        onClick={() => handleSessionAction("duplicate", session as ExtendedSession)}
-                        className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                          ? "bg-green-600 text-white hover:bg-green-700"
-                          : "bg-green-100 text-green-700 hover:bg-green-200"
-                          }`}
-                      >
-                        <FiCopy />
-                        <span>Duplicate</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSession(session.id)}
-                        className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                          ? "bg-red-600 text-white hover:bg-red-700"
-                          : "bg-red-100 text-red-700 hover:bg-red-200"
-                          }`}
-                      >
-                        <FiTrash2 />
-                        <span>Delete</span>
-                      </button>
-                    </div>
+            {divideBy === 'category' ? (
+              Object.entries(groupByCategory(orderSessions(savedSessions))).map(([cat, sessions]) => (
+                <div key={cat} className="mb-4">
+                  <div className={`text-xs font-semibold mb-2 ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>{cat}</div>
+                  <div className="space-y-2">
+                    {sessions.map((session) => (
+                      sessionCard(session)
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              ))
+            ) : (
+              <div className="space-y-2">
+                {orderSessions(savedSessions).map((session) => (
+                  sessionCard(session)
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Variables Section */}
           <div className="p-4">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col items-center justify-between mb-4 gap-2">
               <h3 className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                 Variables
               </h3>
@@ -388,7 +440,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                           <span className={`font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                             {key}
                           </span>
-                          <span className={`ml-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                          <span className={`ml-2 truncate block w-40 max-w-60 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
                             {value}
                           </span>
                         </div>
@@ -439,6 +491,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
         onClose={() => {
           setShowSessionModal(false);
           setSessionName("");
+          setSessionCategory("");
           setSelectedSession(null);
         }}
         onSave={handleSessionModalSubmit}
@@ -460,6 +513,22 @@ const SavedManager: React.FC<SavedManagerProps> = ({
             : "bg-white border-gray-300 text-gray-900"
             }`}
         />
+        <input
+          type="text"
+          value={sessionCategory}
+          onChange={(e) => setSessionCategory(e.target.value)}
+          placeholder="Category (optional)"
+          list="category-list"
+          className={`w-full px-3 py-2 rounded-md border mb-4 ${isDarkMode
+            ? "bg-gray-700 border-gray-600 text-white"
+            : "bg-white border-gray-300 text-gray-900"
+            }`}
+        />
+        <datalist id="category-list">
+          {existingCategories.map((cat) => (
+            <option key={cat} value={cat} />
+          ))}
+        </datalist>
         {error && (
           <p className={`text-sm ${isDarkMode ? "text-red-400" : "text-red-600"} mb-4`}>
             {error}

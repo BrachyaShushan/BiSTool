@@ -2,6 +2,7 @@ export interface SavedSession {
   id: string;
   name: string;
   timestamp: string;
+  category?: string;
   urlData?: {
     baseURL: string;
     segments: string;

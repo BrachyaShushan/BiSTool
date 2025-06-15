@@ -489,6 +489,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                     disabled={segment.isDynamic}
                   />
                   <button
+                    type="button"
                     onClick={() => handleEditSegment(segment, index)}
                     className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                       ? "bg-blue-600 text-white hover:bg-blue-700"
@@ -499,6 +500,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                     <span>Edit</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleSegmentRemove(index)}
                     className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                       ? "bg-red-600 text-white hover:bg-red-700"
@@ -512,6 +514,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
               ))}
             </div>
             <button
+              type="button"
               onClick={() => handleSegmentAdd()}
               className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                 ? "bg-blue-600 text-white hover:bg-blue-700"
