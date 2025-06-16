@@ -341,7 +341,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     }
   };
 
-  const handleGenerateFromCustomResponse = (token: boolean) => {
+  const handleGenerateFromCustomResponse = () => {
     try {
       const responseData = JSON.parse(customResponse);
       if (!requestConfig) {
@@ -349,7 +349,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
         return;
       }
       const copiedRequestConfig = { ...requestConfig };
-      if (token) {
+      if (includeToken) {
         const tokenName = getValueFromVariables("tokenName") as string;
         let tokenHeader: Header | null = null;
         if (tokenName) {
@@ -924,7 +924,7 @@ ${generateResponses()}`;
         </div>
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => handleGenerateFromCustomResponse(false)}
+            onClick={handleGenerateFromCustomResponse}
             className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
               ? "bg-green-600 text-white hover:bg-green-700"
               : "bg-green-500 text-white hover:bg-green-600"
@@ -932,16 +932,6 @@ ${generateResponses()}`;
           >
             <FiPlay />
             <span>Generate from Custom Response</span>
-          </button>
-          <button
-            onClick={() => handleGenerateFromCustomResponse(true)}
-            className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
-              ? "bg-green-600 text-white hover:bg-green-700"
-              : "bg-green-500 text-white hover:bg-green-600"
-              }`}
-          >
-            <FiPlay />
-            <span>Generate from Custom Response with Token</span>
           </button>
           <button
             onClick={handleResetCustomResponse}
