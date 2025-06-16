@@ -16,7 +16,7 @@ import {
   RequestConfigData,
 } from "../types/app.types";
 import { editor } from "monaco-editor";
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiArrowUpRight, FiPlus, FiTrash2 } from "react-icons/fi";
 
 const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   const {
@@ -28,7 +28,6 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   } = useAppContext() as AppContextType;
   const { isDarkMode } = useTheme() as ThemeContextType;
   const [tokenExpiration, setTokenExpiration] = useState<number | null>(null);
-
   const [activeTab, setActiveTab] = useState<RequestConfigState["activeTab"]>(
     () => {
       if (activeSession?.requestConfig?.bodyType === "json") return "body";
@@ -484,7 +483,16 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
     onSubmit(config);
   };
-
+  const methodOptions =
+  {
+    GET: { value: "GET", label: "GET", color: "text-green-500 dark:text-green-400 bg-green-50 dark:bg-green-900" },
+    POST: { value: "POST", label: "POST", color: "text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900" },
+    PUT: { value: "PUT", label: "PUT", color: "text-yellow-500 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900" },
+    DELETE: { value: "DELETE", label: "DELETE", color: "text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900" },
+    PATCH: { value: "PATCH", label: "PATCH", color: "text-yellow-500 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900" },
+    HEAD: { value: "HEAD", label: "HEAD", color: "text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900" },
+    OPTIONS: { value: "OPTIONS", label: "OPTIONS", color: "text-purple-500 dark:text-purple-400 bg-purple-50 dark:bg-purple-900" },
+  }
   return (
     <div
       className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
@@ -514,18 +522,13 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value)}
-            className={`w-32 px-3 py-2 rounded-md border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-              ? "bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
-              : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-              }`}
+            className={`w-32 px-3 py-2 rounded-md border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${methodOptions[method as keyof typeof methodOptions].color}`}
           >
-            <option value="GET">GET</option>
-            <option value="POST">POST</option>
-            <option value="PUT">PUT</option>
-            <option value="DELETE">DELETE</option>
-            <option value="PATCH">PATCH</option>
-            <option value="HEAD">HEAD</option>
-            <option value="OPTIONS">OPTIONS</option>
+            {Object.values(methodOptions).map((option) => (
+              <option key={option.value} value={option.value} className={option.color}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -810,7 +813,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           Continue to YAML Generator
         </button>
       </div>
-    </div>
+    </div >
   );
 };
 

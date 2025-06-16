@@ -61,6 +61,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   const [responseConditions, setResponseConditions] = useState<ResponseCondition[]>(() => {
     return activeSession?.responseConditions ?? [];
   });
+  const [includeToken, setIncludeToken] = useState<boolean>(activeSession?.includeToken ?? true);
 
   const editorRef = useRef<any>(null);
   const yamlEditorRef = useRef<any>(null);
@@ -279,19 +280,21 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
       url = queryString
         ? `${url}?${queryString}`
         : url;
-      const tokenName = getValueFromVariables("tokenName") as string;
       let tokenHeader: Header | null = null;
-      if (tokenName) {
-        const tokenValue = getValueFromVariables(tokenName);
-        if (tokenValue) {
-          tokenHeader = {
-            key: tokenName,
-            type: "string",
-            in: "header",
-            required: true,
-            description: tokenName,
-            value: tokenValue as string,
-          };
+      if (includeToken) {
+        const tokenName = getValueFromVariables("tokenName") as string;
+        if (tokenName) {
+          const tokenValue = getValueFromVariables(tokenName);
+          if (tokenValue) {
+            tokenHeader = {
+              key: tokenName,
+              type: "string",
+              in: "header",
+              required: true,
+              description: tokenName,
+              value: tokenValue as string,
+            };
+          }
         }
       }
 
@@ -794,6 +797,25 @@ ${generateResponses()}`;
     }
   }, [responseConditions, activeSession?.id]);
 
+  // Sync includeToken with session on session change
+  useEffect(() => {
+    setIncludeToken(activeSession?.includeToken ?? true);
+  }, [activeSession?.id]);
+
+  // Save includeToken to session when it changes
+  useEffect(() => {
+    if (activeSession && includeToken !== undefined) {
+      const updatedSession: ExtendedSession = {
+        ...activeSession,
+        includeToken,
+      };
+      if (activeSession.includeToken !== includeToken) {
+        handleSaveSession(activeSession.name, updatedSession);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [includeToken, activeSession?.id]);
+
   // Define status code options with descriptions
   const statusOptions = [
     { value: "201", label: "201 - Created" },
@@ -838,7 +860,20 @@ ${generateResponses()}`;
               </>
             )}
           </button>
-
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={includeToken}
+              onChange={() => setIncludeToken((prev) => !prev)}
+              id="include-token-checkbox"
+            />
+            <label
+              htmlFor="include-token-checkbox"
+              className={isDarkMode ? "text-white" : "text-gray-700"}
+            >
+              Include Token in Request
+            </label>
+          </div>
           <select
             value={openApiVersion}
             onChange={(e) => setOpenApiVersion(e.target.value)}

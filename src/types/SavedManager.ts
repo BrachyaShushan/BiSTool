@@ -13,6 +13,7 @@ export interface ExtendedSession extends Session {
   customResponse?: string;
   requirements?: string;
   responseConditions?: import("./app.types").ResponseCondition[];
+  includeToken?: boolean;
 }
 
 export interface ExtendedVariable extends Variable {
