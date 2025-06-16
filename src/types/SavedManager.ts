@@ -12,6 +12,7 @@ export interface ExtendedSession extends Session {
   activeSection: string;
   customResponse?: string;
   requirements?: string;
+  responseConditions?: import("./app.types").ResponseCondition[];
 }
 
 export interface ExtendedVariable extends Variable {

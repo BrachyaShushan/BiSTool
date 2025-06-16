@@ -71,6 +71,12 @@ export interface Variable {
   value: string;
 }
 
+export interface ResponseCondition {
+  status: string; // e.g. "204", "400", "201"
+  condition: string; // user-provided text
+  include: boolean; // whether to include this response
+}
+
 export interface Session {
   id: string;
   name: string;
@@ -79,10 +85,7 @@ export interface Session {
   urlData?: URLData;
   requestConfig?: RequestConfigData;
   yamlOutput?: string;
-  include204?: boolean;
-  include400?: boolean;
-  response204Condition?: string;
-  response400Condition?: string;
+  responseConditions?: ResponseCondition[];
 }
 
 export interface AppContextType {

@@ -8,7 +8,7 @@ import {
   EditorOptions,
   ResponseData,
 } from "../types/yamlGenerator.types";
-import { Header, RequestConfigData } from "../types/app.types";
+import { Header, RequestConfigData, ResponseCondition } from "../types/app.types";
 import { ExtendedSession } from "../types/SavedManager";
 
 // Extract variables from URL in {variable} format, excluding the base URL
@@ -58,17 +58,8 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   const [customResponse, setCustomResponse] = useState<string>("");
   const [isYamlExpanded, setIsYamlExpanded] = useState<boolean>(false);
   const [editorHeight, setEditorHeight] = useState<number>(400);
-  const [include204, setInclude204] = useState<boolean>(() => {
-    return activeSession?.include204 ?? false;
-  });
-  const [include400, setInclude400] = useState<boolean>(() => {
-    return activeSession?.include400 ?? false;
-  });
-  const [response204Condition, setResponse204Condition] = useState<string>(() => {
-    return activeSession?.response204Condition ?? "";
-  });
-  const [response400Condition, setResponse400Condition] = useState<string>(() => {
-    return activeSession?.response400Condition ?? "";
+  const [responseConditions, setResponseConditions] = useState<ResponseCondition[]>(() => {
+    return activeSession?.responseConditions ?? [];
   });
 
   const editorRef = useRef<any>(null);
@@ -521,31 +512,10 @@ ${config.formData.map(field => `      ${field.key}:
 
     // Generate responses section
     const generateResponses = (): string => {
-      let responses = `  200:
-    description: Successful response
-    schema:
-${schema}`;
-
-      if (include204) {
-        responses += `
-  204:
-    description: No content
-    ${response204Condition ? `condition: ${response204Condition}` : ''}`;
-      }
-
-      if (include400) {
-        responses += `
-  400:
-    description: Bad request
-    ${response400Condition ? `condition: ${response400Condition}` : ''}
-    schema:
-      type: object
-      properties:
-        message:
-          type: string
-          example: "some error message"`;
-      }
-
+      let responses = `  200:\n    description: Successful response\n    schema:\n${schema}`;
+      responseConditions.filter(c => c.include && c.status !== "200").forEach((condition) => {
+        responses += `\n  ${condition.status}:\n    description: ${condition.status} response\n    ${condition.condition ? `condition: ${condition.condition}` : ''}`;
+      });
       return responses;
     };
 
@@ -804,45 +774,36 @@ ${generateResponses()}`;
     }, 0);
   };
 
+  // Load response conditions when session changes
+  useEffect(() => {
+    if (activeSession) {
+      setResponseConditions(activeSession.responseConditions ?? []);
+    }
+  }, [activeSession?.id]);
+
   // Save response conditions to session when they change
   useEffect(() => {
     if (activeSession) {
       const updatedSession: ExtendedSession = {
         ...activeSession,
-        include204,
-        include400,
-        response204Condition,
-        response400Condition,
+        responseConditions,
       };
-      // Only save if the values have actually changed
-      if (
-        activeSession.include204 !== include204 ||
-        activeSession.include400 !== include400 ||
-        activeSession.response204Condition !== response204Condition ||
-        activeSession.response400Condition !== response400Condition
-      ) {
+      if (JSON.stringify(activeSession.responseConditions) !== JSON.stringify(responseConditions)) {
         handleSaveSession(activeSession.name, updatedSession);
       }
     }
-  }, [include204, include400, response204Condition, response400Condition, activeSession?.id]);
+  }, [responseConditions, activeSession?.id]);
 
-  // Load response conditions when session changes
-  useEffect(() => {
-    if (activeSession) {
-      if (activeSession.include204 !== include204) {
-        setInclude204(activeSession.include204 ?? false);
-      }
-      if (activeSession.include400 !== include400) {
-        setInclude400(activeSession.include400 ?? false);
-      }
-      if (activeSession.response204Condition !== response204Condition) {
-        setResponse204Condition(activeSession.response204Condition ?? "");
-      }
-      if (activeSession.response400Condition !== response400Condition) {
-        setResponse400Condition(activeSession.response400Condition ?? "");
-      }
-    }
-  }, [activeSession?.id]);
+  // Define status code options with descriptions
+  const statusOptions = [
+    { value: "201", label: "201 - Created" },
+    { value: "204", label: "204 - No Content" },
+    { value: "400", label: "400 - Bad Request" },
+    { value: "401", label: "401 - Unauthorized" },
+    { value: "403", label: "403 - Forbidden" },
+    { value: "404", label: "404 - Not Found" },
+    { value: "500", label: "500 - Internal Server Error" },
+  ];
 
   if (!requestConfig) {
     return <div>No request configuration available</div>;
@@ -960,7 +921,7 @@ ${generateResponses()}`;
         </div>
       </div>
 
-      <div className="mb-4">
+      {requestConfig?.queryParams?.length > 0 && <div className="mb-4">
         <label
           className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
             }`}
@@ -989,7 +950,7 @@ ${generateResponses()}`;
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
       <div className="mb-4">
         <label
@@ -1024,59 +985,70 @@ ${generateResponses()}`;
             }`}
         >
           <div className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <input
-                type="checkbox"
-                checked={include204}
-                onChange={(e) => setInclude204(e.target.checked)}
-                className={`${isDarkMode ? "text-blue-500" : "text-blue-600"
-                  }`}
-              />
-              <span className={`${isDarkMode ? "text-white" : "text-gray-700"}`}>
-                Include 204 (No Content) Response
-              </span>
-            </div>
-            {include204 && (
-              <div className="ml-6">
+            {responseConditions.map((condition, idx) => (
+              <div key={idx} className="flex items-center space-x-2 mb-2">
+                {/* Status code dropdown or input */}
+                <select
+                  value={condition.status}
+                  onChange={e => {
+                    const updated = [...responseConditions];
+                    updated[idx] = { ...condition, status: e.target.value };
+                    setResponseConditions(updated);
+                  }}
+                  className={`px-2 py-1 rounded border ${isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
+                >
+                  <option disabled value="">Select Status Code</option>
+                  {statusOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                  {/* Show custom code if not in the list */}
+                  {condition.status && !statusOptions.some(opt => opt.value === condition.status) && (
+                    <option value={condition.status}>{condition.status}</option>
+                  )}
+                </select>
+                {/* Condition text input */}
                 <input
                   type="text"
-                  value={response204Condition}
-                  onChange={(e) => setResponse204Condition(e.target.value)}
-                  placeholder="Condition for 204 response (e.g., 'when resource is deleted')"
-                  className={`w-full px-3 py-2 rounded-md ${isDarkMode
-                    ? "bg-gray-600 border-gray-500 text-white"
-                    : "bg-white border-gray-300"
-                    } border`}
+                  value={condition.condition}
+                  onChange={e => {
+                    const updated = [...responseConditions];
+                    updated[idx] = { ...condition, condition: e.target.value };
+                    setResponseConditions(updated);
+                  }}
+                  placeholder="Condition (optional)"
+                  className={`px-2 py-1 rounded border flex-1 ${isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
                 />
-              </div>
-            )}
-
-            <div className="flex items-center space-x-4">
-              <input
-                type="checkbox"
-                checked={include400}
-                onChange={(e) => setInclude400(e.target.checked)}
-                className={`${isDarkMode ? "text-blue-500" : "text-blue-600"
-                  }`}
-              />
-              <span className={`${isDarkMode ? "text-white" : "text-gray-700"}`}>
-                Include 400 (Bad Request) Response
-              </span>
-            </div>
-            {include400 && (
-              <div className="ml-6">
+                {/* Include checkbox */}
                 <input
-                  type="text"
-                  value={response400Condition}
-                  onChange={(e) => setResponse400Condition(e.target.value)}
-                  placeholder="Condition for 400 response (e.g., 'when required parameters are missing')"
-                  className={`w-full px-3 py-2 rounded-md ${isDarkMode
-                    ? "bg-gray-600 border-gray-500 text-white"
-                    : "bg-white border-gray-300"
-                    } border`}
+                  type="checkbox"
+                  checked={condition.include}
+                  onChange={e => {
+                    const updated = [...responseConditions];
+                    updated[idx] = { ...condition, include: e.target.checked };
+                    setResponseConditions(updated);
+                  }}
+                  className={`${isDarkMode ? "text-blue-500" : "text-blue-600"}`}
+                  title="Include this response"
                 />
+                {/* Remove button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResponseConditions(responseConditions.filter((_, i) => i !== idx));
+                  }}
+                  className={`px-2 py-1 rounded ${isDarkMode ? "bg-red-700 text-white hover:bg-red-800" : "bg-red-200 text-red-700 hover:bg-red-300"}`}
+                >
+                  Remove
+                </button>
               </div>
-            )}
+            ))}
+            <button
+              type="button"
+              onClick={() => setResponseConditions([...responseConditions, { status: "", condition: "", include: true }])}
+              className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode ? "bg-green-600 text-white hover:bg-green-700" : "bg-green-500 text-white hover:bg-green-600"}`}
+            >
+              Add Status Code
+            </button>
           </div>
         </div>
       </div>
@@ -1167,6 +1139,10 @@ ${generateResponses()}`;
               ...editorOptions,
               scrollBeyondLastLine: false,
               minimap: { enabled: false },
+              padding: {
+                top: 5,
+                bottom: 10
+              }
             }}
           />
           <div
