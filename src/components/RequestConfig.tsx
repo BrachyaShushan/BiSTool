@@ -16,7 +16,7 @@ import {
   RequestConfigData,
 } from "../types/app.types";
 import { editor } from "monaco-editor";
-import { FiArrowUpRight, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiTrash2 } from "react-icons/fi";
 
 const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   const {

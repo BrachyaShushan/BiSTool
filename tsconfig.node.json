@@ -8,5 +8,14 @@
     },
     "include": [
         "vite.config.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "build",
+        ".next",
+        "coverage",
+        "**/*.spec.ts",
+        "**/*.test.ts"
     ]
 }
