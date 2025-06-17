@@ -18,6 +18,7 @@ interface SavedManagerProps {
   handleDeleteSession: (id: string) => void;
   updateGlobalVariable: (key: string, value: string) => void;
   updateSessionVariable: (key: string, value: string) => void;
+  deleteGlobalVariable: (key: string) => void;
 }
 
 const SavedManager: React.FC<SavedManagerProps> = ({
@@ -29,6 +30,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
   handleDeleteSession,
   updateGlobalVariable,
   updateSessionVariable,
+  deleteGlobalVariable,
 }) => {
   const { isDarkMode } = useTheme();
 
@@ -543,13 +545,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                           <span>Edit</span>
                         </button>
                         <button
-                          onClick={() => {
-                            const newGlobalVariables = { ...globalVariables };
-                            delete newGlobalVariables[key];
-                            Object.entries(newGlobalVariables).forEach(([k, v]) => {
-                              updateGlobalVariable(k, v);
-                            });
-                          }}
+                          onClick={() => deleteGlobalVariable(key)}
                           className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                             ? "bg-red-600 text-white hover:bg-red-700"
                             : "bg-red-100 text-red-700 hover:bg-red-200"

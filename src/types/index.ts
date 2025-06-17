@@ -32,4 +32,5 @@ export interface AppContextType {
   handleURLBuilderSubmit: (data: URLData) => void;
   handleRequestConfigSubmit: (config: RequestConfigData) => void;
   handleYAMLGenerated: (yaml: string) => void;
+  deleteGlobalVariable: (key: string) => void;
 }

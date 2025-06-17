@@ -24,6 +24,7 @@ const AppContent: React.FC = () => {
         handleDeleteSession,
         updateGlobalVariable,
         updateSessionVariable,
+        deleteGlobalVariable,
     } = useAppContext();
 
     const { isDarkMode, toggleDarkMode } = useTheme();
@@ -96,6 +97,7 @@ const AppContent: React.FC = () => {
                                     handleDeleteSession={handleDeleteSession}
                                     updateGlobalVariable={updateGlobalVariable}
                                     updateSessionVariable={updateSessionVariable}
+                                    deleteGlobalVariable={deleteGlobalVariable}
                                 />
                                 <button
                                     onClick={toggleDarkMode}

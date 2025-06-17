@@ -62,7 +62,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     return activeSession?.responseConditions ?? [];
   });
   const [includeToken, setIncludeToken] = useState<boolean>(activeSession?.includeToken ?? true);
-
+  const tokenExists = globalVariables["tokenName"] ? true : false;
   const editorRef = useRef<any>(null);
   const yamlEditorRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -348,26 +348,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
         setError("No request configuration available");
         return;
       }
-      const copiedRequestConfig = { ...requestConfig };
-      if (includeToken) {
-        const tokenName = getValueFromVariables("tokenName") as string;
-        let tokenHeader: Header | null = null;
-        if (tokenName) {
-          const tokenValue = getValueFromVariables(tokenName);
-          if (tokenValue) {
-            tokenHeader = {
-              key: tokenName,
-              type: "string",
-              in: "header",
-              required: true,
-              description: tokenName,
-              value: (tokenValue as string).split(".").map(() => "xxx").join("."),
-            };
-          }
-        }
-        copiedRequestConfig.headers = [...(tokenHeader ? [tokenHeader] : []), ...(requestConfig?.headers ?? [])].filter(Boolean);
-      }
-      const yaml = generateYAML(responseData, copiedRequestConfig);
+      const yaml = generateYAML(responseData, requestConfig);
       setLocalYamlOutput(yaml);
       setYamlOutput(yaml);
     } catch (err) {
@@ -385,13 +366,32 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
     // Get the URL from urlData
     const url = urlData?.builtUrl || "";
-    const { method, headers, queryParams, formData } = config;
+    const { method, queryParams, formData } = config;
+    let headers = config?.headers ?? [];
 
     // Use active session name or fallback to endpoint name
     const title = activeSession?.name || "API Endpoint";
     const category = activeSession?.category || "API";
     const description = activeSession?.urlData.sessionDescription?.split("\n").map(line => line.trim()).join(". ") || "";
 
+    if (includeToken) {
+      const tokenName = getValueFromVariables("tokenName") as string;
+      let tokenHeader: Header | null = null;
+      if (tokenName) {
+        const tokenValue = getValueFromVariables(tokenName);
+        if (tokenValue) {
+          tokenHeader = {
+            key: tokenName,
+            type: "string",
+            in: "header",
+            required: true,
+            description: tokenName,
+            value: (tokenValue as string).split(".").map(() => "xxx").join("."),
+          };
+          headers = [tokenHeader, ...headers];
+        }
+      }
+    }
     // Generate path parameters from dynamic segments
     const pathParameters = urlData?.parsedSegments
       ?.filter((segment) => segment.isDynamic)
@@ -863,9 +863,10 @@ ${generateResponses()}`;
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
-              checked={includeToken}
+              checked={includeToken && tokenExists}
               onChange={() => setIncludeToken((prev) => !prev)}
               id="include-token-checkbox"
+              disabled={!tokenExists}
             />
             <label
               htmlFor="include-token-checkbox"
@@ -958,7 +959,7 @@ ${generateResponses()}`;
             }`}
         >
           {requestConfig?.queryParams?.map((param) => (
-            <div key={param.key} className="flex items-center mb-2">
+            <label key={param.key} className="flex items-center mb-2">
               <input
                 type="checkbox"
                 checked={selectedQueries[param.key]}
@@ -972,7 +973,7 @@ ${generateResponses()}`;
               >
                 {param.key}: {param.value}
               </span>
-            </div>
+            </label>
           ))}
         </div>
       </div>}

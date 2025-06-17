@@ -114,6 +114,7 @@ export interface AppContextType {
   handleURLBuilderSubmit: (data: URLData) => void;
   handleRequestConfigSubmit: (data: RequestConfigData) => void;
   handleYAMLGenerated: (yaml: string) => void;
+  deleteGlobalVariable: (key: string) => void;
 }
 
 export interface ThemeContextType {

@@ -336,6 +336,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
+  const deleteGlobalVariable = (key: string) => {
+    setGlobalVariables((prev) => {
+      const updated = { ...prev };
+      delete updated[key];
+      return updated;
+    });
+  };
+
   const updateSessionVariable = (key: string, value: string) => {
     if (activeSession) {
       const updatedSession: ExtendedSession = {
@@ -514,6 +522,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateSharedVariable,
     deleteSharedVariable,
     updateGlobalVariable,
+    deleteGlobalVariable,
     updateSessionVariable,
     handleNewSession,
     handleLoadSession,
