@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
-import Modal from "./Modal";
 import { URLBuilderProps } from "../types/components.types";
 import { URLData } from "../types/app.types";
-import { FiEdit2, FiTrash2, FiPlus } from "react-icons/fi";
+import { FiTrash2, FiPlus } from "react-icons/fi";
 
 interface Segment {
   value: string;
@@ -12,10 +11,6 @@ interface Segment {
   paramName: string;
   description?: string;
   required?: boolean;
-}
-
-interface EditingSegment extends Segment {
-  index: number;
 }
 
 const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
@@ -79,11 +74,6 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
   });
 
   const [environment, setEnvironment] = useState<string>("development");
-  const [editingSegment, setEditingSegment] = useState<EditingSegment | null>(
-    null
-  );
-  const [showSegmentEditor, setShowSegmentEditor] = useState<boolean>(false);
-
   const initialLoadDone = useRef(false);
 
   // Effect to handle initial load and session changes
@@ -356,149 +346,180 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     setSegments(newSegments);
   };
 
-  const handleEditSegment = (segment: Segment, index: number) => {
-    setEditingSegment({ ...segment, index });
-    setShowSegmentEditor(true);
-  };
-
-  const handleSaveSegment = () => {
-    if (editingSegment) {
-      const updatedSegments = [...segments];
-      updatedSegments[editingSegment.index] = {
-        value: editingSegment.value,
-        isDynamic: editingSegment.isDynamic,
-        paramName: editingSegment.paramName,
-        description: editingSegment.description || "",
-        required: editingSegment.required || false,
-      };
-      setSegments(updatedSegments);
-      setShowSegmentEditor(false);
-      setEditingSegment(null);
-    }
-  };
-
   return (
-    <>
-      <div
-        className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
-          } rounded-lg shadow`}
-      >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <label
-                className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-                  }`}
-              >
-                Protocol
-              </label>
-              <select
-                value={protocol}
-                onChange={(e) => setProtocol(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                  ? "bg-gray-700 border-gray-600 text-white"
-                  : "bg-white border-gray-300 text-gray-900"
-                  }`}
-              >
-                <option value="http">HTTP</option>
-                <option value="https">HTTPS</option>
-              </select>
-            </div>
-            <div className="flex-1 ml-4">
-              <label
-                className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-                  }`}
-              >
-                Domain
-              </label>
-              <input
-                type="text"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                placeholder="example.com"
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                  ? "bg-gray-700 border-gray-600 text-white"
-                  : "bg-white border-gray-300 text-gray-900"
-                  }`}
-              />
-            </div>
-            <div className="flex-1 ml-4">
-              <label
-                className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-                  }`}
-              >
-                Environment
-              </label>
-              <select
-                value={environment}
-                onChange={(e) => setEnvironment(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                  ? "bg-gray-700 border-gray-600 text-white"
-                  : "bg-white border-gray-300 text-gray-900"
-                  }`}
-              >
-                <option value="development">Development</option>
-                <option value="staging">Staging</option>
-                <option value="production">Production</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
+    <div
+      className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
+        } rounded-lg shadow`}
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
             <label
               className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
                 }`}
             >
-              Session Description
+              Protocol
             </label>
-            <textarea
-              value={sessionDescription}
-              onChange={(e) => setSessionDescription(e.target.value)}
-              placeholder="Enter a description for this API endpoint"
+            <select
+              value={protocol}
+              onChange={(e) => setProtocol(e.target.value)}
               className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
                 ? "bg-gray-700 border-gray-600 text-white"
                 : "bg-white border-gray-300 text-gray-900"
                 }`}
-              rows={3}
-            />
+            >
+              <option value="http">HTTP</option>
+              <option value="https">HTTPS</option>
+            </select>
           </div>
-
-          <div>
+          <div className="flex-1 ml-4">
             <label
               className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
                 }`}
             >
-              Path Segments
+              Domain
             </label>
-            <div className="space-y-2">
-              {segments.map((segment, index) => (
-                <div key={index} className="flex items-center space-x-2">
+            <input
+              type="text"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              placeholder="example.com"
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                ? "bg-gray-700 border-gray-600 text-white"
+                : "bg-white border-gray-300 text-gray-900"
+                }`}
+            />
+          </div>
+          <div className="flex-1 ml-4">
+            <label
+              className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
+                }`}
+            >
+              Environment
+            </label>
+            <select
+              value={environment}
+              onChange={(e) => setEnvironment(e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                ? "bg-gray-700 border-gray-600 text-white"
+                : "bg-white border-gray-300 text-gray-900"
+                }`}
+            >
+              <option value="development">Development</option>
+              <option value="staging">Staging</option>
+              <option value="production">Production</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label
+            className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
+              }`}
+          >
+            Session Description
+          </label>
+          <textarea
+            value={sessionDescription}
+            onChange={(e) => setSessionDescription(e.target.value)}
+            placeholder="Enter a description for this API endpoint"
+            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+              ? "bg-gray-700 border-gray-600 text-white"
+              : "bg-white border-gray-300 text-gray-900"
+              }`}
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <label
+            className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
+              }`}
+          >
+            Path Segments
+          </label>
+          <div className="space-y-2">
+            {segments.map((segment, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <div className="w-[30%]">
+                  {segment.isDynamic ? (
+                    <input
+                      type="text"
+                      value={segment.paramName}
+                      onChange={(e) => {
+                        const newSegments = [...segments];
+                        newSegments[index] = {
+                          ...segment,
+                          paramName: e.target.value
+                        };
+                        setSegments(newSegments);
+                      }}
+                      placeholder="Parameter name"
+                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                        ? "bg-gray-700 border-gray-600 text-white"
+                        : "bg-white border-gray-300 text-gray-900"
+                        }`}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={segment.value}
+                      onChange={(e) => {
+                        const newSegments = [...segments];
+                        newSegments[index] = {
+                          ...segment,
+                          value: e.target.value
+                        };
+                        setSegments(newSegments);
+                      }}
+                      placeholder="Segment value"
+                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                        ? "bg-gray-700 border-gray-600 text-white"
+                        : "bg-white border-gray-300 text-gray-900"
+                        }`}
+                    />
+                  )}
+                </div>
+                <div className="w-[50%]">
                   <input
                     type="text"
-                    value={
-                      segment.isDynamic
-                        ? `{${segment.paramName}}`
-                        : segment.value
-                    }
-                    onChange={(e) => handleSegmentChange(index, e.target.value)}
-                    placeholder="Segment"
-                    className={`flex-1 px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                    value={segment.description || ""}
+                    onChange={(e) => {
+                      const newSegments = [...segments];
+                      newSegments[index] = {
+                        ...segment,
+                        description: e.target.value
+                      };
+                      setSegments(newSegments);
+                    }}
+                    placeholder="Description"
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
                       ? "bg-gray-700 border-gray-600 text-white"
                       : "bg-white border-gray-300 text-gray-900"
                       }`}
-                    disabled={segment.isDynamic}
                   />
-                  <button
-                    type="button"
-                    onClick={() => handleEditSegment(segment, index)}
-                    className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                      }`}
-                  >
-                    <FiEdit2 />
-                    <span>Edit</span>
-                  </button>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={segment.isDynamic}
+                      onChange={(e) => {
+                        const newSegments = [...segments];
+                        newSegments[index] = {
+                          ...segment,
+                          isDynamic: e.target.checked,
+                          value: e.target.checked ? "" : segment.value,
+                          paramName: e.target.checked ? segment.paramName : ""
+                        };
+                        setSegments(newSegments);
+                      }}
+                      className={`h-4 w-4 text-blue-600 focus:ring-blue-500 rounded ${isDarkMode ? "border-gray-600" : "border-gray-300"}`}
+                    />
+                    <span className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      Dynamic
+                    </span>
+                  </label>
                   <button
                     type="button"
                     onClick={() => handleSegmentRemove(index)}
@@ -511,200 +532,96 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                     <span>Remove</span>
                   </button>
                 </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => handleSegmentAdd()}
-              className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                }`}
-            >
-              <FiPlus />
-              <span>Add Segment</span>
-            </button>
+              </div>
+            ))}
           </div>
-
-          <div
-            className={`p-4 ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
-              } rounded-md`}
+          <button
+            type="button"
+            onClick={() => handleSegmentAdd()}
+            className={`mt-2 px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+              }`}
           >
-            <h3
-              className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
+            <FiPlus />
+            <span>Add Segment</span>
+          </button>
+        </div>
+
+        <div
+          className={`p-4 ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
+            } rounded-md`}
+        >
+          <h3
+            className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
+              }`}
+          >
+            URL Preview
+          </h3>
+          <div
+            className={`mt-2 p-2 ${isDarkMode
+              ? "bg-gray-800 border-gray-600"
+              : "bg-white border-gray-200"
+              } rounded border`}
+          >
+            <code
+              className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-900"
                 }`}
             >
-              URL Preview
-            </h3>
-            <div
-              className={`mt-2 p-2 ${isDarkMode
-                ? "bg-gray-800 border-gray-600"
-                : "bg-white border-gray-200"
-                } rounded border`}
-            >
-              <code
-                className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-900"
+              {builtUrl}
+            </code>
+          </div>
+          {segments.some((s) => s.isDynamic) && (
+            <div className="mt-4">
+              <h4
+                className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
                   }`}
               >
-                {builtUrl}
-              </code>
-            </div>
-            {segments.some((s) => s.isDynamic) && (
-              <div className="mt-4">
-                <h4
-                  className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
-                    }`}
-                >
-                  Variable Values
-                </h4>
-                <ul className="mt-2 space-y-1">
-                  {segments
-                    .filter((s) => s.isDynamic && s.paramName)
-                    .map((segment, i) => {
-                      const value =
-                        getVariableValue(segment.paramName, environment) ||
-                        "Not set";
-                      return (
-                        <li
-                          key={i}
-                          className="flex items-center space-x-2 text-sm"
+                Variable Values
+              </h4>
+              <ul className="mt-2 space-y-1">
+                {segments
+                  .filter((s) => s.isDynamic && s.paramName)
+                  .map((segment, i) => {
+                    const value =
+                      getVariableValue(segment.paramName, environment) ||
+                      "Not set";
+                    return (
+                      <li
+                        key={i}
+                        className="flex items-center space-x-2 text-sm"
+                      >
+                        <span
+                          className={`font-mono ${isDarkMode ? "text-gray-300" : "text-gray-900"
+                            }`}
                         >
-                          <span
-                            className={`font-mono ${isDarkMode ? "text-gray-300" : "text-gray-900"
-                              }`}
-                          >
-                            {segment.paramName}:
-                          </span>
-                          <span
-                            className={
-                              isDarkMode ? "text-gray-400" : "text-gray-600"
-                            }
-                          >
-                            {value}
-                          </span>
-                        </li>
-                      );
-                    })}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className={`px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700`}
-            >
-              Continue to Request Configuration
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <Modal
-        isOpen={showSegmentEditor}
-        onClose={() => {
-          setShowSegmentEditor(false);
-          setEditingSegment(null);
-        }}
-        onSave={handleSaveSegment}
-        title="Edit Segment"
-      >
-        {editingSegment && (
-          <div className="space-y-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                checked={editingSegment.isDynamic}
-                onChange={(e) =>
-                  setEditingSegment({
-                    ...editingSegment,
-                    isDynamic: e.target.checked,
-                  })
-                }
-                className={`h-4 w-4 text-blue-600 focus:ring-blue-500 rounded ${isDarkMode ? "border-gray-600" : "border-gray-300"
-                  }`}
-              />
-              <label
-                className={`ml-2 block text-sm ${isDarkMode ? "text-gray-300" : "text-gray-700"
-                  }`}
-              >
-                Dynamic Segment
-              </label>
+                          {segment.paramName}:
+                        </span>
+                        <span
+                          className={
+                            isDarkMode ? "text-gray-400" : "text-gray-600"
+                          }
+                        >
+                          {value}
+                        </span>
+                      </li>
+                    );
+                  })}
+              </ul>
             </div>
-            {editingSegment.isDynamic ? (
-              <div>
-                <label
-                  className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"
-                    }`}
-                >
-                  Parameter Name
-                </label>
-                <input
-                  type="text"
-                  value={editingSegment.paramName}
-                  onChange={(e) =>
-                    setEditingSegment({
-                      ...editingSegment,
-                      paramName: e.target.value,
-                    })
-                  }
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
-                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                    }`}
-                />
-              </div>
-            ) : (
-              <div>
-                <label
-                  className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"
-                    }`}
-                >
-                  Value
-                </label>
-                <input
-                  type="text"
-                  value={editingSegment.value}
-                  onChange={(e) =>
-                    setEditingSegment({
-                      ...editingSegment,
-                      value: e.target.value,
-                    })
-                  }
-                  className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
-                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                    }`}
-                />
-              </div>
-            )}
-            <div>
-              <label
-                className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"
-                  }`}
-              >
-                Description
-              </label>
-              <textarea
-                value={editingSegment.description}
-                onChange={(e) =>
-                  setEditingSegment({
-                    ...editingSegment,
-                    description: e.target.value,
-                  })
-                }
-                rows={3}
-                className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${isDarkMode
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                  }`}
-              />
-            </div>
-          </div>
-        )}
-      </Modal>
-    </>
+          )}
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            className={`px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700`}
+          >
+            Continue to Request Configuration
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 
