@@ -67,6 +67,9 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   const yamlEditorRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const yamlContainerRef = useRef<HTMLDivElement>(null);
+  const [outputViewMode, setOutputViewMode] = useState<'yaml' | 'json'>('yaml');
+  const [lastJsonResponse, setLastJsonResponse] = useState<any>(null);
+  const [lastYamlOutput, setLastYamlOutput] = useState<string>("");
 
   // Initialize selectedQueries when requestConfig changes
   useEffect(() => {
@@ -315,25 +318,42 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
         return acc;
       }, {} as Record<string, string>);
 
-      console.log('Request headers:', headers); // Debug log
-
+      let body = null;
+      if (requestConfig?.bodyType === "json" && requestConfig.jsonBody) {
+        body = requestConfig.jsonBody;
+      } else if (requestConfig?.bodyType === "form" && requestConfig.formData) {
+        body = requestConfig.formData.map(field => `${field.key}=${field.value}`).join("&");
+      } else if (requestConfig?.bodyType === "text" && requestConfig.jsonBody) {
+        body = requestConfig.jsonBody;
+      }
+      if (body && requestConfig?.bodyType === "json") {
+        headers["Content-Type"] = "application/json; charset=utf-8";
+      } else if (body && requestConfig?.bodyType === "form") {
+        headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8";
+      } else if (body && requestConfig?.bodyType === "text") {
+        headers["Content-Type"] = "text/plain; charset=utf-8";
+      }
       // Make the API request
       const response = await fetch(url, {
         method: requestConfig?.method || "GET",
         headers: headers,
-        body: requestConfig?.bodyType === "json" && requestConfig.jsonBody
-          ? requestConfig.jsonBody
-          : null
+        body
       });
 
       if (!response.ok) {
+        if (response.text) {
+          setOutputViewMode('json');
+          setLastJsonResponse(JSON.parse(await response.text()));
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      const yaml = generateYAML(data, requestConfig);
-      setLocalYamlOutput(yaml); // Set local state
-      setYamlOutput(yaml); // Set global state
+      const yamlStr = generateYAML(data, requestConfig);
+      setLastJsonResponse(data);
+      setLastYamlOutput(yamlStr);
+      setLocalYamlOutput(yamlStr);
+      setYamlOutput(yamlStr);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -348,9 +368,11 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
         setError("No request configuration available");
         return;
       }
-      const yaml = generateYAML(responseData, requestConfig);
-      setLocalYamlOutput(yaml);
-      setYamlOutput(yaml);
+      const yamlStr = generateYAML(responseData, requestConfig);
+      setLastJsonResponse(responseData);
+      setLastYamlOutput(yamlStr);
+      setLocalYamlOutput(yamlStr);
+      setYamlOutput(yamlStr);
     } catch (err) {
       setError("Invalid JSON format");
     }
@@ -827,6 +849,19 @@ ${generateResponses()}`;
     { value: "500", label: "500 - Internal Server Error" },
   ];
 
+  // Output editor value
+  const getOutputEditorValue = () => {
+    if (outputViewMode === 'yaml') {
+      return lastYamlOutput;
+    } else {
+      try {
+        return lastJsonResponse ? JSON.stringify(lastJsonResponse, null, 2) : '';
+      } catch {
+        return '// Invalid JSON';
+      }
+    }
+  };
+
   if (!requestConfig) {
     return <div>No request configuration available</div>;
   }
@@ -1082,10 +1117,9 @@ ${generateResponses()}`;
       <div className="mt-4">
         <div className="flex items-center justify-between mb-2">
           <label
-            className={`block text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
-              }`}
+            className={`block text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"}`}
           >
-            Generated YAML
+            Generated Output
           </label>
           <button
             onClick={handleCopyYAML}
@@ -1145,20 +1179,32 @@ ${generateResponses()}`;
               </>
             )}
           </button>
+          <div className="flex items-center">
+            <span className="mr-2 font-medium">View as:</span>
+            <button
+              className={`px-2 py-1 rounded-l ${outputViewMode === 'yaml' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              onClick={() => setOutputViewMode('yaml')}
+            >
+              YAML
+            </button>
+            <button
+              className={`px-2 py-1 rounded-r ${outputViewMode === 'json' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              onClick={() => setOutputViewMode('json')}
+            >
+              JSON
+            </button>
+          </div>
         </div>
         <div
           ref={yamlContainerRef}
-          className={`border ${isDarkMode ? "border-gray-600" : "border-gray-300"
-            } rounded-lg overflow-hidden relative`}
-          style={{
-            height: isYamlExpanded ? "calc(100vh - 200px)" : editorHeight,
-          }}
+          className={`border ${isDarkMode ? "border-gray-600" : "border-gray-300"} rounded-lg overflow-hidden relative`}
+          style={{ height: isYamlExpanded ? "calc(100vh - 200px)" : editorHeight }}
         >
           <Editor
             height="100%"
-            defaultLanguage="yaml"
-            value={yamlOutput}
-            onChange={(value) => setYamlOutput(value || "")}
+            defaultLanguage={outputViewMode}
+            language={outputViewMode}
+            value={getOutputEditorValue()}
             onMount={handleYamlEditorDidMount}
             theme={isDarkMode ? "vs-dark" : "light"}
             options={{
