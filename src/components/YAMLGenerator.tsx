@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import { Editor } from "@monaco-editor/react";
-import { FiDownload, FiCopy, FiMaximize2, FiMinimize2, FiPlay, FiCheck } from "react-icons/fi";
+import { FiDownload, FiCopy, FiMaximize2, FiMinimize2, FiPlay, FiCheck, FiX } from "react-icons/fi";
 import {
   YAMLGeneratorProps,
   EditorOptions,
@@ -10,6 +10,7 @@ import {
 } from "../types/yamlGenerator.types";
 import { Header, RequestConfigData, ResponseCondition } from "../types/app.types";
 import { ExtendedSession } from "../types/SavedManager";
+import { v4 as uuidv4 } from 'uuid';
 
 // Extract variables from URL in {variable} format, excluding the base URL
 const extractVariables = (url: string): string[] => {
@@ -41,6 +42,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   const [yamlOutput, setLocalYamlOutput] = useState<string>("");
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [statusCode, setStatusCode] = useState<string>("200");
   const [error, setError] = useState<string | null>(null);
   const [selectedQueries, setSelectedQueries] = useState<
     Record<string, boolean>
@@ -54,7 +56,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     }
     return {};
   });
-  const [openApiVersion, setOpenApiVersion] = useState<string>("1.0.0");
+  const [openApiVersion, setOpenApiVersion] = useState<string>("0.9.7.1");
   const [customResponse, setCustomResponse] = useState<string>("");
   const [isYamlExpanded, setIsYamlExpanded] = useState<boolean>(false);
   const [editorHeight, setEditorHeight] = useState<number>(400);
@@ -70,6 +72,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   const [outputViewMode, setOutputViewMode] = useState<'yaml' | 'json'>('yaml');
   const [lastJsonResponse, setLastJsonResponse] = useState<any>(null);
   const [lastYamlOutput, setLastYamlOutput] = useState<string>("");
+  const tests = activeSession?.tests || [];
 
   // Initialize selectedQueries when requestConfig changes
   useEffect(() => {
@@ -339,7 +342,12 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
         headers: headers,
         body
       });
-
+      setStatusCode(response.status.toString());
+      if (response.status == 204) {
+        setOutputViewMode('json');
+        setLastJsonResponse({});
+        return;
+      }
       if (!response.ok) {
         if (response.text) {
           setOutputViewMode('json');
@@ -544,8 +552,8 @@ ${config.formData.map(field => `      ${field.key}:
       return responses;
     };
 
-    if (openApiVersion === "1.0.0") {
-      // Generate OpenAPI 1.0 YAML with generic template structure
+    if (openApiVersion === "0.9.7.1") {
+      // Generate OpenAPI 0.9.7.1 YAML with generic template structure
       yaml = `${method} ${title}
 ---
 tags:
@@ -862,9 +870,176 @@ ${generateResponses()}`;
     }
   };
 
+  // Add Test handler
+  const handleAddTest = () => {
+    if (!activeSession) return;
+    const newTest: import("../types/SavedManager").TestCase = {
+      id: uuidv4(),
+      name: '',
+      bodyOverride: '',
+      pathOverrides: {},
+      queryOverrides: {},
+      expectedStatus: '200',
+      expectedResponse: '',
+      lastResult: undefined,
+      useToken: true,
+    };
+    const updatedSession = {
+      ...activeSession,
+      tests: [...tests, newTest],
+      urlData: activeSession.urlData,
+      requestConfig: activeSession.requestConfig,
+      yamlOutput: activeSession.yamlOutput,
+      segmentVariables: activeSession.segmentVariables,
+      sharedVariables: activeSession.sharedVariables,
+      activeSection: activeSession.activeSection,
+      name: activeSession.name,
+      id: activeSession.id,
+      timestamp: activeSession.timestamp,
+    };
+    handleSaveSession(activeSession.name, updatedSession);
+  };
+
+  // Update Test handler
+  const handleUpdateTest = (id: string, update: Partial<import("../types/SavedManager").TestCase>) => {
+    if (!activeSession) return;
+    // Ensure string fields are always strings, not undefined
+    const safeUpdate = { ...update };
+    if ('bodyOverride' in safeUpdate) safeUpdate.bodyOverride = safeUpdate.bodyOverride ?? '';
+    if ('expectedResponse' in safeUpdate) safeUpdate.expectedResponse = safeUpdate.expectedResponse ?? '';
+    const updatedTests = tests.map((test: import("../types/SavedManager").TestCase) => test.id === id ? { ...test, ...safeUpdate } : test);
+    const updatedSession = {
+      ...activeSession,
+      tests: updatedTests,
+      urlData: activeSession.urlData,
+      requestConfig: activeSession.requestConfig,
+      yamlOutput: activeSession.yamlOutput,
+      segmentVariables: activeSession.segmentVariables,
+      sharedVariables: activeSession.sharedVariables,
+      activeSection: activeSession.activeSection,
+      name: activeSession.name,
+      id: activeSession.id,
+      timestamp: activeSession.timestamp,
+    };
+    handleSaveSession(activeSession.name, updatedSession);
+  };
+
+  // Remove Test handler
+  const handleRemoveTest = (id: string) => {
+    if (!activeSession) return;
+    const updatedTests = tests.filter((test: import("../types/SavedManager").TestCase) => test.id !== id);
+    const updatedSession = {
+      ...activeSession,
+      tests: updatedTests,
+      urlData: activeSession.urlData,
+      requestConfig: activeSession.requestConfig,
+      yamlOutput: activeSession.yamlOutput,
+      segmentVariables: activeSession.segmentVariables,
+      sharedVariables: activeSession.sharedVariables,
+      activeSection: activeSession.activeSection,
+      name: activeSession.name,
+      id: activeSession.id,
+      timestamp: activeSession.timestamp,
+    };
+    handleSaveSession(activeSession.name, updatedSession);
+  };
+
+  // Run Test handler
+  const handleRunTest = async (test: import("../types/SavedManager").TestCase) => {
+    // Build request using overrides
+    let url = urlData.builtUrl || '';
+    // Path overrides: only override if non-empty string
+    if (urlData.parsedSegments) {
+      urlData.parsedSegments.forEach(seg => {
+        const overrideVal = test.pathOverrides?.[seg.paramName];
+        if (seg.isDynamic && overrideVal && overrideVal.trim() !== '') {
+          url = url.replace(`{${seg.paramName}}`, String(overrideVal));
+        }
+      });
+    }
+    // Replace any remaining {variable} in the URL with test overrides, session/shared, or global variables
+    url = url.replace(/\{([^}]+)\}/g, (match, varName) => {
+      if (test.pathOverrides && test.pathOverrides[varName] && test.pathOverrides[varName].trim() !== '') {
+        return test.pathOverrides[varName];
+      }
+      if (activeSession?.sharedVariables && activeSession.sharedVariables[varName]) {
+        return activeSession.sharedVariables[varName];
+      }
+      if (globalVariables && globalVariables[varName]) {
+        return globalVariables[varName];
+      }
+      return match; // leave as is if not found
+    });
+    // Query param overrides: only override if non-empty string
+    let queryString = '';
+    if (requestConfig?.queryParams) {
+      const params = requestConfig.queryParams.map(param => {
+        const overrideVal = test.queryOverrides?.[param.key];
+        const value = (overrideVal && overrideVal.trim() !== '') ? overrideVal : param.value;
+        return `${param.key}=${encodeURIComponent(value)}`;
+      });
+      queryString = params.length ? `?${params.join('&')}` : '';
+    }
+    url = url + queryString;
+    // Body override: only use if non-empty string
+    let body: string | undefined = undefined;
+    let headers: Record<string, string> = (requestConfig?.headers || []).reduce((acc: Record<string, string>, h) => {
+      acc[h.key] = h.value;
+      return acc;
+    }, {});
+    // Add token header if useToken is true (or undefined)
+    if (test.useToken !== false && includeToken) {
+      const tokenName = globalVariables['tokenName'] || 'x-access-token';
+      const tokenValue = globalVariables[tokenName];
+      if (tokenName && tokenValue) {
+        headers[tokenName] = tokenValue;
+      }
+    }
+    if (requestConfig?.bodyType === 'json') {
+      if (test.bodyOverride && test.bodyOverride.trim() !== '') {
+        body = test.bodyOverride;
+      } else if (requestConfig.jsonBody) {
+        body = requestConfig.jsonBody;
+      }
+      headers['Content-Type'] = 'application/json';
+    }
+    // Make the request
+    let result: 'pass' | 'fail' = 'fail';
+    try {
+      const fetchOptions: RequestInit = {
+        method: requestConfig?.method || 'GET',
+        headers,
+        ...(body !== undefined ? { body } : {}),
+      };
+      const response = await fetch(url, fetchOptions);
+      test.serverResponse = await response.text();
+      const statusMatch = response.status.toString() === test.expectedStatus;
+      let responseMatch = true;
+      if (test.expectedResponse) {
+        const respJson = await response.json();
+        responseMatch = JSON.stringify(respJson) === test.expectedResponse;
+      }
+      result = statusMatch && responseMatch ? 'pass' : 'fail';
+    } catch {
+      result = 'fail';
+    }
+    handleUpdateTest(test.id, { lastResult: result });
+  };
+
   if (!requestConfig) {
     return <div>No request configuration available</div>;
   }
+  const statusCodeColor = {
+    "200": "bg-blue-500",
+    "201": "bg-green-500",
+    "204": "bg-green-500",
+    "400": "bg-red-500",
+    "401": "bg-red-500",
+    "403": "bg-red-500",
+    "404": "bg-red-500",
+    "500": "bg-red-500",
+  }
+
 
   return (
     <div
@@ -920,7 +1095,7 @@ ${generateResponses()}`;
           >
             <option value="3.0.0">OpenAPI 3.0.0</option>
             <option value="2.0.0">OpenAPI 2.0.0</option>
-            <option value="1.0.0">OpenAPI 1.0.0</option>
+            <option value="0.9.7.1">OpenAPI 0.9.7.1</option>
           </select>
         </div>
       </div>
@@ -1180,6 +1355,8 @@ ${generateResponses()}`;
             )}
           </button>
           <div className="flex items-center">
+            <span className="mr-2 font-medium">Status Code:</span>
+            <span className={`mr-2 px-2 py-1 rounded-md font-medium ${statusCodeColor[statusCode as keyof typeof statusCodeColor]}`}>{statusCode}</span>
             <span className="mr-2 font-medium">View as:</span>
             <button
               className={`px-2 py-1 rounded-l ${outputViewMode === 'yaml' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
@@ -1221,6 +1398,153 @@ ${generateResponses()}`;
             className="absolute bottom-0 left-0 right-0 h-2 bg-gray-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
             onMouseDown={handleYamlMouseDown}
           />
+        </div>
+      </div>
+
+      {/* TESTS SECTION */}
+      <div className="mt-8">
+        <h3 className={`text-lg font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>TESTS</h3>
+        <button
+          className={`mb-4 px-4 py-2 rounded-md ${isDarkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+          onClick={handleAddTest}
+        >
+          Add Test
+        </button>
+        <div className="space-y-6">
+          {tests.map((test: any) => (
+            <div key={test.id} className={`p-4 rounded-lg border ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+              <div className="flex items-center mb-2">
+                <input
+                  type="text"
+                  value={test.name}
+                  onChange={e => handleUpdateTest(test.id, { name: e.target.value })}
+                  placeholder="Test Name"
+                  className={`mr-4 px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                />
+                <button
+                  className={`ml-auto px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700`}
+                  onClick={() => handleRemoveTest(test.id)}
+                >
+                  Remove
+                </button>
+              </div>
+              {/* Path variable overrides */}
+              {urlData?.parsedSegments?.filter(seg => seg.isDynamic).length > 0 && (
+                <div className="mb-2">
+                  <div className="font-medium mb-1">Path Variable Overrides</div>
+                  <div className="flex flex-wrap gap-2">
+                    {urlData.parsedSegments.filter(seg => seg.isDynamic).map(seg => (
+                      <input
+                        key={seg.paramName}
+                        type="text"
+                        value={test.pathOverrides?.[seg.paramName] || ''}
+                        onChange={e => handleUpdateTest(test.id, { pathOverrides: { ...test.pathOverrides, [seg.paramName]: e.target.value } })}
+                        placeholder={seg.paramName}
+                        className={`px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Query param overrides */}
+              {requestConfig?.queryParams?.length > 0 && (
+                <div className="mb-2">
+                  <div className="font-medium mb-1">Query Param Overrides</div>
+                  <div className="flex flex-wrap gap-2">
+                    {requestConfig.queryParams.map(param => (
+                      <input
+                        key={param.key}
+                        type="text"
+                        value={test.queryOverrides?.[param.key] || ''}
+                        onChange={e => handleUpdateTest(test.id, { queryOverrides: { ...test.queryOverrides, [param.key]: e.target.value } })}
+                        placeholder={param.key}
+                        className={`px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Body override */}
+              {requestConfig?.bodyType === 'json' && (
+                <div className="mb-2">
+                  <div className="font-medium mb-1">Body Override (JSON)</div>
+                  <Editor
+                    height="100px"
+                    defaultLanguage="json"
+                    value={test.bodyOverride || ''}
+                    onChange={value => handleUpdateTest(test.id, { bodyOverride: value ?? '' })}
+                    theme={isDarkMode ? 'vs-dark' : 'light'}
+                    options={{ minimap: { enabled: false }, fontSize: 14 }}
+                  />
+                </div>
+              )}
+              {/* Expected status */}
+              <div className="mb-2">
+                <div className="font-medium mb-1">Expected Status</div>
+                <input
+                  type="text"
+                  value={test.expectedStatus}
+                  onChange={e => handleUpdateTest(test.id, { expectedStatus: e.target.value })}
+                  className={`px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                />
+              </div>
+              {/* Expected response */}
+              <div className="mb-2">
+                <div className="font-medium mb-1">Expected Response (JSON)</div>
+                <Editor
+                  height="100px"
+                  defaultLanguage="json"
+                  value={test.expectedResponse || ''}
+                  onChange={value => handleUpdateTest(test.id, { expectedResponse: value ?? '' })}
+                  theme={isDarkMode ? 'vs-dark' : 'light'}
+                  options={{ minimap: { enabled: false }, fontSize: 14 }}
+                />
+              </div>
+              {/* Server response*/}
+              {test.serverResponse && test.serverResponse.trim() !== '' && (
+                <div className="mb-2">
+                  <div className="font-medium mb-1">Server Response (JSON)</div>
+                  <Editor
+                    height="100px"
+                    defaultLanguage="json"
+                    value={
+                      (() => {
+                        try {
+                          return JSON.stringify(JSON.parse(test.serverResponse || ''), null, 2);
+                        } catch {
+                          return test.serverResponse || '';
+                        }
+                      })()
+                    }
+                    theme={isDarkMode ? 'vs-dark' : 'light'}
+                    options={{ minimap: { enabled: false }, readOnly: true, fontSize: 14 }}
+                  />
+                </div>
+              )}
+              {/* Use token checkbox */}
+              <div className="mb-2 flex items-center">
+                <input
+                  type="checkbox"
+                  checked={test.useToken !== false}
+                  onChange={e => handleUpdateTest(test.id, { useToken: e.target.checked })}
+                  className="mr-2"
+                  id={`use-token-${test.id}`}
+                />
+                <label htmlFor={`use-token-${test.id}`}>Use token</label>
+              </div>
+              {/* Run and result */}
+              <div className="flex items-center mt-2">
+                <button
+                  className={`px-4 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 mr-4`}
+                  onClick={() => handleRunTest(test)}
+                >
+                  Run
+                </button>
+                {test.lastResult === 'pass' && <FiCheck className="text-green-600" size={30} />}
+                {test.lastResult === 'fail' && <FiX className="text-red-600" size={30} />}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

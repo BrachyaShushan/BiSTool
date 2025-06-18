@@ -2,6 +2,19 @@ import { Session, Variable, URLData, RequestConfigData } from "./app.types";
 
 export type ModalType = "new" | "rename" | "duplicate" | "edit";
 
+export interface TestCase {
+  id: string;
+  name?: string;
+  bodyOverride?: string;
+  pathOverrides?: Record<string, string>;
+  queryOverrides?: Record<string, string>;
+  expectedStatus: string;
+  expectedResponse?: string;
+  lastResult?: 'pass' | 'fail' | undefined;
+  useToken?: boolean;
+  serverResponse?: string;
+}
+
 export interface ExtendedSession extends Session {
   category?: string;
   urlData: URLData;
@@ -14,6 +27,7 @@ export interface ExtendedSession extends Session {
   requirements?: string;
   responseConditions?: import("./app.types").ResponseCondition[];
   includeToken?: boolean;
+  tests?: TestCase[];
 }
 
 export interface ExtendedVariable extends Variable {
