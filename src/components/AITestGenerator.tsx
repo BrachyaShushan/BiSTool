@@ -9,6 +9,7 @@ import {
   EditorMountParams,
   AnthropicResponse,
 } from "../types/AITestGenerator";
+import { FiCopy } from "react-icons/fi";
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
@@ -52,6 +53,90 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requirements]);
 
+  const promptGenerator = (): string => {
+    const prompt = `Create BDD-style pytest tests for the following Flask API endpoint based on this OpenAPI YAML specification:
+
+    ${yamlData}
+    
+    IMPORTANT: The tests must follow the exact style and structure of my existing test files, with these requirements:
+    
+    1. Use test_client from app.tests for all HTTP requests (NOT the requests library)
+    2. Create a helper function that takes a role and all necessary parameters for the endpoint
+    3. Use get_user_test_headers(role) for authentication headers
+    4. Write detailed BDD-style docstrings with Given/When/Then format in each test function
+    5. Use pytest.mark.parametrize for testing multiple parameter combinations
+    6. Use AssertionMessages constants for standard assertions (status200, status400, res_data, etc.)
+    7. Validate response structure with proper type checking
+    8. Test all applicable user roles (company, division, region, facility)
+    9. Include tests for all relevant status codes (200, 204, 400, 404, etc.)
+    10. Add type hints for all function parameters and variables
+    11. Store the variables that are used in the test cases in a dictionary in top of the test file
+    
+    Your tests should include:
+    - A helper function to make requests to the endpoint with different parameters
+    - Tests for valid requests with various parameter combinations
+    - Tests for invalid parameter formats (400 errors)
+    - Tests for non-existent resources (404 errors)
+    - Validation of response structure including data fields, types, and values
+    - At least one data validation test with specific expected response values
+    
+    Follow this general structure:
+    \`\`\`python
+    from typing import Dict, Optional
+    from app.tests.messages import AssertionMessages
+    from app.tests import get_user_test_headers, test_client
+    import pytest
+    
+    
+    def fetch_endpoint_data(role: str, param1: str, param2: str, filters: Optional[Dict] = None):
+        """Helper function to fetch data from the endpoint."""
+        headers = get_user_test_headers(role)
+        
+        query_string = filters or {}
+        url = f"/api/endpoint/{param1}/{param2}"
+        
+        res = test_client.get(
+            url,
+            headers=headers,
+            query_string=query_string
+        )
+        return res
+    
+    
+    @pytest.mark.parametrize(
+        "role, param1, param2, filters",
+        [
+            # Test cases here
+        ]
+    )
+    def test_endpoint_status_200(role, param1, param2, filters):
+        """
+        Scenario: Retrieve data with valid parameters
+        
+        Given:
+            - Valid parameters 
+            - The user has appropriate role permissions
+        
+        When:
+            - Requesting data with these parameters
+        
+        Then:
+            - The API should return a status code of 200
+            - The response should have the expected structure
+        """
+        # Test implementation
+    \`\`\`
+    
+    Additional Requirements:
+    ${requirements}
+    
+    IMPORTANT: Please ensure the response is complete and not cut off. Include all test cases and their implementations.
+    IMPORTANT: ${useOOP
+        ? "Please generate the test code in object-oriented style"
+        : "Please generate the test code in functional style"
+      }`;
+    return prompt;
+  }
   const generatePytestCode = async (): Promise<void> => {
     setIsLoading(true);
     setError("");
@@ -62,87 +147,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
         dangerouslyAllowBrowser: true,
       });
 
-      const prompt = `Create BDD-style pytest tests for the following Flask API endpoint based on this OpenAPI YAML specification:
-
-${yamlData}
-
-IMPORTANT: The tests must follow the exact style and structure of my existing test files, with these requirements:
-
-1. Use test_client from app.tests for all HTTP requests (NOT the requests library)
-2. Create a helper function that takes a role and all necessary parameters for the endpoint
-3. Use get_user_test_headers(role) for authentication headers
-4. Write detailed BDD-style docstrings with Given/When/Then format in each test function
-5. Use pytest.mark.parametrize for testing multiple parameter combinations
-6. Use AssertionMessages constants for standard assertions (status200, status400, res_data, etc.)
-7. Validate response structure with proper type checking
-8. Test all applicable user roles (company, division, region, facility)
-9. Include tests for all relevant status codes (200, 204, 400, 404, etc.)
-10. Add type hints for all function parameters and variables
-11. Store the variables that are used in the test cases in a dictionary in top of the test file
-
-Your tests should include:
-- A helper function to make requests to the endpoint with different parameters
-- Tests for valid requests with various parameter combinations
-- Tests for invalid parameter formats (400 errors)
-- Tests for non-existent resources (404 errors)
-- Validation of response structure including data fields, types, and values
-- At least one data validation test with specific expected response values
-
-Follow this general structure:
-\`\`\`python
-from typing import Dict, Optional
-from app.tests.messages import AssertionMessages
-from app.tests import get_user_test_headers, test_client
-import pytest
-
-
-def fetch_endpoint_data(role: str, param1: str, param2: str, filters: Optional[Dict] = None):
-    """Helper function to fetch data from the endpoint."""
-    headers = get_user_test_headers(role)
-    
-    query_string = filters or {}
-    url = f"/api/endpoint/{param1}/{param2}"
-    
-    res = test_client.get(
-        url,
-        headers=headers,
-        query_string=query_string
-    )
-    return res
-
-
-@pytest.mark.parametrize(
-    "role, param1, param2, filters",
-    [
-        # Test cases here
-    ]
-)
-def test_endpoint_status_200(role, param1, param2, filters):
-    """
-    Scenario: Retrieve data with valid parameters
-    
-    Given:
-        - Valid parameters 
-        - The user has appropriate role permissions
-    
-    When:
-        - Requesting data with these parameters
-    
-    Then:
-        - The API should return a status code of 200
-        - The response should have the expected structure
-    """
-    # Test implementation
-\`\`\`
-
-Additional Requirements:
-${requirements}
-
-IMPORTANT: Please ensure the response is complete and not cut off. Include all test cases and their implementations.
-IMPORTANT: ${useOOP
-          ? "Please generate the test code in object-oriented style"
-          : "Please generate the test code in functional style"
-        }`;
+      const prompt = promptGenerator();
 
       const response: AnthropicResponse = await anthropic.messages.create({
         model: "claude-3-5-haiku-20241022",
@@ -435,6 +440,16 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
         >
           Use Object-Oriented Programming style for test classes
         </label>
+        <button
+          onClick={() => navigator.clipboard.writeText(promptGenerator())}
+          className={`ml-4 inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md ${isDarkMode
+            ? "bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
+            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+        >
+          <FiCopy />
+          <span className="ml-2">Copy Prompt to AI</span>
+        </button>
       </div>
 
       <div className="mb-6">
@@ -474,6 +489,7 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
             "Generate Pytest Code"
           )}
         </button>
+
       </div>
 
       {error && (

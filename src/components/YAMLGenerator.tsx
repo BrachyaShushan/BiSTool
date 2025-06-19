@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import { Editor } from "@monaco-editor/react";
-import { FiDownload, FiCopy, FiMaximize2, FiMinimize2, FiPlay, FiCheck, FiX } from "react-icons/fi";
+import { FiDownload, FiCopy, FiMaximize2, FiMinimize2, FiPlay, FiCheck, FiX, FiTrash } from "react-icons/fi";
 import {
   YAMLGeneratorProps,
   EditorOptions,
@@ -364,6 +364,9 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
       setYamlOutput(yamlStr);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
+      if (statusCode == "200") {
+        setStatusCode("500");
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -924,6 +927,28 @@ ${generateResponses()}`;
     handleSaveSession(activeSession.name, updatedSession);
   };
 
+  const handleDuplicateTest = (id: string) => {
+    const test = tests.find(t => t.id === id);
+    if (test && activeSession) {
+      const newTest: import("../types/SavedManager").TestCase = {
+        ...test,
+        id: uuidv4(),
+        name: test.name + ' Copy',
+      };
+      const updatedSession = {
+        ...activeSession,
+        tests: [...tests, newTest],
+        urlData: activeSession.urlData,
+        requestConfig: activeSession.requestConfig,
+        yamlOutput: activeSession.yamlOutput,
+        segmentVariables: activeSession.segmentVariables,
+        sharedVariables: activeSession.sharedVariables,
+        activeSection: activeSession.activeSection,
+      };
+      handleSaveSession(activeSession.name, updatedSession);
+    }
+  };
+
   // Remove Test handler
   const handleRemoveTest = (id: string) => {
     if (!activeSession) return;
@@ -1016,12 +1041,43 @@ ${generateResponses()}`;
       const statusMatch = response.status.toString() === test.expectedStatus;
       let responseMatch = true;
       if (test.expectedResponse) {
-        const respJson = await response.json();
-        responseMatch = JSON.stringify(respJson) === test.expectedResponse;
+        if (test.expectedPartialResponse) {
+          // Utility: Deep subset check for objects/arrays
+          const isDeepSubset = (expected: any, actual: any): boolean => {
+            if (typeof expected !== typeof actual) return false;
+            if (typeof expected !== 'object' || expected === null || actual === null) {
+              return expected === actual;
+            }
+            if (Array.isArray(expected)) {
+              if (!Array.isArray(actual)) return false;
+              // Every item in expected must be found as a deep subset in some item in actual
+              return expected.every(expItem => actual.some(actItem => isDeepSubset(expItem, actItem)));
+            }
+            // For objects: every key in expected must exist in actual and match recursively
+            return Object.keys(expected).every(key =>
+              key in actual && isDeepSubset(expected[key], actual[key])
+            );
+          };
+          const isPartialMatch = (expected: string, actual: string) => {
+            try {
+              const expectedJson = JSON.parse(expected);
+              const actualJson = JSON.parse(actual);
+              return isDeepSubset(expectedJson, actualJson);
+            } catch {
+              return false;
+            }
+          };
+          responseMatch = isPartialMatch(test.expectedResponse, test.serverResponse);
+        } else {
+          const respJson = await response.json();
+          responseMatch = JSON.stringify(respJson) === test.expectedResponse;
+        }
       }
       result = statusMatch && responseMatch ? 'pass' : 'fail';
+      test.serverStatusCode = response.status;
     } catch {
       result = 'fail';
+      test.serverStatusCode = 0;
     }
     handleUpdateTest(test.id, { lastResult: result });
   };
@@ -1237,11 +1293,27 @@ ${generateResponses()}`;
                   {statusOptions.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
+                  <option value="custom">Custom Status Code</option>
+
                   {/* Show custom code if not in the list */}
                   {condition.status && !statusOptions.some(opt => opt.value === condition.status) && (
                     <option value={condition.status}>{condition.status}</option>
                   )}
                 </select>
+                {condition.status === "custom" && (
+                  <div className="flex items-center space-x-2 w-full">
+                    <input type="text" id={`custom-status-${idx}`} defaultValue={condition.status}
+                      className={`px-2 py-1 rounded border ${isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} />
+                    <button type="button" onClick={() => {
+                      const input = document.getElementById(`custom-status-${idx}`) as HTMLInputElement;
+                      const updated = [...responseConditions];
+                      updated[idx] = { ...condition, status: input.value };
+                      setResponseConditions(updated);
+                    }} className={`px-2 py-1 rounded border ${isDarkMode ? "bg-green-700 border-green-600 text-white" : "bg-green-200 text-green-700 hover:bg-green-300"}`}>
+                      <FiCheck />
+                    </button>
+                  </div>
+                )}
                 {/* Condition text input */}
                 <input
                   type="text"
@@ -1422,9 +1494,17 @@ ${generateResponses()}`;
                   className={`mr-4 px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
                 />
                 <button
-                  className={`ml-auto px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700`}
+                  className={`flex items-center gap-2 ml-auto px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700`}
+                  onClick={() => handleDuplicateTest(test.id)}
+                >
+                  <FiCopy />
+                  Duplicate
+                </button>
+                <button
+                  className={`flex items-center gap-2 ml-auto px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700`}
                   onClick={() => handleRemoveTest(test.id)}
                 >
+                  <FiTrash />
                   Remove
                 </button>
               </div>
@@ -1490,7 +1570,13 @@ ${generateResponses()}`;
               </div>
               {/* Expected response */}
               <div className="mb-2">
-                <div className="font-medium mb-1">Expected Response (JSON)</div>
+                <div className="flex items-center mb-1">
+                  <span className="font-medium mb-1">Expected Response (JSON)</span>
+                  <label className="flex items-center ml-2">
+                    <input type="checkbox" checked={!!test.expectedPartialResponse} onChange={e => handleUpdateTest(test.id, { expectedPartialResponse: e.target.checked ? test.expectedResponse : undefined })} />
+                    <span className="ml-2">Partial match</span>
+                  </label>
+                </div>
                 <Editor
                   height="100px"
                   defaultLanguage="json"
@@ -1501,6 +1587,13 @@ ${generateResponses()}`;
                 />
               </div>
               {/* Server response*/}
+              {/* Server status code */}
+              {test.serverStatusCode && (
+                <div className="flex items-center mb-2">
+                  <span className="font-medium mr-2">Server Status Code:</span>
+                  <span className={`font-medium px-2 py-1 rounded ${statusCodeColor[test.serverStatusCode as keyof typeof statusCodeColor]}`}>{test.serverStatusCode}</span>
+                </div>
+              )}
               {test.serverResponse && test.serverResponse.trim() !== '' && (
                 <div className="mb-2">
                   <div className="font-medium mb-1">Server Response (JSON)</div>
@@ -1535,10 +1628,11 @@ ${generateResponses()}`;
               {/* Run and result */}
               <div className="flex items-center mt-2">
                 <button
-                  className={`px-4 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 mr-4`}
+                  className={`flex items-center gap-2 px-4 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 mr-4`}
                   onClick={() => handleRunTest(test)}
                 >
-                  Run
+                  <FiPlay />
+                  <span>Run</span>
                 </button>
                 {test.lastResult === 'pass' && <FiCheck className="text-green-600" size={30} />}
                 {test.lastResult === 'fail' && <FiX className="text-red-600" size={30} />}

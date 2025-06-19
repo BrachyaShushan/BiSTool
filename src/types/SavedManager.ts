@@ -10,9 +10,11 @@ export interface TestCase {
   queryOverrides?: Record<string, string>;
   expectedStatus: string;
   expectedResponse?: string;
+  expectedPartialResponse?: string;
   lastResult?: 'pass' | 'fail' | undefined;
   useToken?: boolean;
   serverResponse?: string;
+  serverStatusCode?: number;
 }
 
 export interface ExtendedSession extends Session {

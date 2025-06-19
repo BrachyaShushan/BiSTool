@@ -82,6 +82,9 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
+  const [jsonEditorHeight, setJsonEditorHeight] = useState<number>(200);
+  const jsonEditorContainerRef = useRef<HTMLDivElement>(null);
+
   const decodeString = useCallback((encodedString: string): string | null => {
     try {
       return atob(encodedString.replace(/-/g, "+").replace(/_/g, "/"));
@@ -341,6 +344,35 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     }
   };
 
+  const handleJsonEditorMouseDown = (e: React.MouseEvent): void => {
+    e.preventDefault();
+    const startY = e.pageY;
+    const startHeight = jsonEditorContainerRef.current?.getBoundingClientRect().height || 0;
+
+    function onMouseMove(e: MouseEvent): void {
+      const deltaY = e.pageY - startY;
+      const newHeight = Math.max(100, startHeight + deltaY);
+      if (jsonEditorContainerRef.current) {
+        jsonEditorContainerRef.current.style.height = `${newHeight}px`;
+      }
+      setJsonEditorHeight(newHeight);
+      if (editorRef.current) {
+        editorRef.current.layout();
+      }
+    }
+
+    function onMouseUp(): void {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      if (editorRef.current) {
+        editorRef.current.layout();
+      }
+    }
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  };
+
   const getBodyContent = (): React.ReactElement => {
     switch (bodyType) {
       case "json":
@@ -350,12 +382,13 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
               JSON Body
             </label>
             <div
-              className="overflow-hidden border rounded-md"
-              style={{ height: "200px" }}
+              ref={jsonEditorContainerRef}
+              className="overflow-hidden border rounded-md relative"
+              style={{ height: `${jsonEditorHeight}px` }}
               aria-labelledby="jsonBodyLabel"
             >
               <Editor
-                height="200px"
+                height="100%"
                 defaultLanguage="json"
                 value={jsonBody}
                 theme={isDarkMode ? "vs-dark" : "vs"}
@@ -379,6 +412,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   formatOnType: true,
                   tabSize: 2,
                 }}
+              />
+              <div
+                className="absolute bottom-0 left-0 right-0 h-2 bg-gray-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                onMouseDown={handleJsonEditorMouseDown}
               />
             </div>
           </div>
@@ -484,15 +521,26 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     onSubmit(config);
   };
   const methodOptions =
-  {
-    GET: { value: "GET", label: "GET", color: "text-green-500 dark:text-green-400 bg-green-50 dark:bg-green-900" },
-    POST: { value: "POST", label: "POST", color: "text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900" },
-    PUT: { value: "PUT", label: "PUT", color: "text-yellow-500 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900" },
-    DELETE: { value: "DELETE", label: "DELETE", color: "text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900" },
-    PATCH: { value: "PATCH", label: "PATCH", color: "text-yellow-500 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900" },
-    HEAD: { value: "HEAD", label: "HEAD", color: "text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900" },
-    OPTIONS: { value: "OPTIONS", label: "OPTIONS", color: "text-purple-500 dark:text-purple-400 bg-purple-50 dark:bg-purple-900" },
-  }
+    isDarkMode ?
+      {
+        GET: { value: "GET", label: "GET", color: "dark:text-green-400 dark:bg-green-900" },
+        POST: { value: "POST", label: "POST", color: "dark:text-blue-400 dark:bg-blue-900" },
+        PUT: { value: "PUT", label: "PUT", color: "dark:text-yellow-400 dark:bg-yellow-900" },
+        DELETE: { value: "DELETE", label: "DELETE", color: "dark:text-red-400 dark:bg-red-900" },
+        PATCH: { value: "PATCH", label: "PATCH", color: "dark:text-yellow-400 dark:bg-yellow-900" },
+        HEAD: { value: "HEAD", label: "HEAD", color: "dark:text-blue-400 dark:bg-blue-900" },
+        OPTIONS: { value: "OPTIONS", label: "OPTIONS", color: "dark:text-purple-400 dark:bg-purple-900" },
+      }
+      :
+      {
+        GET: { value: "GET", label: "GET", color: "text-green-500 bg-green-50" },
+        POST: { value: "POST", label: "POST", color: "text-blue-500 bg-blue-50" },
+        PUT: { value: "PUT", label: "PUT", color: "text-yellow-500 bg-yellow-50" },
+        DELETE: { value: "DELETE", label: "DELETE", color: "text-red-500 bg-red-50" },
+        PATCH: { value: "PATCH", label: "PATCH", color: "text-yellow-500 bg-yellow-50" },
+        HEAD: { value: "HEAD", label: "HEAD", color: "text-blue-500 bg-blue-50" },
+        OPTIONS: { value: "OPTIONS", label: "OPTIONS", color: "text-purple-500 bg-purple-50" },
+      }
   return (
     <div
       className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
@@ -525,7 +573,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             className={`w-32 px-3 py-2 rounded-md border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${methodOptions[method as keyof typeof methodOptions].color}`}
           >
             {Object.values(methodOptions).map((option) => (
-              <option key={option.value} value={option.value} className={option.color}>
+              <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}

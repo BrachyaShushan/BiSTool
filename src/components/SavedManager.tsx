@@ -447,7 +447,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
             {/* Session List */}
             {divideBy === 'category' ? (
               Object.entries(groupByCategory(orderSessions(savedSessions))).map(([cat, sessions]) => (
-                <Disclosure key={cat} defaultOpen>
+                <Disclosure key={cat}>
                   {({ open }: { open: boolean }) => (
                     <div className="mb-4">
                       <DisclosureButton className={`flex items-center w-full text-left font-semibold mb-2 focus:outline-none ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
