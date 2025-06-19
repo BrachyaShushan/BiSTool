@@ -51,13 +51,13 @@ const AppContent: React.FC = () => {
     ];
 
     const methodColor = {
-        GET: "dark:bg-blue-900 dark:text-blue-100 bg-blue-100 text-blue-900",
-        POST: "dark:bg-green-900 dark:text-green-100 bg-green-100 text-green-900",
-        PUT: "dark:bg-yellow-900 dark:text-yellow-100 bg-yellow-100 text-yellow-900",
-        DELETE: "dark:bg-red-900 dark:text-red-100 bg-red-100 text-red-900",
-        PATCH: "dark:bg-yellow-900 dark:text-yellow-100 bg-yellow-100 text-yellow-900",
-        HEAD: "dark:bg-blue-900 dark:text-blue-100 bg-blue-100 text-blue-900",
-        OPTIONS: "dark:bg-purple-900 dark:text-purple-100 bg-purple-100 text-purple-900",
+        GET: { value: "GET", label: "GET", color: "dark:text-green-400 dark:bg-green-900 bg-green-50 text-green-500" },
+        POST: { value: "POST", label: "POST", color: "dark:text-blue-400 dark:bg-blue-900 bg-blue-50 text-blue-500" },
+        PUT: { value: "PUT", label: "PUT", color: "dark:text-yellow-400 dark:bg-yellow-900 bg-yellow-50 text-yellow-500" },
+        DELETE: { value: "DELETE", label: "DELETE", color: "dark:text-red-400 dark:bg-red-900 bg-red-50 text-red-500" },
+        PATCH: { value: "PATCH", label: "PATCH", color: "dark:text-yellow-400 dark:bg-yellow-900 bg-yellow-50 text-yellow-500" },
+        HEAD: { value: "HEAD", label: "HEAD", color: "dark:text-blue-400 dark:bg-blue-900 bg-blue-50 text-blue-500" },
+        OPTIONS: { value: "OPTIONS", label: "OPTIONS", color: "dark:text-purple-400 dark:bg-purple-900 bg-purple-50 text-purple-500" },
     }
 
     return (
@@ -78,8 +78,29 @@ const AppContent: React.FC = () => {
                                     BiSTool
                                 </h1>
                             </div>
+                            {/* Sessions of Current Category */}
+                            {activeSession?.category && (
+                                <div className="mt-4 p-4 rounded-lg shadow-sm gap-2 flex dark:bg-gray-800 bg-white">
+                                    {savedSessions.filter(s => s.category === activeSession.category).length > 0 ? (
+                                        savedSessions
+                                            .filter(s => s.category === activeSession.category)
+                                            .map(session => (
+                                                <button
+                                                    key={session.id}
+                                                    onClick={() => handleLoadSession(session)}
+                                                    className={`px-3 py-1 rounded ${activeSession.id === session.id ? "dark:bg-blue-600 dark:text-blue-100 bg-blue-200 text-blue-700 hover:bg-blue-200 dark:hover:bg-blue-800" : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100 hover:bg-blue-200 dark:hover:bg-blue-800"} transition-colors text-sm`}
+                                                >
+                                                    {session.name}
+                                                </button>
+                                            ))
+                                    ) : (
+                                        <span className="text-gray-500 text-sm">No other sessions in this category.</span>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="flex items-center space-x-4">
-                                {activeSession && <span className={`ml-2 px-2 py-2 rounded text-xs ${methodColor[activeSession?.requestConfig.method as keyof typeof methodColor]}`}>{activeSession?.requestConfig.method}</span>}
+                                {activeSession && <span className={`ml-2 px-2 py-2 rounded text-xs ${methodColor[activeSession?.requestConfig.method as keyof typeof methodColor].color}`}>{activeSession?.requestConfig.method}</span>}
 
                                 <SavedManager
                                     activeSession={activeSession}
