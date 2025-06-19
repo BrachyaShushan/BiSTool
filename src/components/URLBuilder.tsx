@@ -321,22 +321,6 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     onSubmit(newUrlData);
   };
 
-  const handleSegmentChange = (index: number, value: string) => {
-    const newSegments = [...segments];
-    const currentSegment = newSegments[index];
-    if (currentSegment) {
-      newSegments[index] = {
-        ...currentSegment,
-        value,
-        isDynamic: value.startsWith("{") && value.endsWith("}"),
-        paramName: currentSegment.paramName || "",
-        description: currentSegment.description || "",
-        required: currentSegment.required || false,
-      };
-      setSegments(newSegments);
-    }
-  };
-
   const handleSegmentAdd = () => {
     setSegments([...segments, { value: "", isDynamic: false, paramName: "", description: "", required: false }]);
   };
@@ -348,55 +332,55 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
   return (
     <div
-      className={`p-4 dark:bg-gray-800 bg-white rounded-lg shadow`}
+      className={`p-4 bg-white rounded-lg shadow dark:bg-gray-800`}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between items-center">
           <div className="flex-1">
-            <label
-              className={`block text-sm font-medium mb-1 dark:text-white text-gray-700`}
+            <span
+              className={`block mb-1 text-sm font-medium text-gray-700 dark:text-white`}
             >
               Protocol
-            </label>
+            </span>
             <select
               value={protocol}
               onChange={(e) => setProtocol(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
+              className={`px-3 py-2 w-full text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
             >
               <option value="http">HTTP</option>
               <option value="https">HTTPS</option>
             </select>
           </div>
           <div className="flex-1 ml-4">
-            <label
-              className={`block text-sm font-medium mb-1 dark:text-white text-gray-700`}
+            <span
+              className={`block mb-1 text-sm font-medium text-gray-700 dark:text-white`}
             >
               Domain
-            </label>
+            </span>
             <input
               type="text"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
               placeholder="example.com"
               className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                ? "bg-gray-700 border-gray-600 text-white"
-                : "bg-white border-gray-300 text-gray-900"
+                ? "text-white bg-gray-700 border-gray-600"
+                : "text-gray-900 bg-white border-gray-300"
                 }`}
             />
           </div>
           <div className="flex-1 ml-4">
-            <label
-              className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
+            <span
+              className={`block mb-1 text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
                 }`}
             >
               Environment
-            </label>
+            </span>
             <select
               value={environment}
               onChange={(e) => setEnvironment(e.target.value)}
               className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                ? "bg-gray-700 border-gray-600 text-white"
-                : "bg-white border-gray-300 text-gray-900"
+                ? "text-white bg-gray-700 border-gray-600"
+                : "text-gray-900 bg-white border-gray-300"
                 }`}
             >
               <option value="development">Development</option>
@@ -407,31 +391,29 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         </div>
 
         <div>
-          <label
-            className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-              }`}
+          <span
+            className={`block mb-1 text-sm font-medium text-gray-700 dark:text-white`}
           >
             Session Description
-          </label>
+          </span>
           <textarea
             value={sessionDescription}
             onChange={(e) => setSessionDescription(e.target.value)}
             placeholder="Enter a description for this API endpoint"
             className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-              ? "bg-gray-700 border-gray-600 text-white"
-              : "bg-white border-gray-300 text-gray-900"
+              ? "text-white bg-gray-700 border-gray-600"
+              : "text-gray-900 bg-white border-gray-300"
               }`}
             rows={3}
           />
         </div>
 
         <div>
-          <label
-            className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-              }`}
+          <span
+            className={`block mb-1 text-sm font-medium text-gray-700 dark:text-white`}
           >
             Path Segments
-          </label>
+          </span>
           <div className="space-y-2">
             {segments.map((segment, index) => (
               <div key={index} className="flex items-center space-x-2">
@@ -449,10 +431,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                         setSegments(newSegments);
                       }}
                       placeholder="Parameter name"
-                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                        ? "bg-gray-700 border-gray-600 text-white"
-                        : "bg-white border-gray-300 text-gray-900"
-                        }`}
+                      className={`px-3 py-2 w-full text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:text-white dark:bg-gray-700 dark:border-gray-600`}
                     />
                   ) : (
                     <input
@@ -467,17 +446,14 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                         setSegments(newSegments);
                       }}
                       placeholder="Segment value"
-                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                        ? "bg-gray-700 border-gray-600 text-white"
-                        : "bg-white border-gray-300 text-gray-900"
-                        }`}
+                      className={`px-3 py-2 w-full text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:text-white dark:bg-gray-700 dark:border-gray-600`}
                     />
                   )}
                 </div>
                 <div className="w-[50%]">
                   <input
                     type="text"
-                    value={segment.description || ""}
+                    value={segment.description ?? ""}
                     onChange={(e) => {
                       const newSegments = [...segments];
                       newSegments[index] = {
@@ -487,14 +463,11 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                       setSegments(newSegments);
                     }}
                     placeholder="Description"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                      ? "bg-gray-700 border-gray-600 text-white"
-                      : "bg-white border-gray-300 text-gray-900"
-                      }`}
+                    className={`px-3 py-2 w-full text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:text-white dark:bg-gray-700 dark:border-gray-600`}
                   />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <label className="flex items-center space-x-2">
+                  <span className="flex items-center space-x-2">
                     <input
                       type="checkbox"
                       checked={segment.isDynamic}
@@ -513,13 +486,13 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                     <span className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                       Dynamic
                     </span>
-                  </label>
+                  </span>
                   <button
                     type="button"
                     onClick={() => handleSegmentRemove(index)}
                     className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                      ? "bg-red-600 text-white hover:bg-red-700"
-                      : "bg-red-100 text-red-700 hover:bg-red-200"
+                      ? "text-white bg-red-600 hover:bg-red-700"
+                      : "text-red-700 bg-red-100 hover:bg-red-200"
                       }`}
                   >
                     <FiTrash2 />
@@ -533,8 +506,8 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
             type="button"
             onClick={() => handleSegmentAdd()}
             className={`mt-2 px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+              ? "text-white bg-blue-600 hover:bg-blue-700"
+              : "text-blue-700 bg-blue-100 hover:bg-blue-200"
               }`}
           >
             <FiPlus />
@@ -543,8 +516,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         </div>
 
         <div
-          className={`p-4 ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
-            } rounded-md`}
+          className={`p-4 bg-gray-50 rounded-md dark:bg-gray-700`}
         >
           <h3
             className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
@@ -609,7 +581,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         <div className="flex justify-end">
           <button
             type="submit"
-            className={`px-4 py-2 rounded-md dark:bg-blue-600 dark:text-white bg-blue-100 text-blue-700 hover:bg-blue-200 dark:hover:bg-blue-700`}
+            className={`px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
           >
             Continue to Request Configuration
           </button>

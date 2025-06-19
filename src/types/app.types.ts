@@ -1,6 +1,6 @@
 import { ExtendedSession } from "./SavedManager";
 
-export type SectionId = "url" | "request" | "yaml" | "ai";
+export type SectionId = "url" | "request" | "tests" | "yaml" | "ai";
 
 export interface Section {
   id: SectionId;
@@ -59,7 +59,7 @@ export interface RequestConfigData {
   method: string;
   headers: Header[];
   queryParams: QueryParam[];
-  bodyType: "none" | "json" | "form" | "text"
+  bodyType: "none" | "json" | "form" | "text";
   jsonBody?: string;
   formData?: FormDataField[];
   textBody?: string;

@@ -29,7 +29,7 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
                     setSavedSessions(validSessions);
                 }
             } catch (err) {
-                setError('Failed to load saved sessions');
+                setError('Failed to load saved sessions: ' + err);
                 setSavedSessions([]);
             } finally {
                 setIsLoading(false);
@@ -48,7 +48,7 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
             localStorage.setItem("saved_sessions", JSON.stringify(updatedSessions));
             setShowDeleteConfirm(null);
         } catch (err) {
-            setError('Failed to delete session');
+            setError('Failed to delete session: ' + err);
         }
     };
 
@@ -68,7 +68,7 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
             setSelectedSession(session);
             onLoadRequest(session);
         } catch (err) {
-            setError('Failed to load session');
+            setError('Failed to load session: ' + err);
         }
     };
 
@@ -81,7 +81,7 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
     }
 
     return (
-        <div className="p-4 rounded-lg shadow bg-gray-50">
+        <div className="p-4 bg-gray-50 rounded-lg shadow">
             <h2 className="mb-4 text-xl font-bold">Saved Sessions</h2>
 
             {savedSessions.length === 0 ? (
@@ -96,7 +96,7 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
                                 : "border-gray-200"
                                 }`}
                         >
-                            <div className="flex items-start justify-between">
+                            <div className="flex justify-between items-start">
                                 <div className="flex-1">
                                     <h3 className="font-medium">
                                         {session.name || "Unnamed Session"}
@@ -133,7 +133,7 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
                             </div>
 
                             {showDeleteConfirm === session.timestamp && (
-                                <div className="p-2 mt-2 border border-red-200 rounded bg-red-50">
+                                <div className="p-2 mt-2 bg-red-50 rounded border border-red-200">
                                     <p className="text-sm text-red-700">
                                         Are you sure you want to delete this session?
                                     </p>

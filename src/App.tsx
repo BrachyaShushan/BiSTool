@@ -1,6 +1,7 @@
 import React from "react";
 import URLBuilder from "./components/URLBuilder";
 import RequestConfig from "./components/RequestConfig";
+import TestManager from "./components/TestManager";
 import YAMLGenerator from "./components/YAMLGenerator";
 import AITestGenerator from "./components/AITestGenerator";
 import SavedManager from "./components/SavedManager";
@@ -33,6 +34,8 @@ const AppContent: React.FC = () => {
         switch (activeSection) {
             case "request":
                 return <RequestConfig onSubmit={handleRequestConfigSubmit} />;
+            case "tests":
+                return <TestManager />;
             case "yaml":
                 return <YAMLGenerator onGenerate={handleYAMLGenerated} />;
             case "ai":
@@ -46,6 +49,7 @@ const AppContent: React.FC = () => {
     const sections: Section[] = [
         { id: "url", label: "URL Builder" },
         { id: "request", label: "Request Config" },
+        { id: "tests", label: "Tests" },
         { id: "yaml", label: "YAML Generator" },
         { id: "ai", label: "AI Test Generator" },
     ];
