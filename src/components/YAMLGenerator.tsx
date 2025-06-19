@@ -1086,31 +1086,27 @@ ${generateResponses()}`;
     return <div>No request configuration available</div>;
   }
   const statusCodeColor = {
-    "200": "bg-blue-500",
-    "201": "bg-green-500",
-    "204": "bg-green-500",
-    "400": "bg-red-500",
-    "401": "bg-red-500",
-    "403": "bg-red-500",
-    "404": "bg-red-500",
-    "500": "bg-red-500",
+    "200": "dark:bg-blue-500 bg-blue-200",
+    "201": "dark:bg-green-500 bg-green-200",
+    "204": "dark:bg-green-500 bg-green-200",
+    "400": "dark:bg-red-500 bg-red-200",
+    "401": "dark:bg-red-500 bg-red-200",
+    "403": "dark:bg-red-500 bg-red-200",
+    "404": "dark:bg-red-500 bg-red-200",
+    "500": "dark:bg-red-500 bg-red-200",
   }
 
 
   return (
     <div
-      className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
-        } rounded-lg shadow`}
+      className={`p-4 dark:bg-gray-800 bg-white rounded-lg shadow`}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
           <button
             onClick={handleFetchRequest}
             disabled={isGenerating}
-            className={`px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-blue-500 text-white hover:bg-blue-600"
-              } ${isGenerating ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`px-4 py-2 rounded-md flex items-center space-x-2 dark:bg-blue-600 dark:text-white bg-blue-100 text-blue-700 hover:bg-blue-200 dark:hover:bg-blue-700 ${isGenerating ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {isGenerating ? (
               <>
@@ -1136,7 +1132,7 @@ ${generateResponses()}`;
             />
             <label
               htmlFor="include-token-checkbox"
-              className={isDarkMode ? "text-white" : "text-gray-700"}
+              className={`dark:text-white text-gray-700`}
             >
               Include Token in Request
             </label>
@@ -1144,10 +1140,7 @@ ${generateResponses()}`;
           <select
             value={openApiVersion}
             onChange={(e) => setOpenApiVersion(e.target.value)}
-            className={`px-3 py-2 border rounded-md ${isDarkMode
-              ? "bg-gray-700 border-gray-600 text-white"
-              : "bg-white border-gray-300 text-gray-900"
-              }`}
+            className={`px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
           >
             <option value="3.0.0">OpenAPI 3.0.0</option>
             <option value="2.0.0">OpenAPI 2.0.0</option>
@@ -1164,15 +1157,13 @@ ${generateResponses()}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
-            }`}
+          className={`block text-sm font-medium mb-2 dark:text-white text-gray-700`}
         >
           Custom Response
         </label>
         <div
           ref={containerRef}
-          className={`border ${isDarkMode ? "border-gray-600" : "border-gray-300"
-            } rounded-lg overflow-hidden relative`}
+          className={`border dark:border-gray-600 border-gray-300 rounded-lg overflow-hidden relative`}
           style={{ height: "200px" }}
         >
           <Editor
@@ -1192,20 +1183,14 @@ ${generateResponses()}`;
         <div className="flex items-center space-x-2">
           <button
             onClick={handleGenerateFromCustomResponse}
-            className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
-              ? "bg-green-600 text-white hover:bg-green-700"
-              : "bg-green-500 text-white hover:bg-green-600"
-              }`}
+            className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 dark:bg-green-600 dark:text-white hover:bg-green-200 dark:hover:bg-green-700 bg-green-100 text-green-700 hover:bg-green-200`}
           >
             <FiPlay />
             <span>Generate from Custom Response</span>
           </button>
           <button
             onClick={handleResetCustomResponse}
-            className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
-              ? "bg-yellow-600 text-white hover:bg-yellow-700"
-              : "bg-yellow-400 text-white hover:bg-yellow-500"
-              }`}
+            className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 dark:bg-yellow-600 dark:text-white hover:bg-yellow-200 dark:hover:bg-yellow-700 bg-yellow-100 text-yellow-700 hover:bg-yellow-200`}
             type="button"
           >
             <span>Reset to Default</span>
@@ -1215,14 +1200,12 @@ ${generateResponses()}`;
 
       {requestConfig?.queryParams?.length > 0 && <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
-            }`}
+          className={`block text-sm font-medium mb-2 dark:text-white text-gray-700`}
         >
           Query Parameters
         </label>
         <div
-          className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
-            }`}
+          className={`p-4 rounded-lg dark:bg-gray-700 bg-gray-50`}
         >
           {requestConfig?.queryParams?.map((param) => (
             <label key={param.key} className="flex items-center mb-2">
@@ -1231,11 +1214,10 @@ ${generateResponses()}`;
                 checked={selectedQueries[param.key]}
                 disabled={param.required}
                 onChange={() => handleQueryToggle(param.key)}
-                className={`mr-2 ${isDarkMode ? "text-blue-500" : "text-blue-600"
-                  }`}
+                className={`mr-2 dark:text-blue-500 text-blue-600`}
               />
               <span
-                className={`${isDarkMode ? "text-white" : "text-gray-700"}`}
+                className={`dark:text-white text-gray-700`}
               >
                 {param.key}: {param.value}
               </span>
@@ -1246,18 +1228,16 @@ ${generateResponses()}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
-            }`}
+          className={`block text-sm font-medium mb-2 dark:text-white text-gray-700`}
         >
           Request URL
         </label>
         <div
-          className={`p-3 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
-            }`}
+          className={`p-3 rounded-lg dark:bg-gray-700 bg-gray-50`}
         >
           <div className="flex items-center space-x-2">
             <code
-              className={`${isDarkMode ? "text-gray-300" : "text-gray-700"}`}
+              className={`dark:text-gray-300 text-gray-700`}
             >
               {getColoredUrl()}
             </code>
@@ -1267,14 +1247,12 @@ ${generateResponses()}`;
 
       <div className="mb-4">
         <label
-          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
-            }`}
+          className={`block text-sm font-medium mb-2 dark:text-white text-gray-700`}
         >
           Response Conditions
         </label>
         <div
-          className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"
-            }`}
+          className={`p-4 rounded-lg dark:bg-gray-700 bg-gray-50`}
         >
           <div className="space-y-4">
             {responseConditions.map((condition, idx) => (
@@ -1287,7 +1265,7 @@ ${generateResponses()}`;
                     updated[idx] = { ...condition, status: e.target.value };
                     setResponseConditions(updated);
                   }}
-                  className={`px-2 py-1 rounded border ${isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
+                  className={`px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
                 >
                   <option disabled value="">Select Status Code</option>
                   {statusOptions.map(opt => (
@@ -1303,7 +1281,7 @@ ${generateResponses()}`;
                 {condition.status === "custom" && (
                   <div className="flex items-center space-x-2 w-full">
                     <input type="text" id={`custom-status-${idx}`} defaultValue={condition.status}
-                      className={`px-2 py-1 rounded border ${isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} />
+                      className={`px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`} />
                     <button type="button" onClick={() => {
                       const input = document.getElementById(`custom-status-${idx}`) as HTMLInputElement;
                       const updated = [...responseConditions];
@@ -1324,7 +1302,7 @@ ${generateResponses()}`;
                     setResponseConditions(updated);
                   }}
                   placeholder="Condition (optional)"
-                  className={`px-2 py-1 rounded border flex-1 ${isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
+                  className={`px-2 py-1 rounded border flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
                 />
                 {/* Include checkbox */}
                 <input
@@ -1335,7 +1313,7 @@ ${generateResponses()}`;
                     updated[idx] = { ...condition, include: e.target.checked };
                     setResponseConditions(updated);
                   }}
-                  className={`${isDarkMode ? "text-blue-500" : "text-blue-600"}`}
+                  className={`dark:text-blue-500 text-blue-600`}
                   title="Include this response"
                 />
                 {/* Remove button */}
@@ -1344,7 +1322,7 @@ ${generateResponses()}`;
                   onClick={() => {
                     setResponseConditions(responseConditions.filter((_, i) => i !== idx));
                   }}
-                  className={`px-2 py-1 rounded ${isDarkMode ? "bg-red-700 text-white hover:bg-red-800" : "bg-red-200 text-red-700 hover:bg-red-300"}`}
+                  className={`px-2 py-1 rounded dark:bg-red-700 dark:text-white dark:hover:bg-red-800 bg-red-200 text-red-700 hover:bg-red-300`}
                 >
                   Remove
                 </button>
@@ -1353,7 +1331,7 @@ ${generateResponses()}`;
             <button
               type="button"
               onClick={() => setResponseConditions([...responseConditions, { status: "", condition: "", include: true }])}
-              className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode ? "bg-green-600 text-white hover:bg-green-700" : "bg-green-500 text-white hover:bg-green-600"}`}
+              className={`mt-2 px-4 py-2 rounded-md flex items-center space-x-2 dark:bg-green-600 dark:text-white hover:bg-green-200 dark:hover:bg-green-700 bg-green-100 text-green-700 hover:bg-green-200`}
             >
               Add Status Code
             </button>
@@ -1364,21 +1342,14 @@ ${generateResponses()}`;
       <div className="mt-4">
         <div className="flex items-center justify-between mb-2">
           <label
-            className={`block text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"}`}
+            className={`block text-sm font-medium dark:text-white text-gray-700`}
           >
             Generated Output
           </label>
           <button
             onClick={handleCopyYAML}
             disabled={!yamlOutput}
-            className={`px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
-              ? yamlOutput
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-700 text-gray-400 cursor-not-allowed"
-              : yamlOutput
-                ? "bg-blue-500 text-white hover:bg-blue-600"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
+            className={`px-4 py-2 rounded-md flex items-center space-x-2 dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700 bg-blue-100 text-blue-700 hover:bg-blue-200 ${!yamlOutput ? "bg-gray-200 text-gray-400 cursor-not-allowed" : ""}`}
           >
             {copySuccess ? (
               <>
@@ -1395,24 +1366,14 @@ ${generateResponses()}`;
           <button
             onClick={handleDownloadYAML}
             disabled={!yamlOutput}
-            className={`px-4 py-2 rounded-md flex items-center space-x-2 ${isDarkMode
-              ? yamlOutput
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-700 text-gray-400 cursor-not-allowed"
-              : yamlOutput
-                ? "bg-blue-500 text-white hover:bg-blue-600"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
+            className={`px-4 py-2 rounded-md flex items-center space-x-2 dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700 bg-blue-100 text-blue-700 hover:bg-blue-200 ${!yamlOutput ? "bg-gray-200 text-gray-400 cursor-not-allowed" : ""}`}
           >
             <FiDownload />
             <span>Download YAML</span>
           </button>
           <button
             onClick={handleYamlExpand}
-            className={`px-2 py-1 text-sm rounded-md flex items-center space-x-2 ${isDarkMode
-              ? "bg-gray-700 text-white hover:bg-gray-600"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
+            className={`px-2 py-1 text-sm rounded-md flex items-center space-x-2 dark:bg-gray-700 dark:text-white hover:bg-gray-600 bg-gray-200 text-gray-700 hover:bg-gray-300`}
           >
             {isYamlExpanded ? (
               <>
@@ -1428,16 +1389,16 @@ ${generateResponses()}`;
           </button>
           <div className="flex items-center">
             <span className="mr-2 font-medium">Status Code:</span>
-            <span className={`mr-2 px-2 py-1 rounded-md font-medium ${statusCodeColor[statusCode as keyof typeof statusCodeColor]}`}>{statusCode}</span>
+            <span className={`mr-2 px-2 py-1 rounded-md dark:text-white dark:font-medium ${statusCodeColor[statusCode as keyof typeof statusCodeColor]}`}>{statusCode}</span>
             <span className="mr-2 font-medium">View as:</span>
             <button
-              className={`px-2 py-1 rounded-l ${outputViewMode === 'yaml' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              className={`px-2 py-1 rounded-l ${outputViewMode === 'yaml' ? 'dark:bg-blue-600 dark:text-white bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-200 text-gray-700'}`}
               onClick={() => setOutputViewMode('yaml')}
             >
               YAML
             </button>
             <button
-              className={`px-2 py-1 rounded-r ${outputViewMode === 'json' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              className={`px-2 py-1 rounded-r ${outputViewMode === 'json' ? 'dark:bg-blue-600 dark:text-white bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-200 text-gray-700'}`}
               onClick={() => setOutputViewMode('json')}
             >
               JSON
@@ -1446,7 +1407,7 @@ ${generateResponses()}`;
         </div>
         <div
           ref={yamlContainerRef}
-          className={`border ${isDarkMode ? "border-gray-600" : "border-gray-300"} rounded-lg overflow-hidden relative`}
+          className={`border dark:border-gray-600 border-gray-300 rounded-lg overflow-hidden relative`}
           style={{ height: isYamlExpanded ? "calc(100vh - 200px)" : editorHeight }}
         >
           <Editor
@@ -1475,33 +1436,33 @@ ${generateResponses()}`;
 
       {/* TESTS SECTION */}
       <div className="mt-8">
-        <h3 className={`text-lg font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>TESTS</h3>
+        <h3 className={`text-lg font-bold mb-2 dark:text-white text-gray-900`}>TESTS</h3>
         <button
-          className={`mb-4 px-4 py-2 rounded-md ${isDarkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+          className={`mb-4 px-4 py-2 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700 bg-blue-100 text-blue-700 hover:bg-blue-200`}
           onClick={handleAddTest}
         >
           Add Test
         </button>
         <div className="space-y-6">
           {tests.map((test: any) => (
-            <div key={test.id} className={`p-4 rounded-lg border ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+            <div key={test.id} className={`p-4 rounded-lg border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50`}>
               <div className="flex items-center mb-2">
                 <input
                   type="text"
                   value={test.name}
                   onChange={e => handleUpdateTest(test.id, { name: e.target.value })}
                   placeholder="Test Name"
-                  className={`mr-4 px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                  className={`mr-4 px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
                 />
                 <button
-                  className={`flex items-center gap-2 ml-auto px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700`}
+                  className={`flex items-center gap-2 ml-auto px-2 py-1 rounded dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700 bg-blue-100 text-blue-700 hover:bg-blue-200`}
                   onClick={() => handleDuplicateTest(test.id)}
                 >
                   <FiCopy />
                   Duplicate
                 </button>
                 <button
-                  className={`flex items-center gap-2 ml-auto px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700`}
+                  className={`flex items-center gap-2 ml-auto px-2 py-1 rounded dark:bg-red-600 dark:text-white dark:hover:bg-red-800 bg-red-100 text-red-700 hover:bg-red-200`}
                   onClick={() => handleRemoveTest(test.id)}
                 >
                   <FiTrash />
@@ -1520,7 +1481,7 @@ ${generateResponses()}`;
                         value={test.pathOverrides?.[seg.paramName] || ''}
                         onChange={e => handleUpdateTest(test.id, { pathOverrides: { ...test.pathOverrides, [seg.paramName]: e.target.value } })}
                         placeholder={seg.paramName}
-                        className={`px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                        className={`px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
                       />
                     ))}
                   </div>
@@ -1538,7 +1499,7 @@ ${generateResponses()}`;
                         value={test.queryOverrides?.[param.key] || ''}
                         onChange={e => handleUpdateTest(test.id, { queryOverrides: { ...test.queryOverrides, [param.key]: e.target.value } })}
                         placeholder={param.key}
-                        className={`px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                        className={`px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
                       />
                     ))}
                   </div>
@@ -1565,7 +1526,7 @@ ${generateResponses()}`;
                   type="text"
                   value={test.expectedStatus}
                   onChange={e => handleUpdateTest(test.id, { expectedStatus: e.target.value })}
-                  className={`px-2 py-1 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                  className={`px-2 py-1 rounded border dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
                 />
               </div>
               {/* Expected response */}
@@ -1628,7 +1589,7 @@ ${generateResponses()}`;
               {/* Run and result */}
               <div className="flex items-center mt-2">
                 <button
-                  className={`flex items-center gap-2 px-4 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 mr-4`}
+                  className={`flex items-center gap-2 px-4 py-1 rounded dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700 mr-4 bg-blue-100 text-blue-700 hover:bg-blue-200`}
                   onClick={() => handleRunTest(test)}
                 >
                   <FiPlay />

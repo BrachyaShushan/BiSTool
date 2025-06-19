@@ -348,25 +348,20 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
   return (
     <div
-      className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-white"
-        } rounded-lg shadow`}
+      className={`p-4 dark:bg-gray-800 bg-white rounded-lg shadow`}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <label
-              className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-                }`}
+              className={`block text-sm font-medium mb-1 dark:text-white text-gray-700`}
             >
               Protocol
             </label>
             <select
               value={protocol}
               onChange={(e) => setProtocol(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                ? "bg-gray-700 border-gray-600 text-white"
-                : "bg-white border-gray-300 text-gray-900"
-                }`}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
             >
               <option value="http">HTTP</option>
               <option value="https">HTTPS</option>
@@ -374,8 +369,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
           </div>
           <div className="flex-1 ml-4">
             <label
-              className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-white" : "text-gray-700"
-                }`}
+              className={`block text-sm font-medium mb-1 dark:text-white text-gray-700`}
             >
               Domain
             </label>
@@ -615,7 +609,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         <div className="flex justify-end">
           <button
             type="submit"
-            className={`px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700`}
+            className={`px-4 py-2 rounded-md dark:bg-blue-600 dark:text-white bg-blue-100 text-blue-700 hover:bg-blue-200 dark:hover:bg-blue-700`}
           >
             Continue to Request Configuration
           </button>
