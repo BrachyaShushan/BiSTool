@@ -1373,7 +1373,7 @@ ${generateResponses()}`;
           </button>
           <button
             onClick={handleYamlExpand}
-            className={`px-2 py-1 text-sm rounded-md flex items-center space-x-2 dark:bg-gray-700 dark:text-white hover:bg-gray-600 bg-gray-200 text-gray-700 hover:bg-gray-300`}
+            className={`px-2 py-1 text-sm rounded-md flex items-center space-x-2 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 bg-gray-200 text-gray-700 hover:bg-gray-300`}
           >
             {isYamlExpanded ? (
               <>
