@@ -92,14 +92,14 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
                         <div
                             key={session.timestamp}
                             className={`p-3 border rounded-lg ${selectedSession?.timestamp === session.timestamp
-                                ? "border-blue-500 bg-blue-50"
-                                : "border-gray-200"
+                                ? "border-blue-500 bg-blue-50 dark:bg-blue-900"
+                                : "border-gray-200 dark:border-gray-700"
                                 }`}
                         >
                             <div className="flex justify-between items-start">
                                 <div className="flex-1">
                                     <h3 className="font-medium">
-                                        {session.name || "Unnamed Session"}
+                                        {session.name ?? "Unnamed Session"}
                                     </h3>
                                     <p className="text-sm text-gray-500">
                                         {new Date(session.timestamp).toLocaleString()}
@@ -107,12 +107,12 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
                                     <div className="mt-2 text-sm">
                                         <p>
                                             <span className="font-medium">URL:</span>{" "}
-                                            {session.urlData?.processedURL ||
+                                            {session.urlData?.processedURL ??
                                                 `${session.urlData?.baseURL}${session.urlData?.segments ? '/' + session.urlData.segments : ''}`}
                                         </p>
                                         <p>
                                             <span className="font-medium">Method:</span>{" "}
-                                            {session.requestConfig?.method || "GET"}
+                                            {session.requestConfig?.method ?? "No method"}
                                         </p>
                                     </div>
                                 </div>

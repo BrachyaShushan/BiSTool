@@ -81,9 +81,46 @@ const TestManager: React.FC = () => {
         };
         handleSaveSession(activeSession.name, updatedSession);
     };
+    // Utility: Deep subset check for objects/arrays
+    const isDeepSubset = (expected: any, actual: any): boolean => {
+        if (typeof expected !== typeof actual) return false;
+        if (typeof expected !== 'object' || expected === null || actual === null) {
+            return expected === actual;
+        }
+        if (Array.isArray(expected)) {
+            if (!Array.isArray(actual)) return false;
+            return expected.every(expItem => actual.some(actItem => isDeepSubset(expItem, actItem)));
+        }
+        return Object.keys(expected).every(key =>
+            key in actual && isDeepSubset(expected[key], actual[key])
+        );
+    };
 
+    const isPartialMatch = (expected: string, actual: string) => {
+        try {
+            const expectedJson = JSON.parse(expected);
+            const actualJson = JSON.parse(actual);
+            return isDeepSubset(expectedJson, actualJson);
+        } catch {
+            return false;
+        }
+    };
+    const evaluateUrl = (url: string, test: TestCase) => {
+        return url.replace(/\{([^}]+)\}/g, (match, varName) => {
+            if (test.pathOverrides?.[varName] && test.pathOverrides[varName].trim() !== '') {
+                return test.pathOverrides[varName];
+            }
+            if (activeSession?.sharedVariables?.[varName]) {
+                return activeSession.sharedVariables[varName];
+            }
+            if (globalVariables?.[varName]) {
+                return globalVariables[varName];
+            }
+            return match; // leave as is if not found
+        });
+    }
     // Run Test handler
-    const handleRunTest = async (test: import("../types/SavedManager").TestCase) => {
+    const handleRunTest = async (test: TestCase) => {
         // Build request using overrides
         let url = urlData.builtUrl ?? '';
 
@@ -98,18 +135,7 @@ const TestManager: React.FC = () => {
         }
 
         // Replace any remaining {variable} in the URL with test overrides, session/shared, or global variables
-        url = url.replace(/\{([^}]+)\}/g, (match, varName) => {
-            if (test.pathOverrides?.[varName] && test.pathOverrides[varName].trim() !== '') {
-                return test.pathOverrides[varName];
-            }
-            if (activeSession?.sharedVariables?.[varName]) {
-                return activeSession.sharedVariables[varName];
-            }
-            if (globalVariables?.[varName]) {
-                return globalVariables[varName];
-            }
-            return match; // leave as is if not found
-        });
+        url = evaluateUrl(url, test);
 
         // Query param overrides: only override if non-empty string
         let queryString = '';
@@ -163,30 +189,7 @@ const TestManager: React.FC = () => {
 
             if (test.expectedResponse) {
                 if (test.expectedPartialResponse) {
-                    // Utility: Deep subset check for objects/arrays
-                    const isDeepSubset = (expected: any, actual: any): boolean => {
-                        if (typeof expected !== typeof actual) return false;
-                        if (typeof expected !== 'object' || expected === null || actual === null) {
-                            return expected === actual;
-                        }
-                        if (Array.isArray(expected)) {
-                            if (!Array.isArray(actual)) return false;
-                            return expected.every(expItem => actual.some(actItem => isDeepSubset(expItem, actItem)));
-                        }
-                        return Object.keys(expected).every(key =>
-                            key in actual && isDeepSubset(expected[key], actual[key])
-                        );
-                    };
 
-                    const isPartialMatch = (expected: string, actual: string) => {
-                        try {
-                            const expectedJson = JSON.parse(expected);
-                            const actualJson = JSON.parse(actual);
-                            return isDeepSubset(expectedJson, actualJson);
-                        } catch {
-                            return false;
-                        }
-                    };
                     responseMatch = isPartialMatch(test.expectedResponse, test.serverResponse);
                 } else {
                     const respJson = await response.json();
