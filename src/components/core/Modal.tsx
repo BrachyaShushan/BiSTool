@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import { useTheme } from "../context/ThemeContext";
-import { ModalProps } from "../types/Modal.types";
+import { useTheme } from "../../context/ThemeContext";
+import { ModalProps } from "../../types/components/Modal.types";
 import { FiX, FiSave, FiXCircle } from "react-icons/fi";
 
 const Modal: React.FC<ModalProps> = ({

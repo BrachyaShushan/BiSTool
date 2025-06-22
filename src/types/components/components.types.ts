@@ -4,7 +4,7 @@ import {
   QueryParam,
   Header,
   FormDataField,
-} from "./app.types";
+} from "../core/app.types";
 
 export interface URLBuilderProps {
   onSubmit: (data: URLData) => void;
@@ -12,6 +12,10 @@ export interface URLBuilderProps {
 
 export interface RequestConfigProps {
   onSubmit: (data: RequestConfigData) => void;
+}
+
+export interface TestManagerProps {
+  onSubmit?: (data: any) => void;
 }
 
 export interface YAMLGeneratorProps {

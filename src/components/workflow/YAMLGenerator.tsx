@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useAppContext } from "../context/AppContext";
-import { useTheme } from "../context/ThemeContext";
+import { useAppContext } from "../../context/AppContext";
+import { useTheme } from "../../context/ThemeContext";
 import { Editor } from "@monaco-editor/react";
-import { FiDownload, FiCopy, FiMaximize2, FiMinimize2, FiPlay, FiCheck } from "react-icons/fi";
+import { FiDownload, FiCopy, FiMaximize2, FiMinimize2, FiPlay, FiCheck, FiArrowRight } from "react-icons/fi";
+import { YAMLGeneratorProps } from "../../types/components/components.types";
 import {
-  YAMLGeneratorProps,
   EditorOptions,
   ResponseData,
-} from "../types/yamlGenerator.types";
-import { Header, RequestConfigData, ResponseCondition } from "../types/app.types";
-import { ExtendedSession } from "../types/SavedManager";
+} from "../../types/components/yamlGenerator.types";
+import { Header, RequestConfigData, ResponseCondition } from "../../types/core/app.types";
+import { ExtendedSession } from "../../types/features/SavedManager";
 
 // Extract variables from URL in {variable} format, excluding the base URL
 const extractVariables = (url: string): string[] => {
@@ -26,7 +26,7 @@ const extractVariables = (url: string): string[] => {
   });
 };
 
-const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
+const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
   const {
     urlData,
     requestConfig,
@@ -35,6 +35,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     segmentVariables,
     activeSession,
     handleSaveSession,
+    setActiveSection,
   } = useAppContext();
 
   const { isDarkMode } = useTheme();
@@ -48,7 +49,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   >(() => {
     if (requestConfig?.queryParams) {
       const initialQueries: Record<string, boolean> = {};
-      requestConfig.queryParams.forEach((param) => {
+      requestConfig.queryParams.forEach((param: any) => {
         initialQueries[param.key] = param.required ?? false;
       });
       return initialQueries;
@@ -63,7 +64,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     return activeSession?.responseConditions ?? [];
   });
   const [includeToken, setIncludeToken] = useState<boolean>(activeSession?.includeToken ?? true);
-  const tokenExists = globalVariables["tokenName"] ? true : false;
+  const tokenExists = globalVariables["tokenName"];
   const editorRef = useRef<any>(null);
   const yamlEditorRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,7 +77,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
   useEffect(() => {
     if (requestConfig?.queryParams) {
       const initialQueries: Record<string, boolean> = {};
-      requestConfig.queryParams.forEach((param) => {
+      requestConfig.queryParams.forEach((param: any) => {
         initialQueries[param.key] = selectedQueries[param.key] ?? false;
       });
       setSelectedQueries(initialQueries);
@@ -190,7 +191,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     e.preventDefault();
     const startY = e.pageY;
     const startHeight =
-      containerRef.current?.getBoundingClientRect().height || 0;
+      containerRef.current?.getBoundingClientRect().height ?? 0;
 
     function onMouseMove(e: MouseEvent): void {
       const deltaY = e.pageY - startY;
@@ -219,7 +220,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     e.preventDefault();
     const startY = e.pageY;
     const startHeight =
-      yamlContainerRef.current?.getBoundingClientRect().height || 0;
+      yamlContainerRef.current?.getBoundingClientRect().height ?? 0;
 
     function onMouseMove(e: MouseEvent): void {
       const deltaY = e.pageY - startY;
@@ -310,7 +311,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
 
       // Convert headers to the format expected by fetch
       const headers = combinedHeaders.reduce((acc, header) => {
-        if (header && header.key) {
+        if (header?.key) {
           const value = getValueFromVariables(header.value);
           if (value !== null && value !== undefined) {
             acc[header.key] = value as string;
@@ -336,12 +337,12 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
       }
       // Make the API request
       const response = await fetch(url, {
-        method: requestConfig?.method || "GET",
+        method: requestConfig?.method ?? "GET",
         headers: headers,
         body
       });
       setStatusCode(response.status.toString());
-      if (response.status == 204) {
+      if (response.status === 204) {
         setOutputViewMode('json');
         setLastJsonResponse({});
         return;
@@ -360,9 +361,11 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
       setLastYamlOutput(yamlStr);
       setLocalYamlOutput(yamlStr);
       setYamlOutput(yamlStr);
+      // Call onGenerate to trigger navigation to next section
+      onGenerate(yamlStr);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
-      if (statusCode == "200") {
+      if (statusCode === "200") {
         setStatusCode("500");
       }
     } finally {
@@ -382,8 +385,10 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
       setLastYamlOutput(yamlStr);
       setLocalYamlOutput(yamlStr);
       setYamlOutput(yamlStr);
+      // Call onGenerate to trigger navigation to next section
+      onGenerate(yamlStr);
     } catch (err) {
-      setError("Invalid JSON format");
+      setError("Invalid JSON format ERROR: " + err);
     }
   };
 
@@ -401,9 +406,9 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     let headers = config?.headers ?? [];
 
     // Use active session name or fallback to endpoint name
-    const title = activeSession?.name || "API Endpoint";
-    const category = activeSession?.category || "API";
-    const description = activeSession?.urlData.sessionDescription?.split("\n").map(line => line.trim()).join(". ") || "";
+    const title = activeSession?.name ?? "API Endpoint";
+    const category = activeSession?.category ?? "API";
+    const description = activeSession?.urlData?.sessionDescription?.split("\n").map(line => line.trim()).join(". ") ?? "";
 
     if (includeToken) {
       const tokenName = getValueFromVariables("tokenName") as string;
@@ -430,7 +435,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
         return `  - name: ${segment.paramName}
     in: path
     type: string
-    example: ${activeSession?.sharedVariables[segment.paramName]}
+    example: ${activeSession?.sharedVariables?.[segment.paramName]}
     required: true${segment.description ? `\n    description: ${segment.description}` : ""
           }`;
       });
@@ -439,9 +444,9 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     const headerParameters = headers?.map((header) => {
       return `  - name: ${header.key}
     in: header
-    type: ${header.type || "string"}
+    type: ${header.type ?? "string"}
     required: ${header.required || false}
-    description: ${header.description || ""}
+    description: ${header.description ?? ""}
     example: ${header.value}`;
     });
 
@@ -449,9 +454,9 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     const queryParameters = queryParams?.map((param) => {
       return `  - name: ${param.key}
     in: query
-    type: ${param.type || "string"}
-    required: ${param.required || false}
-    description: ${param.description || ""}
+    type: ${param.type ?? "string"}
+    required: ${param.required ?? false}
+    description: ${param.description ?? ""}
     example: ${param.value}`;
     });
 
@@ -461,7 +466,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = () => {
     in: formData
     type: ${field.type}
     required: ${field.required}
-    description: ${field.description || ""}
+    description: ${field.description ?? ""}
     example: ${field.value}`;
     });
 
@@ -528,7 +533,7 @@ ${generateSchema(jsonBody, "    ")}`;
 ${config.formData.map(field => `      ${field.key}:
         type: ${field.type}
         required: ${field.required}
-        description: ${field.description || ""}
+        description: ${field.description ?? ""}
         example: ${field.value}`).join("\n")}`;
       } else if (config.bodyType === "text") {
         bodySchema += `  - in: body
@@ -548,7 +553,8 @@ ${config.formData.map(field => `      ${field.key}:
     const generateResponses = (): string => {
       let responses = `  200:\n    description: Successful response\n    schema:\n${schema}`;
       responseConditions.filter(c => c.include && c.status !== "200").forEach((condition) => {
-        responses += `\n  ${condition.status}:\n    description: ${condition.status} response\n    ${condition.condition ? `condition: ${condition.condition}` : ''}`;
+        responses += `\n  ${condition.status}:\n    description: ${condition.status} response\n    ${condition.condition ? `condition: ${condition.condition}` : ""
+          }`;
       });
       return responses;
     };
@@ -557,50 +563,50 @@ ${config.formData.map(field => `      ${field.key}:
       // Generate OpenAPI 0.9.7.1 YAML with generic template structure
       yaml = `${method} ${title}
 ---
-tags:
-  - ${category}
+        tags:
+        - ${category}
 description: ${description}
 url: ${url}
 security:
-  - ApiKeyAuth: []
+        - ApiKeyAuth: []
 parameters:
-${allParameters}${generateRequestBody()}
+        ${allParameters}${generateRequestBody()}
 responses:
-${generateResponses()}`;
+        ${generateResponses()}`;
     } else if (openApiVersion === "2.0.0") {
       // Generate OpenAPI 2.0 YAML
       yaml = `swagger: '2.0'
 info:
-  title: ${title}
+        title: ${title}
   version: '1.0'
 paths:
-  ${url}:
-    ${method.toLowerCase()}:
-      tags:
+        ${url}:
+        ${method.toLowerCase()}:
+        tags:
         - ${title}
       produces:
         - application/json
       parameters:
-${allParameters}
+        ${allParameters}
 ${generateRequestBody()}
       responses:
-${generateResponses()}`;
+        ${generateResponses()}`;
     } else {
       // Generate OpenAPI 3.0 YAML
       yaml = `openapi: 3.0.0
 info:
-  title: ${title}
+        title: ${title}
   version: '1.0'
 paths:
-  ${url}:
-    ${method.toLowerCase()}:
-      tags:
+        ${url}:
+        ${method.toLowerCase()}:
+        tags:
         - ${title}
       parameters:
-${allParameters}
+        ${allParameters}
 ${generateRequestBody()}
       responses:
-${generateResponses()}`;
+        ${generateResponses()}`;
     }
 
     return yaml;
@@ -700,19 +706,19 @@ ${generateResponses()}`;
 
       if (part.includes("://")) {
         return (
-          <span key={index} className="text-blue-500">
+          <span key={`${index}-${resolvedPart}`} className="text-blue-500">
             {resolvedPart}
           </span>
         );
       } else if (index === 1) {
         return (
-          <span key={index} className="text-green-500">
+          <span key={`${index}-${resolvedPart}`} className="text-green-500">
             {resolvedPart}
           </span>
         );
       } else {
         return (
-          <span key={index} className="text-purple-500">
+          <span key={`${index}-${resolvedPart}`} className="text-purple-500">
             {resolvedPart}
           </span>
         );
@@ -739,8 +745,8 @@ ${generateResponses()}`;
 
   // Load custom response from session or default when session changes
   useEffect(() => {
-    if (activeSession && activeSession.customResponse) {
-      setCustomResponse(activeSession.customResponse);
+    if (activeSession?.customResponse) {
+      setCustomResponse(activeSession?.customResponse);
     } else {
       setCustomResponse(getDefaultCustomResponse());
     }
@@ -914,7 +920,7 @@ ${generateResponses()}`;
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
-              checked={includeToken && tokenExists}
+              checked={includeToken && !!tokenExists}
               onChange={() => setIncludeToken((prev) => !prev)}
               id="include-token-checkbox"
               disabled={!tokenExists}
@@ -936,8 +942,13 @@ ${generateResponses()}`;
             <option value="0.9.7.1">OpenAPI 0.9.7.1</option>
           </select>
         </div>
+        <div className="flex justify-between items-center mb-4">
+          <button onClick={() => setActiveSection("ai")} className="flex items-center px-4 py-2 space-x-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700">
+            <FiArrowRight />
+            <span>Continue to AI Test Generator</span>
+          </button>
+        </div>
       </div>
-
       {error && (
         <div className="p-3 mb-4 text-red-700 bg-red-100 rounded-md">
           {error}
@@ -958,8 +969,8 @@ ${generateResponses()}`;
           <Editor
             height="100%"
             defaultLanguage="json"
-            value={customResponse || ""}
-            onChange={(value) => setCustomResponse(value || "")}
+            value={customResponse ?? ""}
+            onChange={(value) => setCustomResponse(value ?? "")}
             onMount={handleEditorDidMount}
             theme={isDarkMode ? "vs-dark" : "light"}
             options={editorOptions}
@@ -1045,7 +1056,7 @@ ${generateResponses()}`;
         >
           <div className="space-y-4">
             {responseConditions.map((condition, idx) => (
-              <div key={idx} className="flex items-center mb-2 space-x-2">
+              <div key={`${idx}-${condition.status}`} className="flex items-center mb-2 space-x-2">
                 {/* Status code dropdown or input */}
                 <select
                   value={condition.status}

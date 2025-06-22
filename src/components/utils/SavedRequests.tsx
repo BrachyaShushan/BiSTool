@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { SavedRequestsProps, SavedSession } from "../types/savedRequests.types";
+import { useProjectContext } from "../../context/ProjectContext";
+import { SavedRequestsProps, SavedSession } from "../../types/features/savedRequests.types";
 
 const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
+    const { getProjectStorageKey } = useProjectContext();
     const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
-    const [selectedSession, setSelectedSession] = useState<SavedSession | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -12,7 +13,8 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
     useEffect(() => {
         const loadSessions = () => {
             try {
-                const saved = localStorage.getItem("saved_sessions");
+                const storageKey = getProjectStorageKey("saved_sessions");
+                const saved = localStorage.getItem(storageKey);
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     if (!Array.isArray(parsed)) {
@@ -37,7 +39,7 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
         };
 
         loadSessions();
-    }, []);
+    }, [getProjectStorageKey]);
 
     const deleteSession = (id: string) => {
         try {
@@ -45,7 +47,8 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
                 (session) => session.id !== id
             );
             setSavedSessions(updatedSessions);
-            localStorage.setItem("saved_sessions", JSON.stringify(updatedSessions));
+            const storageKey = getProjectStorageKey("saved_sessions");
+            localStorage.setItem(storageKey, JSON.stringify(updatedSessions));
             setShowDeleteConfirm(null);
         } catch (err) {
             setError('Failed to delete session: ' + err);
@@ -65,7 +68,6 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
                 throw new Error(`Missing required session properties: ${missingProps.join(', ')}`);
             }
 
-            setSelectedSession(session);
             onLoadRequest(session);
         } catch (err) {
             setError('Failed to load session: ' + err);
@@ -81,72 +83,54 @@ const SavedRequests: React.FC<SavedRequestsProps> = ({ onLoadRequest }) => {
     }
 
     return (
-        <div className="p-4 bg-gray-50 rounded-lg shadow">
-            <h2 className="mb-4 text-xl font-bold">Saved Sessions</h2>
-
+        <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Saved Requests</h3>
             {savedSessions.length === 0 ? (
-                <p className="text-gray-500">No saved sessions yet</p>
+                <p className="text-gray-500">No saved requests found.</p>
             ) : (
                 <div className="space-y-2">
                     {savedSessions.map((session) => (
                         <div
-                            key={session.timestamp}
-                            className={`p-3 border rounded-lg ${selectedSession?.timestamp === session.timestamp
-                                ? "border-blue-500 bg-blue-50 dark:bg-blue-900"
-                                : "border-gray-200 dark:border-gray-700"
-                                }`}
+                            key={session.id}
+                            className="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
-                            <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                    <h3 className="font-medium">
-                                        {session.name ?? "Unnamed Session"}
-                                    </h3>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-medium">{session.name}</h4>
                                     <p className="text-sm text-gray-500">
                                         {new Date(session.timestamp).toLocaleString()}
                                     </p>
-                                    <div className="mt-2 text-sm">
-                                        <p>
-                                            <span className="font-medium">URL:</span>{" "}
-                                            {session.urlData?.processedURL ??
-                                                `${session.urlData?.baseURL}${session.urlData?.segments ? '/' + session.urlData.segments : ''}`}
-                                        </p>
-                                        <p>
-                                            <span className="font-medium">Method:</span>{" "}
-                                            {session.requestConfig?.method ?? "No method"}
-                                        </p>
-                                    </div>
                                 </div>
                                 <div className="flex space-x-2">
                                     <button
                                         onClick={() => loadSession(session)}
-                                        className="px-2 py-1 text-sm text-white bg-blue-500 rounded hover:bg-blue-600"
+                                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                                     >
                                         Load
                                     </button>
                                     <button
-                                        onClick={() => setShowDeleteConfirm(session.timestamp)}
-                                        className="px-2 py-1 text-sm text-white bg-red-500 rounded hover:bg-red-600"
+                                        onClick={() => setShowDeleteConfirm(session.id)}
+                                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
                                     >
                                         Delete
                                     </button>
                                 </div>
                             </div>
-
-                            {showDeleteConfirm === session.timestamp && (
-                                <div className="p-2 mt-2 bg-red-50 rounded border border-red-200">
-                                    <p className="text-sm text-red-700">
+                            {showDeleteConfirm === session.id && (
+                                <div className="mt-2 p-2 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded">
+                                    <p className="text-sm text-red-700 dark:text-red-300">
                                         Are you sure you want to delete this session?
                                     </p>
-                                    <div className="flex mt-2 space-x-2">
+                                    <div className="flex space-x-2 mt-2">
                                         <button
                                             onClick={() => deleteSession(session.id)}
-                                            className="px-2 py-1 text-xs text-white bg-red-500 rounded hover:bg-red-600"
+                                            className="px-2 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
                                         >
-                                            Yes, Delete
+                                            Confirm
                                         </button>
                                         <button
                                             onClick={() => setShowDeleteConfirm(null)}
-                                            className="px-2 py-1 text-xs text-white bg-gray-500 rounded hover:bg-gray-600"
+                                            className="px-2 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
                                         >
                                             Cancel
                                         </button>

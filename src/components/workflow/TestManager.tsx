@@ -1,10 +1,10 @@
 import React from "react";
-import { useAppContext } from "../context/AppContext";
-import { useTheme } from "../context/ThemeContext";
+import { useAppContext } from "../../context/AppContext";
+import { useTheme } from "../../context/ThemeContext";
+import { TestCase } from "../../types/features/SavedManager";
+import { FiTrash2, FiPlay, FiCopy, FiCheck, FiX } from "react-icons/fi";
 import { Editor } from "@monaco-editor/react";
-import { FiPlay, FiCheck, FiX, FiTrash, FiCopy } from "react-icons/fi";
 import { v4 as uuidv4 } from 'uuid';
-import { TestCase } from "../types/SavedManager";
 
 const TestManager: React.FC = () => {
     const {
@@ -13,6 +13,7 @@ const TestManager: React.FC = () => {
         globalVariables,
         activeSession,
         handleSaveSession,
+        setActiveSection,
     } = useAppContext();
 
     const { isDarkMode } = useTheme();
@@ -21,31 +22,24 @@ const TestManager: React.FC = () => {
     // Add Test handler
     const handleAddTest = () => {
         if (!activeSession) return;
-        const newTest: import("../types/SavedManager").TestCase = {
+        const newTest: TestCase = {
             id: uuidv4(),
             name: '',
-            bodyOverride: '',
-            pathOverrides: {},
-            queryOverrides: {},
             expectedStatus: '200',
             expectedResponse: '',
-            lastResult: undefined,
-            useToken: true,
         };
         const updatedSession = {
             ...activeSession,
-            tests: [...tests, newTest],
+            tests: [...(activeSession.tests || []), newTest],
         };
         handleSaveSession(activeSession.name, updatedSession);
     };
 
     // Update Test handler
-    const handleUpdateTest = (id: string, update: Partial<import("../types/SavedManager").TestCase>) => {
+    const handleUpdateTest = (id: string, update: Partial<TestCase>) => {
         if (!activeSession) return;
         const safeUpdate = { ...update };
-        if ('bodyOverride' in safeUpdate) safeUpdate.bodyOverride = safeUpdate.bodyOverride ?? '';
-        if ('expectedResponse' in safeUpdate) safeUpdate.expectedResponse = safeUpdate.expectedResponse ?? '';
-        const updatedTests = tests.map((test: import("../types/SavedManager").TestCase) =>
+        const updatedTests = tests.map((test: TestCase) =>
             test.id === id ? { ...test, ...safeUpdate } : test
         );
         const updatedSession = {
@@ -55,17 +49,33 @@ const TestManager: React.FC = () => {
         handleSaveSession(activeSession.name, updatedSession);
     };
 
+    const handleRunAll = () => {
+        tests.forEach(test => handleRunTest(test));
+    };
+    const handleContinue = () => {
+        setActiveSection("yaml");
+    };
+
+    const handleRunAllFailed = () => {
+        tests.forEach(test => {
+            if (test.lastResult === 'fail') {
+                handleRunTest(test);
+            }
+        });
+    };
+
     const handleDuplicateTest = (id: string) => {
         const test = tests.find(t => t.id === id);
         if (test && activeSession) {
-            const newTest: import("../types/SavedManager").TestCase = {
+            const newTest: TestCase = {
                 ...test,
                 id: uuidv4(),
                 name: `${test.name} Copy`,
+                expectedResponse: test.expectedResponse ?? '',
             };
             const updatedSession = {
                 ...activeSession,
-                tests: [...tests, newTest],
+                tests: [...(activeSession.tests || []), newTest],
             };
             handleSaveSession(activeSession.name, updatedSession);
         }
@@ -74,7 +84,7 @@ const TestManager: React.FC = () => {
     // Remove Test handler
     const handleRemoveTest = (id: string) => {
         if (!activeSession) return;
-        const updatedTests = tests.filter((test: import("../types/SavedManager").TestCase) => test.id !== id);
+        const updatedTests = tests.filter((test: TestCase) => test.id !== id);
         const updatedSession = {
             ...activeSession,
             tests: updatedTests,
@@ -126,7 +136,7 @@ const TestManager: React.FC = () => {
 
         // Path overrides: only override if non-empty string
         if (urlData.parsedSegments) {
-            urlData.parsedSegments.forEach(seg => {
+            urlData.parsedSegments.forEach((seg: any) => {
                 const overrideVal = test.pathOverrides?.[seg.paramName];
                 if (seg.isDynamic && overrideVal && overrideVal.trim() !== '') {
                     url = url.replace(`{${seg.paramName}}`, String(overrideVal));
@@ -140,7 +150,7 @@ const TestManager: React.FC = () => {
         // Query param overrides: only override if non-empty string
         let queryString = '';
         if (requestConfig?.queryParams) {
-            const params = requestConfig.queryParams.map(param => {
+            const params = requestConfig.queryParams.map((param: any) => {
                 const overrideVal = test.queryOverrides?.[param.key];
                 const value = (overrideVal && overrideVal.trim() !== '') ? overrideVal : param.value;
                 return `${param.key}=${encodeURIComponent(value)}`;
@@ -151,7 +161,7 @@ const TestManager: React.FC = () => {
 
         // Body override: only use if non-empty string
         let body: string | undefined = undefined;
-        let headers: Record<string, string> = (requestConfig?.headers || []).reduce((acc: Record<string, string>, h) => {
+        let headers: Record<string, string> = (requestConfig?.headers || []).reduce((acc: Record<string, string>, h: any) => {
             acc[h.key] = h.value;
             return acc;
         }, {});
@@ -254,17 +264,17 @@ const TestManager: React.FC = () => {
                                 className={`flex gap-2 items-center px-2 py-1 ml-auto text-red-700 bg-red-100 rounded dark:bg-red-600 dark:text-white dark:hover:bg-red-800 hover:bg-red-200`}
                                 onClick={() => handleRemoveTest(test.id)}
                             >
-                                <FiTrash />
+                                <FiTrash2 />
                                 Remove
                             </button>
                         </div>
 
                         {/* Path variable overrides */}
-                        {urlData?.parsedSegments?.filter(seg => seg.isDynamic).length > 0 && (
+                        {urlData?.parsedSegments?.filter((seg: any) => seg.isDynamic).length > 0 && (
                             <div className="mb-2">
                                 <div className="mb-1 font-medium">Path Variable Overrides</div>
                                 <div className="flex flex-wrap gap-2">
-                                    {urlData.parsedSegments.filter(seg => seg.isDynamic).map(seg => (
+                                    {urlData.parsedSegments.filter((seg: any) => seg.isDynamic).map((seg: any) => (
                                         <input
                                             key={seg.paramName}
                                             type="text"
@@ -283,7 +293,7 @@ const TestManager: React.FC = () => {
                             <div className="mb-2">
                                 <div className="mb-1 font-medium">Query Param Overrides</div>
                                 <div className="flex flex-wrap gap-2">
-                                    {requestConfig.queryParams.map(param => (
+                                    {requestConfig.queryParams.map((param: any) => (
                                         <input
                                             key={param.key}
                                             type="text"
@@ -348,7 +358,7 @@ const TestManager: React.FC = () => {
 
                         {/* Server response*/}
                         {/* Server status code */}
-                        {test.serverStatusCode && test.serverStatusCode != 0 ? (
+                        {test.serverStatusCode && test.serverStatusCode !== 0 ? (
                             <div className="flex items-center mb-2">
                                 <span className="mr-2 font-medium">Server Status Code:</span>
                                 <span className={`font-medium px-2 py-1 rounded ${statusCodeColor[test.serverStatusCode as unknown as keyof typeof statusCodeColor]}`}>
@@ -404,6 +414,26 @@ const TestManager: React.FC = () => {
                         </div>
                     </div>
                 ))}
+            </div>
+            <div className="flex justify-between items-center mb-4">
+                <button
+                    className={`px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
+                    onClick={handleRunAll}
+                >
+                    Run All Tests
+                </button>
+                <button
+                    className={`px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
+                    onClick={handleRunAllFailed}
+                >
+                    Run All Failed Tests
+                </button>
+                <button
+                    className={`px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
+                    onClick={handleContinue}
+                >
+                    Continue
+                </button>
             </div>
         </div>
     );

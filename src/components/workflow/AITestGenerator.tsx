@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useTheme } from "../context/ThemeContext";
-import { useAppContext } from "../context/AppContext";
+import { useTheme } from "../../context/ThemeContext";
+import { useAppContext } from "../../context/AppContext";
 import Editor from "@monaco-editor/react";
 import Anthropic from "@anthropic-ai/sdk/index.mjs";
 import {
@@ -8,7 +8,7 @@ import {
   EditorRef,
   EditorMountParams,
   AnthropicResponse,
-} from "../types/AITestGenerator";
+} from "../../types/components/AITestGenerator";
 import { FiCopy } from "react-icons/fi";
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {

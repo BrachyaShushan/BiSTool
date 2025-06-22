@@ -2,6 +2,13 @@ export interface AITestGeneratorProps {
   yamlData: string;
 }
 
+export interface AITestGeneratorData {
+  prompt: string;
+  response: string;
+  isLoading: boolean;
+  error: string | null;
+}
+
 export interface EditorRef {
   current: any; // Monaco editor instance
 }

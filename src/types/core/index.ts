@@ -1,13 +1,8 @@
-import {
-  URLData,
-  RequestConfigData,
-  Variable,
-  SectionId,
-} from "./core/app.types";
-import { ExtendedSession } from "./features/SavedManager";
+import { URLData, RequestConfigData, Variable, SectionId } from "./app.types";
+import { ExtendedSession } from "../features/SavedManager";
 
-export * from "./core/app.types";
-export * from "./core/project.types";
+export * from "./app.types";
+export * from "./project.types";
 
 export interface AppContextType {
   urlData: URLData;

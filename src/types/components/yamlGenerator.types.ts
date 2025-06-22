@@ -4,7 +4,7 @@ import {
   QueryParam as AppQueryParam,
   Header as AppHeader,
   FormDataField as AppFormDataField,
-} from "./app.types";
+} from "../core/app.types";
 
 export interface YAMLGeneratorProps {
   onGenerate: (yaml: string) => void;

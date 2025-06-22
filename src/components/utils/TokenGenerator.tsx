@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useAppContext } from "../context/AppContext";
-import { useTheme } from "../context/ThemeContext";
-import Modal from "./Modal";
+import { useAppContext } from "../../context/AppContext";
+import { useTheme } from "../../context/ThemeContext";
+import Modal from "../core/Modal";
 import { FiKey } from "react-icons/fi";
 
 interface TokenConfig {

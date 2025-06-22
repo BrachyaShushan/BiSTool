@@ -12,92 +12,147 @@ import {
   Variable,
   SectionId,
 } from "../types";
-import { ExtendedSession } from "../types/SavedManager";
+import { ExtendedSession } from "../types/features/SavedManager";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeSession, setActiveSession] = useState<ExtendedSession | null>(() => {
-    try {
-      const savedSession = localStorage.getItem("active_session");
-      if (savedSession) {
-        const parsed = safeParseJSON(savedSession);
-        return parsed ?? null;
-      }
-      return null;
-    } catch (err) {
-      setError("Failed to load active session Error: " + err);
-      return null;
-    }
-  });
+interface AppProviderProps {
+  children: React.ReactNode;
+  getProjectStorageKey: (key: string) => string;
+  currentProjectId: string | null;
+  forceReload: number;
+}
 
-  const [savedSessions, setSavedSessions] = useState<ExtendedSession[]>(() => {
-    try {
-      const savedSessions = localStorage.getItem("saved_sessions");
-      if (savedSessions) {
-        const parsed = safeParseJSON(savedSessions);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-      return [];
-    } catch (err) {
-      setError("Failed to load saved sessions Error: " + err);
-      return [];
-    }
-  });
-
-  const [globalVariables, setGlobalVariables] = useState<Record<string, string>>(() => {
-    try {
-      const savedState = localStorage.getItem("app_state");
-      if (savedState) {
-        const parsed = safeParseJSON(savedState);
-        return parsed?.globalVariables ?? {};
-      }
-      return {};
-    } catch (err) {
-      setError("Failed to load global variables Error: " + err);
-      return {};
-    }
-  });
-
+export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectStorageKey, currentProjectId, forceReload }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialize with default values instead of trying to load from localStorage
+  const [activeSession, setActiveSession] = useState<ExtendedSession | null>(null);
+  const [savedSessions, setSavedSessions] = useState<ExtendedSession[]>([]);
+  const [globalVariables, setGlobalVariables] = useState<Record<string, string>>({});
+
   // Initialize state from localStorage if available
-  const [urlData, setUrlData] = useState<URLData>(() => {
+  const [urlData, setUrlData] = useState<URLData>({
+    baseURL: "",
+    segments: "",
+    parsedSegments: [],
+    queryParams: [],
+    segmentVariables: [],
+    processedURL: "",
+    domain: "",
+    protocol: "https",
+    builtUrl: "",
+    environment: "development",
+  });
+
+  const [requestConfig, setRequestConfig] = useState<RequestConfigData | null>(null);
+  const [yamlOutput, setYamlOutput] = useState<string>("");
+  const [activeSection, setActiveSection] = useState<SectionId>("url");
+  const [segmentVariables, setSegmentVariables] = useState<Record<string, string>>({});
+  const [sharedVariables, setSharedVariables] = useState<Variable[]>([]);
+
+  // Effect to reload data when project changes
+  useEffect(() => {
+    // Only load data if we have a current project
+    if (!currentProjectId) {
+      console.log("No current project ID, skipping data load");
+      setIsLoading(false);
+      return;
+    }
+
+    console.log("Loading data for project:", currentProjectId);
+
+    // Reload active session
     try {
-      const savedState = localStorage.getItem("app_state");
+      const storageKey = getProjectStorageKey("active_session");
+      console.log("Loading active session from:", storageKey);
+      const savedSession = localStorage.getItem(storageKey);
+      if (savedSession) {
+        const parsed = safeParseJSON(savedSession);
+        setActiveSession(parsed ?? null);
+        console.log("Loaded active session:", parsed);
+      } else {
+        setActiveSession(null);
+        console.log("No active session found");
+      }
+    } catch (err) {
+      setError("Failed to load active session Error: " + err);
+      setActiveSession(null);
+    }
+
+    // Reload saved sessions
+    try {
+      const storageKey = getProjectStorageKey("saved_sessions");
+      console.log("Loading saved sessions from:", storageKey);
+      const savedSessions = localStorage.getItem(storageKey);
+      if (savedSessions) {
+        const parsed = safeParseJSON(savedSessions);
+        const sessions = Array.isArray(parsed) ? parsed : [];
+        setSavedSessions(sessions);
+        console.log("Loaded saved sessions:", sessions.length);
+      } else {
+        setSavedSessions([]);
+        console.log("No saved sessions found");
+      }
+    } catch (err) {
+      setError("Failed to load saved sessions Error: " + err);
+      setSavedSessions([]);
+    }
+
+    // Reload global variables
+    try {
+      const storageKey = getProjectStorageKey("app_state");
+      console.log("Loading app state from:", storageKey);
+      const savedState = localStorage.getItem(storageKey);
       if (savedState) {
         const parsed = safeParseJSON(savedState);
-        return (
-          parsed?.urlData ?? {
-            baseURL: "",
-            segments: "",
-            parsedSegments: [],
-            queryParams: [],
-            segmentVariables: [],
-            processedURL: "",
-            domain: "",
-            protocol: "https",
-            builtUrl: "",
-            environment: "development",
-          }
-        );
+        setGlobalVariables(parsed?.globalVariables ?? {});
+        console.log("Loaded global variables:", Object.keys(parsed?.globalVariables ?? {}));
+      } else {
+        setGlobalVariables({});
+        console.log("No app state found");
       }
-      return {
-        baseURL: "",
-        segments: "",
-        parsedSegments: [],
-        queryParams: [],
-        segmentVariables: [],
-        processedURL: "",
-        domain: "",
-        protocol: "https",
-        builtUrl: "",
-        environment: "development",
-      };
+    } catch (err) {
+      setError("Failed to load global variables Error: " + err);
+      setGlobalVariables({});
+    }
+
+    // Reload URL data
+    try {
+      const storageKey = getProjectStorageKey("app_state");
+      const savedState = localStorage.getItem(storageKey);
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        setUrlData(parsed?.urlData ?? {
+          baseURL: "",
+          segments: "",
+          parsedSegments: [],
+          queryParams: [],
+          segmentVariables: [],
+          processedURL: "",
+          domain: "",
+          protocol: "https",
+          builtUrl: "",
+          environment: "development",
+        });
+      } else {
+        setUrlData({
+          baseURL: "",
+          segments: "",
+          parsedSegments: [],
+          queryParams: [],
+          segmentVariables: [],
+          processedURL: "",
+          domain: "",
+          protocol: "https",
+          builtUrl: "",
+          environment: "development",
+        });
+      }
     } catch (err) {
       setError("Failed to load URL data Error: " + err);
-      return {
+      setUrlData({
         baseURL: "",
         segments: "",
         parsedSegments: [],
@@ -108,93 +163,97 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         protocol: "https",
         builtUrl: "",
         environment: "development",
-      };
+      });
     }
-  });
 
-  const [requestConfig, setRequestConfig] = useState<RequestConfigData | null>(
-    () => {
-      try {
-        const savedState = localStorage.getItem("app_state");
-        if (savedState) {
-          const parsed = safeParseJSON(savedState);
-          return parsed?.requestConfig ?? null;
-        }
-        return null;
-      } catch (err) {
-        setError("Failed to load request config Error: " + err);
-        return null;
-      }
-    }
-  );
-
-  const [yamlOutput, setYamlOutput] = useState<string>(() => {
+    // Reload request config
     try {
-      const savedState = localStorage.getItem("app_state");
+      const storageKey = getProjectStorageKey("app_state");
+      const savedState = localStorage.getItem(storageKey);
       if (savedState) {
         const parsed = safeParseJSON(savedState);
-        return parsed?.yamlOutput ?? "";
+        setRequestConfig(parsed?.requestConfig ?? null);
+      } else {
+        setRequestConfig(null);
       }
-      return "";
+    } catch (err) {
+      setError("Failed to load request config Error: " + err);
+      setRequestConfig(null);
+    }
+
+    // Reload YAML output
+    try {
+      const storageKey = getProjectStorageKey("app_state");
+      const savedState = localStorage.getItem(storageKey);
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        setYamlOutput(parsed?.yamlOutput ?? "");
+      } else {
+        setYamlOutput("");
+      }
     } catch (err) {
       setError("Failed to load YAML output Error: " + err);
-      return "";
+      setYamlOutput("");
     }
-  });
 
-  const [activeSection, setActiveSection] = useState<SectionId>(() => {
+    // Reload active section
     try {
-      // First try to get from active session
-      const activeSessionStr = localStorage.getItem("active_session");
+      const activeSessionStorageKey = getProjectStorageKey("active_session");
+      const activeSessionStr = localStorage.getItem(activeSessionStorageKey);
       if (activeSessionStr) {
         const activeSession = safeParseJSON(activeSessionStr);
         if (activeSession?.activeSection) {
-          return activeSession.activeSection as SectionId;
+          setActiveSection(activeSession.activeSection as SectionId);
+        }
+      } else {
+        const appStateStorageKey = getProjectStorageKey("app_state");
+        const savedState = localStorage.getItem(appStateStorageKey);
+        if (savedState) {
+          const parsed = safeParseJSON(savedState);
+          setActiveSection(parsed?.activeSection ?? "url");
+        } else {
+          setActiveSection("url");
         }
       }
-
-      // Then try to get from app state
-      const savedState = localStorage.getItem("app_state");
-      if (savedState) {
-        const parsed = safeParseJSON(savedState);
-        return parsed?.activeSection ?? "url";
-      }
-      return "url";
     } catch (err) {
       setError("Failed to load active section ERROR: " + err);
-      return "url";
+      setActiveSection("url");
     }
-  });
 
-  const [segmentVariables, setSegmentVariables] = useState<
-    Record<string, string>
-  >(() => {
+    // Reload segment variables
     try {
-      const savedState = localStorage.getItem("app_state");
+      const storageKey = getProjectStorageKey("app_state");
+      const savedState = localStorage.getItem(storageKey);
       if (savedState) {
         const parsed = safeParseJSON(savedState);
-        return parsed?.segmentVariables ?? {};
+        setSegmentVariables(parsed?.segmentVariables ?? {});
+      } else {
+        setSegmentVariables({});
       }
-      return {};
     } catch (err) {
       setError("Failed to load segment variables ERROR: " + err);
-      return {};
+      setSegmentVariables({});
     }
-  });
 
-  const [sharedVariables, setSharedVariables] = useState<Variable[]>(() => {
+    // Reload shared variables
     try {
-      const savedState = localStorage.getItem("shared_variables");
+      const storageKey = getProjectStorageKey("shared_variables");
+      const savedState = localStorage.getItem(storageKey);
       if (savedState) {
         const parsed = safeParseJSON(savedState);
-        return parsed ?? [];
+        setSharedVariables(parsed ?? []);
+      } else {
+        setSharedVariables([]);
       }
-      return [];
     } catch (err) {
       setError("Failed to load shared variables ERROR: " + err);
-      return [];
+      setSharedVariables([]);
     }
-  });
+
+    // Set loading to false after all data is loaded
+    setIsLoading(false);
+
+  }, [currentProjectId, forceReload, getProjectStorageKey]);
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
@@ -207,7 +266,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         segmentVariables,
         globalVariables,
       };
-      localStorage.setItem("app_state", JSON.stringify(state));
+      const storageKey = getProjectStorageKey("app_state");
+      localStorage.setItem(storageKey, JSON.stringify(state));
     } catch (err) {
       setError("Failed to save app state ERROR: " + err);
     }
@@ -218,31 +278,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     activeSection,
     segmentVariables,
     globalVariables,
+    getProjectStorageKey,
   ]);
 
   useEffect(() => {
     try {
-      localStorage.setItem("shared_variables", JSON.stringify(sharedVariables));
+      const storageKey = getProjectStorageKey("shared_variables");
+      localStorage.setItem(storageKey, JSON.stringify(sharedVariables));
     } catch (err) {
       setError("Failed to save shared variables ERROR: " + err);
     }
-  }, [sharedVariables]);
+  }, [sharedVariables, getProjectStorageKey]);
 
   useEffect(() => {
     try {
-      localStorage.setItem("active_session", JSON.stringify(activeSession));
+      const storageKey = getProjectStorageKey("active_session");
+      localStorage.setItem(storageKey, JSON.stringify(activeSession));
     } catch (err) {
       setError("Failed to save active session ERROR: " + err);
     }
-  }, [activeSession]);
+  }, [activeSession, getProjectStorageKey]);
 
   useEffect(() => {
     try {
-      localStorage.setItem("saved_sessions", JSON.stringify(savedSessions));
+      const storageKey = getProjectStorageKey("saved_sessions");
+      localStorage.setItem(storageKey, JSON.stringify(savedSessions));
     } catch (err) {
       setError("Failed to save sessions ERROR: " + err);
     }
-  }, [savedSessions]);
+  }, [savedSessions, getProjectStorageKey]);
 
   // Effect to handle session changes and load configurations
   useEffect(() => {
@@ -254,9 +318,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           activeSession.urlData || {
             baseURL: "",
             segments: "",
+            parsedSegments: [],
             queryParams: [],
             segmentVariables: [],
             processedURL: "",
+            domain: "",
+            protocol: "http",
+            builtUrl: "",
+            environment: "development",
           }
         );
 
@@ -282,23 +351,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         // Save the updated session
-        localStorage.setItem("active_session", JSON.stringify(activeSession));
+        const storageKey = getProjectStorageKey("active_session");
+        localStorage.setItem(storageKey, JSON.stringify(activeSession));
       } catch (err) {
         setError("Failed to load session data ERROR: " + err);
       } finally {
         setIsLoading(false);
       }
     }
-  }, [activeSession?.id]); // Only run when session ID changes
+  }, [activeSession?.id, getProjectStorageKey]);
 
   // Save active section to localStorage whenever it changes
   useEffect(() => {
     try {
       // Update app state
-      const savedState = localStorage.getItem("app_state");
+      const appStateStorageKey = getProjectStorageKey("app_state");
+      const savedState = localStorage.getItem(appStateStorageKey);
       const state = savedState ? safeParseJSON(savedState) ?? {} : {};
       state.activeSection = activeSection;
-      localStorage.setItem("app_state", JSON.stringify(state));
+      localStorage.setItem(appStateStorageKey, JSON.stringify(state));
 
       // Update active session if exists
       if (activeSession) {
@@ -306,12 +377,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...activeSession,
           activeSection,
         };
-        localStorage.setItem("active_session", JSON.stringify(updatedSession));
+        const activeSessionStorageKey = getProjectStorageKey("active_session");
+        localStorage.setItem(activeSessionStorageKey, JSON.stringify(updatedSession));
       }
     } catch (err) {
       setError("Failed to save active section ERROR: " + err);
     }
-  }, [activeSection, activeSession]);
+  }, [activeSection, activeSession, getProjectStorageKey]);
 
   const updateSharedVariable = (key: string, value: string) => {
     setSharedVariables((prev) => {
@@ -346,7 +418,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateSessionVariable = (key: string, value: string) => {
     if (activeSession) {
-      const updatedSession: ExtendedSession = {
+      const updatedSession = {
         ...activeSession,
         sharedVariables: {
           ...activeSession.sharedVariables,
@@ -354,72 +426,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
       };
       setActiveSession(updatedSession);
-      handleSaveSession(activeSession.name, updatedSession);
+    }
+  };
+
+  const deleteSessionVariable = (key: string) => {
+    if (activeSession) {
+      const updatedSession = {
+        ...activeSession,
+        sharedVariables: {
+          ...activeSession.sharedVariables,
+        },
+      };
+      delete updatedSession.sharedVariables[key];
+      setActiveSession(updatedSession);
     }
   };
 
   const handleNewSession = () => {
-    try {
-      setActiveSession(null);
-      setUrlData({
-        baseURL: "",
-        segments: "",
-        parsedSegments: [],
-        queryParams: [],
-        segmentVariables: [],
-        processedURL: "",
-        domain: "",
-        protocol: "https",
-        builtUrl: "",
-        environment: "development",
-      });
-      setRequestConfig(null);
-      setYamlOutput("");
-      setSegmentVariables({});
-      setActiveSection("url");
-    } catch (error) {
-      console.error("Error creating new session:", error);
-    }
+    setActiveSession(null);
+    setUrlData({
+      baseURL: "",
+      segments: "",
+      parsedSegments: [],
+      queryParams: [],
+      segmentVariables: [],
+      processedURL: "",
+      domain: "",
+      protocol: "https",
+      builtUrl: "",
+      environment: "development",
+    });
+    setRequestConfig(null);
+    setYamlOutput("");
+    setSegmentVariables({});
+    setSharedVariables([]);
+    setActiveSection("url");
   };
 
   const handleLoadSession = (session: ExtendedSession) => {
-    try {
-      if (!session || typeof session !== "object") {
-        throw new Error("Invalid session data");
-      }
-
-      // Validate required session properties
-      const requiredProps = ["id", "name", "timestamp"];
-      const missingProps = requiredProps.filter((prop) => !(prop in session));
-      if (missingProps.length > 0) {
-        throw new Error(
-          `Missing required session properties: ${missingProps.join(", ")}`
-        );
-      }
-
-      setActiveSession(session);
-      setUrlData(
-        session.urlData || {
-          baseURL: "",
-          segments: "",
-          queryParams: [],
-          segmentVariables: [],
-          processedURL: "",
-        }
-      );
-      setRequestConfig(session.requestConfig || null);
-      setYamlOutput(session.yamlOutput || "");
-      setSegmentVariables(session.segmentVariables || {});
-      setSharedVariables(
-        Object.entries(session.sharedVariables || {}).map(([key, value]) => ({
-          key,
-          value,
-        }))
-      );
-      setActiveSection((session.activeSection as SectionId) || "url");
-    } catch (err) {
-      setError("Failed to load session ERROR: " + err);
-    }
+    setActiveSession(session);
   };
 
   const handleSaveSession = useCallback(
@@ -466,8 +511,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveSession(newSession);
 
       // Save to localStorage immediately
-      localStorage.setItem("active_session", JSON.stringify(newSession));
-      localStorage.setItem("saved_sessions", JSON.stringify(savedSessions));
+      const activeSessionStorageKey = getProjectStorageKey("active_session");
+      const savedSessionsStorageKey = getProjectStorageKey("saved_sessions");
+      localStorage.setItem(activeSessionStorageKey, JSON.stringify(newSession));
+      localStorage.setItem(savedSessionsStorageKey, JSON.stringify(savedSessions));
     },
     [
       urlData,
@@ -477,6 +524,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       segmentVariables,
       sharedVariables,
       savedSessions,
+      getProjectStorageKey,
     ]
   );
 
@@ -489,17 +537,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const handleURLBuilderSubmit = (data: URLData) => {
     setUrlData(data);
+    // Automatically navigate to the next section (Request Config)
     setActiveSection("request");
   };
 
   const handleRequestConfigSubmit = (config: RequestConfigData) => {
     setRequestConfig(config);
-    setActiveSection("yaml");
+    // Automatically navigate to the next section (Tests)
+    setActiveSection("tests");
   };
+
 
   const handleYAMLGenerated = (yaml: string) => {
     setYamlOutput(yaml);
-    setActiveSection("ai");
+  };
+
+  // Helper function to safely parse JSON
+  const safeParseJSON = (jsonString: string) => {
+    try {
+      return JSON.parse(jsonString);
+    } catch (err) {
+      console.error("Failed to parse JSON:", err);
+      return null;
+    }
   };
 
   const value: AppContextType = {
@@ -522,8 +582,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateSharedVariable,
     deleteSharedVariable,
     updateGlobalVariable,
-    deleteGlobalVariable,
     updateSessionVariable,
+    deleteSessionVariable,
     handleNewSession,
     handleLoadSession,
     handleSaveSession,
@@ -531,26 +591,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     handleURLBuilderSubmit,
     handleRequestConfigSubmit,
     handleYAMLGenerated,
+    deleteGlobalVariable,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
-export const useAppContext = (): AppContextType => {
+export const useAppContext = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useAppContext must be used within an AppProvider");
   }
   return context;
-};
-
-export { AppContext };
-
-// Helper function to safely parse JSON
-const safeParseJSON = (str: string): any => {
-  try {
-    return JSON.parse(str);
-  } catch {
-    return null;
-  }
 };

@@ -1,6 +1,6 @@
 import React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../../context/ThemeContext";
 import { FiXCircle, FiTrash2 } from "react-icons/fi";
 
 interface ConfirmationDialogProps {
@@ -40,8 +40,8 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
             <button
               onClick={onClose}
               className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                  ? "bg-gray-700 text-white hover:bg-gray-600"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-gray-700 text-white hover:bg-gray-600"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
             >
               <FiXCircle />
@@ -53,8 +53,8 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                 onClose();
               }}
               className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                  ? "bg-red-600 text-white hover:bg-red-700"
-                  : "bg-red-100 text-red-700 hover:bg-red-200"
+                ? "bg-red-600 text-white hover:bg-red-700"
+                : "bg-red-100 text-red-700 hover:bg-red-200"
                 }`}
             >
               <FiTrash2 />

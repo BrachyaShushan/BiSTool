@@ -1,4 +1,4 @@
-import { ExtendedSession } from "./SavedManager";
+import { ExtendedSession } from "../features/SavedManager";
 
 export type SectionId = "url" | "request" | "tests" | "yaml" | "ai";
 

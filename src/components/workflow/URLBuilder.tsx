@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useAppContext } from "../context/AppContext";
-import { useTheme } from "../context/ThemeContext";
-import { URLBuilderProps } from "../types/components.types";
-import { URLData } from "../types/app.types";
-import { FiTrash2, FiPlus } from "react-icons/fi";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useAppContext } from "../../context/AppContext";
+import { useTheme } from "../../context/ThemeContext";
+import { URLBuilderProps } from "../../types/components/components.types";
+import { URLData } from "../../types/core/app.types";
+import { FiPlus, FiTrash2 } from "react-icons/fi";
 
+// Define Segment interface based on the parsedSegments type in URLData
 interface Segment {
   value: string;
   isDynamic: boolean;
   paramName: string;
-  description?: string;
-  required?: boolean;
+  description: string;
+  required: boolean;
 }
 
 const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
@@ -39,18 +40,18 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
   const [segments, setSegments] = useState<Segment[]>(() => {
     if (activeSession?.urlData?.parsedSegments) {
-      return activeSession.urlData.parsedSegments.map((segment) => ({
+      return activeSession.urlData.parsedSegments.map((segment: any) => ({
         value: segment.value || "",
-        isDynamic: segment.isDynamic,
+        isDynamic: segment.isDynamic || false,
         paramName: segment.paramName || "",
         description: segment.description || "",
         required: segment.required || false,
       }));
     }
     if (urlData?.parsedSegments) {
-      return urlData.parsedSegments.map((segment) => ({
+      return urlData.parsedSegments.map((segment: any) => ({
         value: segment.value || "",
-        isDynamic: segment.isDynamic,
+        isDynamic: segment.isDynamic || false,
         paramName: segment.paramName || "",
         description: segment.description || "",
         required: segment.required || false,
@@ -89,7 +90,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
           parsedSegments = sessionUrlData.segments
             .split("/")
             .filter(Boolean)
-            .map((segment) => {
+            .map((segment: string) => {
               const isDynamic =
                 segment.startsWith("{") && segment.endsWith("}");
               const paramName = isDynamic ? segment.slice(1, -1) : "";
@@ -98,6 +99,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                 isDynamic,
                 paramName,
                 description: "",
+                required: false,
               };
             });
         }
@@ -112,7 +114,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
           parsedSegments = urlData.segments
             .split("/")
             .filter(Boolean)
-            .map((segment) => {
+            .map((segment: string) => {
               const isDynamic =
                 segment.startsWith("{") && segment.endsWith("}");
               const paramName = isDynamic ? segment.slice(1, -1) : "";
@@ -121,6 +123,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                 isDynamic,
                 paramName,
                 description: "",
+                required: false,
               };
             });
         }
@@ -220,7 +223,13 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
       // Update segments
       if (sessionUrlData.parsedSegments) {
-        setSegments(sessionUrlData.parsedSegments);
+        setSegments(sessionUrlData.parsedSegments.map((segment: any) => ({
+          value: segment.value || "",
+          isDynamic: segment.isDynamic || false,
+          paramName: segment.paramName || "",
+          description: segment.description || "",
+          required: segment.required || false,
+        })));
       } else if (
         sessionUrlData.segments &&
         typeof sessionUrlData.segments === "string"
@@ -228,7 +237,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         const parsedSegments = sessionUrlData.segments
           .split("/")
           .filter(Boolean)
-          .map((segment) => {
+          .map((segment: string) => {
             const isDynamic = segment.startsWith("{") && segment.endsWith("}");
             const paramName = isDynamic ? segment.slice(1, -1) : "";
             return {
@@ -236,6 +245,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
               isDynamic,
               paramName,
               description: "",
+              required: false,
             };
           });
         setSegments(parsedSegments);
@@ -290,7 +300,8 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     [globalVariables, segmentVariables, activeSession]
   );
 
-  const handleSubmit = (): void => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+    e.preventDefault();
     const segmentsString = segments
       .map((segment) =>
         segment.isDynamic ? `{${segment.paramName}}` : segment.value

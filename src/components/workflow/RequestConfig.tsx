@@ -1,22 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useAppContext } from "../context/AppContext";
-import { useTheme } from "../context/ThemeContext";
+import { useAppContext } from "../../context/AppContext";
+import { useTheme } from "../../context/ThemeContext";
 import Editor, { OnMount } from "@monaco-editor/react";
-import TokenGenerator from "./TokenGenerator";
-import {
-  RequestConfigProps,
-  RequestConfigState,
-} from "../types/components.types";
-import {
-  AppContextType,
-  ThemeContextType,
-  QueryParam,
-  Header,
-  FormDataField,
-  RequestConfigData,
-} from "../types/app.types";
+import TokenGenerator from "../utils/TokenGenerator";
+import { RequestConfigProps } from "../../types/components/components.types";
+import { RequestConfigData, Header, QueryParam, FormDataField, AppContextType, ThemeContextType } from "../../types/core/app.types";
 import { editor } from "monaco-editor";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
+
+interface RequestConfigState {
+  method: string;
+  headers: Header[];
+  queryParams: QueryParam[];
+  bodyType: "none" | "json" | "form" | "text";
+  jsonBody: string;
+  formData: FormDataField[];
+  textBody: string;
+  activeTab: "params" | "headers" | "body";
+}
 
 const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   const { isDarkMode } = useTheme() as ThemeContextType;
@@ -383,7 +384,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             </label>
             <div
               ref={jsonEditorContainerRef}
-              className="overflow-hidden border rounded-md relative"
+              className="overflow-hidden relative rounded-md border"
               style={{ height: `${jsonEditorHeight}px` }}
               aria-labelledby="jsonBodyLabel"
             >
@@ -414,7 +415,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 }}
               />
               <div
-                className="absolute bottom-0 left-0 right-0 h-2 bg-gray-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                className="absolute right-0 bottom-0 left-0 h-2 bg-gray-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
                 onMouseDown={handleJsonEditorMouseDown}
               />
             </div>
@@ -430,7 +431,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
               {formData.map((field, index) => (
                 <div
                   key={`form-field-${index}`}
-                  className="flex items-center p-2 space-x-2 rounded-md bg-gray-50 dark:bg-gray-700"
+                  className="flex items-center p-2 space-x-2 bg-gray-50 rounded-md dark:bg-gray-700"
                 >
                   <input
                     type="text"
@@ -439,7 +440,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                       updateFormDataField(index, "key", e.target.value)
                     }
                     placeholder="Key"
-                    className="block w-1/2 px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md shadow-sm dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:text-white"
+                    className="block px-3 py-2 w-1/2 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:text-white"
                   />
                   <input
                     type="text"
@@ -448,7 +449,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                       updateFormDataField(index, "value", e.target.value)
                     }
                     placeholder="Value"
-                    className="block w-1/2 px-3 py-2 text-gray-900 bg-white border border-gray-300 rounded-md shadow-sm dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:text-white"
+                    className="block px-3 py-2 w-1/2 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:text-white"
                   />
                   <div className="flex items-center">
                     <input
@@ -457,7 +458,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                       onChange={(e) =>
                         updateFormDataField(index, "required", e.target.checked)
                       }
-                      className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
+                      className="w-4 h-4 text-blue-600 bg-white rounded border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
                     />
                     <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
                       Required
@@ -474,7 +475,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             </div>
             <button
               onClick={addFormDataField}
-              className="inline-flex items-center px-3 py-2 mt-2 text-sm font-medium leading-4 text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm dark:border-gray-600 dark:text-gray-300 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-3 py-2 mt-2 text-sm font-medium leading-4 text-gray-700 bg-white rounded-md border border-gray-300 shadow-sm dark:border-gray-600 dark:text-gray-300 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Add Form Field
             </button>
@@ -484,7 +485,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
         return (
           <div className="mt-4">
             <label
-              className={`block text-sm font-medium dark:text-white text-gray-700`}
+              className={`block text-sm font-medium text-gray-700 dark:text-white`}
             >
               Text Body
             </label>
@@ -492,14 +493,14 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
               value={textBody}
               onChange={(e) => setTextBody(e.target.value)}
               placeholder="Enter text body"
-              className={`mt-2 block w-full rounded-md border-gray-300 dark:bg-gray-800 dark:text-white bg-white text-gray-900`}
+              className={`block mt-2 w-full text-gray-900 bg-white rounded-md border-gray-300 dark:bg-gray-800 dark:text-white`}
             />
           </div>
         );
       case "none":
       default:
         return (
-          <div className="p-4 text-sm text-center text-gray-500 border border-gray-300 border-dashed rounded dark:text-gray-400">
+          <div className="p-4 text-sm text-center text-gray-500 rounded border border-gray-300 border-dashed dark:text-gray-400">
             No body content for this request.
           </div>
         );
@@ -532,11 +533,11 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
   return (
     <div
-      className={`p-4 dark:bg-gray-800 bg-white rounded-lg shadow`}
+      className={`p-4 bg-white rounded-lg shadow dark:bg-gray-800`}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex justify-between items-center mb-4">
         <h2
-          className={`text-xl font-bold dark:text-white text-gray-900`}
+          className={`text-xl font-bold text-gray-900 dark:text-white`}
         >
           Request Configuration
         </h2>
@@ -609,7 +610,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             <div className="space-y-4">
               <div>
                 <label
-                  className={`block text-sm font-medium dark:text-white text-gray-700`}
+                  className={`block text-sm font-medium text-gray-700 dark:text-white`}
                 >
                   Query Parameters
                 </label>
@@ -617,7 +618,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   {queryParams.map((param, index) => (
                     <div
                       key={`query-param-${index}`}
-                      className={`flex items-center space-x-2 p-2 rounded-md dark:bg-gray-700 bg-gray-50`}
+                      className={`flex items-center p-2 space-x-2 bg-gray-50 rounded-md dark:bg-gray-700`}
                     >
                       <input
                         type="text"
@@ -626,7 +627,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateQueryParam(index, "key", e.target.value)
                         }
                         placeholder="Key"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
+                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
                       />
                       <input
                         type="text"
@@ -635,7 +636,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateQueryParam(index, "value", e.target.value)
                         }
                         placeholder="Value"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
+                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
                       />
                       <input
                         type="text"
@@ -644,7 +645,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateQueryParam(index, "description", e.target.value)
                         }
                         placeholder="Description (optional)"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
+                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
                       />
                       <div className="flex items-center">
                         <input
@@ -657,17 +658,17 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                               e.target.checked
                             )
                           }
-                          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border rounded dark:border-gray-600 dark:bg-gray-800 border-gray-300 bg-white`}
+                          className={`w-4 h-4 text-blue-600 bg-white rounded border border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800`}
                         />
                         <span
-                          className={`ml-2 text-sm dark:text-gray-400 text-gray-500`}
+                          className={`ml-2 text-sm text-gray-500 dark:text-gray-400`}
                         >
                           Required
                         </span>
                       </div>
                       <button
                         onClick={() => removeQueryParam(index)}
-                        className={`p-2 dark:text-gray-400 text-gray-500 hover:text-gray-700`}
+                        className={`p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700`}
                       >
                         ×
                       </button>
@@ -676,7 +677,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 </div>
                 <button
                   onClick={() => addQueryParam()}
-                  className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 dark:bg-blue-600 dark:text-white hover:bg-blue-700 bg-blue-100 text-blue-700 hover:bg-blue-200`}
+                  className={`flex items-center px-3 py-1 space-x-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-700 hover:bg-blue-200`}
                 >
                   <FiPlus />
                   <span>Add Query Parameter</span>
@@ -692,7 +693,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             <div className="space-y-4">
               <div>
                 <label
-                  className={`block text-sm font-medium dark:text-white text-gray-700`}
+                  className={`block text-sm font-medium text-gray-700 dark:text-white`}
                 >
                   Headers
                 </label>
@@ -700,7 +701,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   {headers.map((header, index) => (
                     <div
                       key={`header-${index}`}
-                      className={`flex items-center space-x-2 p-2 rounded-md dark:bg-gray-700 bg-gray-50`}
+                      className={`flex items-center p-2 space-x-2 bg-gray-50 rounded-md dark:bg-gray-700`}
                     >
                       <input
                         type="text"
@@ -709,7 +710,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateHeader(index, "key", e.target.value)
                         }
                         placeholder="Key"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
+                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
                       />
                       <input
                         type="text"
@@ -718,7 +719,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateHeader(index, "value", e.target.value)
                         }
                         placeholder="Value"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
+                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
                       />
                       <input
                         type="text"
@@ -727,7 +728,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           updateHeader(index, "description", e.target.value)
                         }
                         placeholder="Description (optional)"
-                        className={`block w-1/3 border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
+                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
                       />
                       <div className="flex items-center">
                         <input
@@ -736,17 +737,17 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           onChange={(e) =>
                             updateHeader(index, "required", e.target.checked)
                           }
-                          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border rounded dark:border-gray-600 dark:bg-gray-800 border-gray-300 bg-white`}
+                          className={`w-4 h-4 text-blue-600 bg-white rounded border border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800`}
                         />
                         <span
-                          className={`ml-2 text-sm dark:text-gray-400 text-gray-500`}
+                          className={`ml-2 text-sm text-gray-500 dark:text-gray-400`}
                         >
                           Required
                         </span>
                       </div>
                       <button
                         onClick={() => removeHeader(index)}
-                        className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 dark:bg-red-600 dark:text-white hover:bg-red-700 bg-red-100 text-red-700 hover:bg-red-200`}
+                        className={`flex items-center px-3 py-1 space-x-2 text-sm font-medium text-red-700 bg-red-100 rounded-md dark:bg-red-600 dark:text-white hover:bg-red-700 hover:bg-red-200`}
                       >
                         <FiTrash2 />
                         <span>Remove</span>
@@ -756,7 +757,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 </div>
                 <button
                   onClick={() => addHeader()}
-                  className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 dark:bg-blue-600 dark:text-white hover:bg-blue-700 bg-blue-100 text-blue-700 hover:bg-blue-200`}
+                  className={`flex items-center px-3 py-1 space-x-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-700 hover:bg-blue-200`}
                 >
                   <FiPlus />
                   <span>Add Header</span>
@@ -771,7 +772,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           <div>
             <div className="mb-4">
               <label
-                className={`block text-sm font-medium dark:text-white text-gray-700 mb-2`}
+                className={`block mb-2 text-sm font-medium text-gray-700 dark:text-white`}
               >
                 Body Type
               </label>
@@ -780,7 +781,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 onChange={(e) =>
                   setBodyType(e.target.value as "none" | "json" | "form" | "text")
                 }
-                className={`w-full md:w-1/3 rounded-md border shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white bg-white border-gray-300 text-gray-900`}
+                className={`w-full text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm md:w-1/3 focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
               >
                 <option value="none">None</option>
                 <option value="json">JSON</option>
@@ -797,7 +798,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
       <div className="mt-6">
         <button
           onClick={handleSubmit}
-          className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium dark:text-white dark:bg-blue-600 hover:bg-blue-200 dark:hover:bg-blue-700 bg-blue-100 text-blue-700 border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex justify-center px-4 py-2 w-full text-sm font-medium text-blue-700 bg-blue-100 rounded-md border border-transparent shadow-sm dark:text-white dark:bg-blue-600 hover:bg-blue-200 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           Continue to YAML Generator
         </button>

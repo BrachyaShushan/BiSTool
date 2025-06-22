@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useTheme } from "../context/ThemeContext";
-import Modal from "./core/Modal";
+import { useTheme } from "../../context/ThemeContext";
+import Modal from "../core/Modal";
 import {
   ExtendedSession,
   ExtendedVariable,
   ModalType,
-} from "../types/features/SavedManager";
+} from "../../types/features/SavedManager";
 import { FiPlus, FiEdit2, FiCopy, FiTrash2, FiChevronDown, FiGlobe, FiFolder, FiDownload, FiUpload, FiCheckSquare, FiSquare } from "react-icons/fi";
 import { Disclosure, DisclosureButton, DisclosurePanel, Transition } from '@headlessui/react';
 
@@ -251,6 +251,9 @@ const SavedManager: React.FC<SavedManagerProps> = ({
     }
   }
   const sessionCard = (session: ExtendedSession) => {
+    if (!session.requestConfig) {
+      return null;
+    }
     return (
       <div key={session.id} className={`p-3 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
         <div className="flex flex-wrap gap-4 justify-between items-center">
@@ -259,7 +262,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
             {session.category && (
               <span className="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">{session.category}</span>
             )}
-            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${isDarkMode ? methodColor.dark[session.requestConfig?.method as keyof typeof methodColor.dark] : methodColor.light[session.requestConfig?.method as keyof typeof methodColor.light]}`}>{session.requestConfig?.method}</span>
+            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${isDarkMode ? methodColor.dark[session.requestConfig.method as keyof typeof methodColor.dark] : methodColor.light[session.requestConfig.method as keyof typeof methodColor.light]}`}>{session.requestConfig.method}</span>
           </div>
           <div className="flex flex-wrap space-x-4">
             <button onClick={() => { handleLoadSession(session as ExtendedSession); setShowModal(false) }} className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode ? "text-white bg-blue-600 hover:bg-blue-700" : "text-blue-700 bg-blue-100 hover:bg-blue-200"}`}><FiFolder /><span>Load</span></button>
@@ -605,7 +608,9 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                                   ...activeSession.sharedVariables,
                                 },
                               };
-                              delete updatedSession.sharedVariables?.[key];
+                              if (updatedSession.sharedVariables) {
+                                delete updatedSession.sharedVariables[key];
+                              }
                               handleSaveSession(activeSession.name, updatedSession);
                             }}
                             className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
