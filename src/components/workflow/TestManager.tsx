@@ -2,7 +2,8 @@ import React from "react";
 import { useAppContext } from "../../context/AppContext";
 import { useTheme } from "../../context/ThemeContext";
 import { TestCase } from "../../types/features/SavedManager";
-import { FiTrash2, FiPlay, FiCopy, FiCheck, FiX } from "react-icons/fi";
+import { FiTrash2, FiPlay, FiCopy, FiCheck, FiX, FiArrowRight } from "react-icons/fi";
+import { FiPlus } from "react-icons/fi";
 import { Editor } from "@monaco-editor/react";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -235,10 +236,34 @@ const TestManager: React.FC = () => {
             <div className="flex justify-between items-center mb-4">
                 <h3 className={`text-lg font-bold text-gray-900 dark:text-white`}>TESTS</h3>
                 <button
-                    className={`px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
+                    className={`flex gap-2 items-center px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
                     onClick={handleAddTest}
                 >
-                    Add Test
+                    <FiPlus />
+                    <span>Add Test</span>
+                </button>
+                <button
+                    className={`flex gap-2 items-center px-4 py-2 text-green-700 bg-green-100 rounded-md dark:bg-green-600 dark:text-white hover:bg-green-200 dark:hover:bg-green-700`}
+                    onClick={handleRunAll}
+                >
+                    <FiPlay />
+                    <span>Run All Tests</span>
+                </button>
+                <button
+                    className={`flex gap-2 items-center px-4 py-2 text-red-700 bg-red-100 rounded-md dark:bg-red-600 dark:text-white hover:bg-red-200 dark:hover:bg-red-700`}
+                    onClick={handleRunAllFailed}
+                    disabled={tests.every(test => test.lastResult === 'fail')}
+                >
+                    <FiPlay />
+                    <span>Run All Failed Tests</span>
+                </button>
+                <button
+                    className={`flex gap-2 items-center px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
+                    onClick={handleContinue}
+                    disabled={tests.every(test => test.lastResult === 'fail') && tests.length != 0}
+                >
+                    <FiArrowRight />
+                    <span>Continue</span>
                 </button>
             </div>
 
@@ -415,26 +440,7 @@ const TestManager: React.FC = () => {
                     </div>
                 ))}
             </div>
-            <div className="flex justify-between items-center mb-4">
-                <button
-                    className={`px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
-                    onClick={handleRunAll}
-                >
-                    Run All Tests
-                </button>
-                <button
-                    className={`px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
-                    onClick={handleRunAllFailed}
-                >
-                    Run All Failed Tests
-                </button>
-                <button
-                    className={`px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
-                    onClick={handleContinue}
-                >
-                    Continue
-                </button>
-            </div>
+
         </div>
     );
 };

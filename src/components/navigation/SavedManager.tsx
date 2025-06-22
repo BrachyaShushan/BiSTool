@@ -49,7 +49,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [sessionCategory, setSessionCategory] = useState<string>("");
   const [divideBy, setDivideBy] = useState<'none' | 'category'>("category");
-  const [orderBy, setOrderBy] = useState<'date' | 'name'>("name");
+  const [orderBy, setOrderBy] = useState<'date' | 'name' | 'method'>("name");
   const [showImportModal, setShowImportModal] = useState(false);
   const [importData, setImportData] = useState<any>(null);
   const [importStep, setImportStep] = useState<'options' | 'choose'>('options');
@@ -216,9 +216,19 @@ const SavedManager: React.FC<SavedManagerProps> = ({
 
   // Helper to order sessions
   const orderSessions = (sessions: ExtendedSession[]) => {
+    const methodOrder = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
     return [...sessions].sort((a, b) => {
       if (orderBy === "name") {
         return a.name.localeCompare(b.name);
+      } else if (orderBy === 'method') {
+        const methodA = a.requestConfig?.method || '';
+        const methodB = b.requestConfig?.method || '';
+        const indexA = methodOrder.indexOf(methodA);
+        const indexB = methodOrder.indexOf(methodB);
+        if (indexA === -1 && indexB === -1) return 0;
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
       } else {
         // date (descending)
         return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
@@ -242,18 +252,21 @@ const SavedManager: React.FC<SavedManagerProps> = ({
       POST: "bg-green-100 text-green-700",
       PUT: "bg-yellow-100 text-yellow-700",
       DELETE: "bg-red-100 text-red-700",
+      PATCH: "bg-purple-100 text-purple-700",
+      HEAD: "bg-gray-100 text-gray-700",
+      OPTIONS: "bg-pink-100 text-pink-700",
     },
     light: {
       GET: "bg-blue-100 text-blue-700",
       POST: "bg-green-100 text-green-700",
       PUT: "bg-yellow-100 text-yellow-700",
       DELETE: "bg-red-100 text-red-700",
+      PATCH: "bg-purple-100 text-purple-700",
+      HEAD: "bg-gray-100 text-gray-700",
+      OPTIONS: "bg-pink-100 text-pink-700",
     }
   }
   const sessionCard = (session: ExtendedSession) => {
-    if (!session.requestConfig) {
-      return null;
-    }
     return (
       <div key={session.id} className={`p-3 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
         <div className="flex flex-wrap gap-4 justify-between items-center">
@@ -262,7 +275,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
             {session.category && (
               <span className="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">{session.category}</span>
             )}
-            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${isDarkMode ? methodColor.dark[session.requestConfig.method as keyof typeof methodColor.dark] : methodColor.light[session.requestConfig.method as keyof typeof methodColor.light]}`}>{session.requestConfig.method}</span>
+            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${isDarkMode ? methodColor.dark[session.requestConfig?.method as keyof typeof methodColor.dark] : methodColor.light[session.requestConfig?.method as keyof typeof methodColor.light]}`}>{session.requestConfig?.method}</span>
           </div>
           <div className="flex flex-wrap space-x-4">
             <button onClick={() => { handleLoadSession(session as ExtendedSession); setShowModal(false) }} className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode ? "text-white bg-blue-600 hover:bg-blue-700" : "text-blue-700 bg-blue-100 hover:bg-blue-200"}`}><FiFolder /><span>Load</span></button>
@@ -433,14 +446,26 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                   <option value="category">Category</option>
                 </select>
                 <label className="ml-2 text-sm">Order By:</label>
-                <select
-                  value={orderBy}
-                  onChange={e => setOrderBy(e.target.value as 'date' | 'name')}
-                  className={`px-2 py-1 rounded border ${isDarkMode ? 'text-white bg-gray-700 border-gray-600' : 'text-gray-900 bg-white border-gray-300'}`}
-                >
-                  <option value="date">Date</option>
-                  <option value="name">Name</option>
-                </select>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setOrderBy('name')}
+                    className={`px-3 py-1 rounded text-sm ${orderBy === 'name' ? (isDarkMode ? 'bg-blue-600' : 'bg-blue-200') : (isDarkMode ? 'bg-gray-600' : 'bg-gray-200')}`}
+                  >
+                    Name
+                  </button>
+                  <button
+                    onClick={() => setOrderBy('date')}
+                    className={`px-3 py-1 rounded text-sm ${orderBy === 'date' ? (isDarkMode ? 'bg-blue-600' : 'bg-blue-200') : (isDarkMode ? 'bg-gray-600' : 'bg-gray-200')}`}
+                  >
+                    Date
+                  </button>
+                  <button
+                    onClick={() => setOrderBy('method')}
+                    className={`px-3 py-1 rounded text-sm ${orderBy === 'method' ? (isDarkMode ? 'bg-blue-600' : 'bg-blue-200') : (isDarkMode ? 'bg-gray-600' : 'bg-gray-200')}`}
+                  >
+                    Method
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -608,9 +633,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                                   ...activeSession.sharedVariables,
                                 },
                               };
-                              if (updatedSession.sharedVariables) {
-                                delete updatedSession.sharedVariables[key];
-                              }
+                              delete updatedSession.sharedVariables?.[key];
                               handleSaveSession(activeSession.name, updatedSession);
                             }}
                             className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
