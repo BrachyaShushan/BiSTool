@@ -51,7 +51,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
   const [activeSection, setActiveSection] = useState<SectionId>("url");
   const [segmentVariables, setSegmentVariables] = useState<Record<string, string>>({});
   const [sharedVariables, setSharedVariables] = useState<Variable[]>([]);
-
+  const methodColor = {
+    GET: { value: "GET", label: "GET", color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" },
+    POST: { value: "POST", label: "POST", color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200" },
+    PUT: { value: "PUT", label: "PUT", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200" },
+    DELETE: { value: "DELETE", label: "DELETE", color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200" },
+    PATCH: { value: "PATCH", label: "PATCH", color: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200" },
+    HEAD: { value: "HEAD", label: "HEAD", color: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-200" },
+    OPTIONS: { value: "OPTIONS", label: "OPTIONS", color: "bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-200" },
+  }
   // Effect to reload data when project changes
   useEffect(() => {
     // Only load data if we have a current project
@@ -572,6 +580,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     activeSession,
     savedSessions,
     globalVariables,
+    methodColor,
     isLoading,
     error,
     setUrlData,

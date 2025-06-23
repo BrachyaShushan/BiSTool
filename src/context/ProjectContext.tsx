@@ -140,7 +140,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } catch (err) {
             console.error("Failed to load active project:", err);
         }
-    }, [projects, initializeDefaultGlobalVariables]);
+    }, []);
 
     // Save projects to localStorage whenever they change
     useEffect(() => {
@@ -214,6 +214,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             );
             setCurrentProject(project);
             setError(null);
+
+            // Set active project in localStorage immediately
+            localStorage.setItem(ACTIVE_PROJECT_KEY, projectId);
 
             // Initialize default global variables if they don't exist
             initializeDefaultGlobalVariables(projectId);

@@ -6,8 +6,9 @@ import {
   ExtendedVariable,
   ModalType,
 } from "../../types/features/SavedManager";
-import { FiPlus, FiEdit2, FiCopy, FiTrash2, FiChevronDown, FiGlobe, FiFolder, FiDownload, FiUpload, FiCheckSquare, FiSquare } from "react-icons/fi";
+import { FiPlus, FiEdit2, FiCopy, FiTrash2, FiChevronDown, FiGlobe, FiFolder, FiDownload, FiUpload, FiCheckSquare, FiSquare, FiCheck } from "react-icons/fi";
 import { Disclosure, DisclosureButton, DisclosurePanel, Transition } from '@headlessui/react';
+import { useAppContext } from "../../context/AppContext";
 
 interface SavedManagerProps {
   activeSession: ExtendedSession | null;
@@ -33,7 +34,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
   deleteGlobalVariable,
 }) => {
   const { isDarkMode } = useTheme();
-
+  const { methodColor } = useAppContext();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [sessionName, setSessionName] = useState<string>("");
   const [showSessionModal, setShowSessionModal] = useState<boolean>(false);
@@ -55,6 +56,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
   const [importStep, setImportStep] = useState<'options' | 'choose'>('options');
   const [selectedImportSessions, setSelectedImportSessions] = useState<string[]>([]);
   const [selectedImportVariables, setSelectedImportVariables] = useState<string[]>([]);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Cleanup on unmount
@@ -214,6 +216,14 @@ const SavedManager: React.FC<SavedManagerProps> = ({
     }
   };
 
+  const handleCopy = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => {
+      setCopiedKey(null);
+    }, 2000);
+  };
+
   // Helper to order sessions
   const orderSessions = (sessions: ExtendedSession[]) => {
     const methodOrder = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
@@ -246,26 +256,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
     });
     return groups;
   };
-  const methodColor = {
-    dark: {
-      GET: "bg-blue-100 text-blue-700",
-      POST: "bg-green-100 text-green-700",
-      PUT: "bg-yellow-100 text-yellow-700",
-      DELETE: "bg-red-100 text-red-700",
-      PATCH: "bg-purple-100 text-purple-700",
-      HEAD: "bg-gray-100 text-gray-700",
-      OPTIONS: "bg-pink-100 text-pink-700",
-    },
-    light: {
-      GET: "bg-blue-100 text-blue-700",
-      POST: "bg-green-100 text-green-700",
-      PUT: "bg-yellow-100 text-yellow-700",
-      DELETE: "bg-red-100 text-red-700",
-      PATCH: "bg-purple-100 text-purple-700",
-      HEAD: "bg-gray-100 text-gray-700",
-      OPTIONS: "bg-pink-100 text-pink-700",
-    }
-  }
+
   const sessionCard = (session: ExtendedSession) => {
     return (
       <div key={session.id} className={`p-3 rounded-md ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
@@ -275,7 +266,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
             {session.category && (
               <span className="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">{session.category}</span>
             )}
-            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${isDarkMode ? methodColor.dark[session.requestConfig?.method as keyof typeof methodColor.dark] : methodColor.light[session.requestConfig?.method as keyof typeof methodColor.light]}`}>{session.requestConfig?.method}</span>
+            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${methodColor[(session.requestConfig?.method || "GET").toUpperCase() as keyof typeof methodColor]}`}>{session.requestConfig?.method}</span>
           </div>
           <div className="flex flex-wrap space-x-4">
             <button onClick={() => { handleLoadSession(session as ExtendedSession); setShowModal(false) }} className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode ? "text-white bg-blue-600 hover:bg-blue-700" : "text-blue-700 bg-blue-100 hover:bg-blue-200"}`}><FiFolder /><span>Load</span></button>
@@ -569,6 +560,15 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                         </div>
                         <div className="flex space-x-2 shrink-0">
                           <button
+                            onClick={() => handleCopy(value as string, `global-${key}`)}
+                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                              ? "text-white bg-green-600 hover:bg-green-700"
+                              : "text-green-700 bg-green-100 hover:bg-green-200"
+                              }`}
+                          >
+                            {copiedKey === `global-${key}` ? <FiCheck /> : <FiCopy />}
+                          </button>
+                          <button
                             onClick={() => handleVariableAction("edit", [key, value], true)}
                             className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                               ? "text-white bg-blue-600 hover:bg-blue-700"
@@ -576,7 +576,6 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                               }`}
                           >
                             <FiEdit2 />
-                            <span>Edit</span>
                           </button>
                           <button
                             onClick={() => deleteGlobalVariable(key)}
@@ -586,7 +585,6 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                               }`}
                           >
                             <FiTrash2 />
-                            <span>Delete</span>
                           </button>
                         </div>
                       </div>
@@ -616,6 +614,15 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                         </div>
                         <div className="flex space-x-2 shrink-0">
                           <button
+                            onClick={() => handleCopy(value as string, `session-${key}`)}
+                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
+                              ? "text-white bg-green-600 hover:bg-green-700"
+                              : "text-green-700 bg-green-100 hover:bg-green-200"
+                              }`}
+                          >
+                            {copiedKey === `session-${key}` ? <FiCheck /> : <FiCopy />}
+                          </button>
+                          <button
                             onClick={() => handleVariableAction("edit", [key, value as string], false)}
                             className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
                               ? "text-white bg-blue-600 hover:bg-blue-700"
@@ -623,7 +630,6 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                               }`}
                           >
                             <FiEdit2 />
-                            <span>Edit</span>
                           </button>
                           <button
                             onClick={() => {
@@ -642,7 +648,6 @@ const SavedManager: React.FC<SavedManagerProps> = ({
                               }`}
                           >
                             <FiTrash2 />
-                            <span>Delete</span>
                           </button>
                         </div>
                       </div>

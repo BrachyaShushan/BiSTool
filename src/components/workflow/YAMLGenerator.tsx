@@ -10,6 +10,8 @@ import {
 } from "../../types/components/yamlGenerator.types";
 import { Header, RequestConfigData, ResponseCondition } from "../../types/core/app.types";
 import { ExtendedSession } from "../../types/features/SavedManager";
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 
 // Extract variables from URL in {variable} format, excluding the base URL
 const extractVariables = (url: string): string[] => {
@@ -1210,23 +1212,27 @@ ${generateRequestBody()}
           className={`overflow-hidden relative rounded-lg border border-gray-300 dark:border-gray-600`}
           style={{ height: isYamlExpanded ? "calc(100vh - 200px)" : editorHeight }}
         >
-          <Editor
-            height="100%"
-            defaultLanguage={outputViewMode}
-            language={outputViewMode}
-            value={getOutputEditorValue()}
-            onMount={handleYamlEditorDidMount}
-            theme={isDarkMode ? "vs-dark" : "light"}
-            options={{
-              ...editorOptions,
-              scrollBeyondLastLine: false,
-              minimap: { enabled: false },
-              padding: {
-                top: 5,
-                bottom: 10
-              }
-            }}
-          />
+          {isGenerating ? (
+            <Skeleton height={isYamlExpanded ? 'calc(100vh - 200px)' : editorHeight} width="100%" count={isYamlExpanded ? 20 : Math.max(10, Math.floor(editorHeight / 20))} style={{ borderRadius: 8 }} />
+          ) : (
+            <Editor
+              height="100%"
+              defaultLanguage={outputViewMode}
+              language={outputViewMode}
+              value={getOutputEditorValue()}
+              onMount={handleYamlEditorDidMount}
+              theme={isDarkMode ? "vs-dark" : "light"}
+              options={{
+                ...editorOptions,
+                scrollBeyondLastLine: false,
+                minimap: { enabled: false },
+                padding: {
+                  top: 5,
+                  bottom: 10
+                }
+              }}
+            />
+          )}
           <div
             className="absolute right-0 bottom-0 left-0 h-2 bg-gray-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
             onMouseDown={handleYamlMouseDown}

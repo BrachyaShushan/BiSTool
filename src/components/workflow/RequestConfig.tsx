@@ -6,7 +6,8 @@ import TokenGenerator from "../utils/TokenGenerator";
 import { RequestConfigProps } from "../../types/components/components.types";
 import { RequestConfigData, Header, QueryParam, FormDataField, AppContextType, ThemeContextType } from "../../types/core/app.types";
 import { editor } from "monaco-editor";
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiEye } from "react-icons/fi";
+import Modal from "../core/Modal";
 
 interface RequestConfigState {
   method: string;
@@ -27,6 +28,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     globalVariables,
     activeSession,
     handleSaveSession,
+    methodColor,
   } = useAppContext() as AppContextType;
   const [tokenExpiration, setTokenExpiration] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<RequestConfigState["activeTab"]>(
@@ -85,6 +87,9 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
   const [jsonEditorHeight, setJsonEditorHeight] = useState<number>(200);
   const jsonEditorContainerRef = useRef<HTMLDivElement>(null);
+
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [decodedToken, setDecodedToken] = useState<any>(null);
 
   const decodeString = useCallback((encodedString: string): string | null => {
     try {
@@ -520,16 +525,35 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
     onSubmit(config);
   };
-  const methodOptions =
-  {
-    GET: { value: "GET", label: "GET", color: "dark:text-green-400 dark:bg-green-900 bg-green-50 text-green-500" },
-    POST: { value: "POST", label: "POST", color: "dark:text-blue-400 dark:bg-blue-900 bg-blue-50 text-blue-500" },
-    PUT: { value: "PUT", label: "PUT", color: "dark:text-yellow-400 dark:bg-yellow-900 bg-yellow-50 text-yellow-500" },
-    DELETE: { value: "DELETE", label: "DELETE", color: "dark:text-red-400 dark:bg-red-900 bg-red-50 text-red-500" },
-    PATCH: { value: "PATCH", label: "PATCH", color: "dark:text-yellow-400 dark:bg-yellow-900 bg-yellow-50 text-yellow-500" },
-    HEAD: { value: "HEAD", label: "HEAD", color: "dark:text-blue-400 dark:bg-blue-900 bg-blue-50 text-blue-500" },
-    OPTIONS: { value: "OPTIONS", label: "OPTIONS", color: "dark:text-purple-400 dark:bg-purple-900 bg-purple-50 text-purple-500" },
-  }
+
+  const handleShowTokenModal = () => {
+    const tokenName = globalVariables ? globalVariables["tokenName"] : undefined;
+    const tokenValue = tokenName ? globalVariables[tokenName] : undefined;
+    if (typeof tokenValue === "string" && tokenValue.split(".").length === 3) {
+      try {
+        const base64Url = tokenValue.split(".")[1];
+        if (!base64Url) {
+          setDecodedToken({ error: "Invalid token format" });
+        } else {
+          const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+          const jsonPayload = decodeURIComponent(
+            atob(base64)
+              .split("")
+              .map(function (c) {
+                return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+              })
+              .join("")
+          );
+          setDecodedToken(JSON.parse(jsonPayload));
+        }
+      } catch (e) {
+        setDecodedToken({ error: "Invalid token format" });
+      }
+    } else {
+      setDecodedToken({ error: "No valid token found in global variables." });
+    }
+    setShowTokenModal(true);
+  };
 
   return (
     <div
@@ -543,6 +567,15 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
         </h2>
         <div className="flex items-center space-x-2">
           <TokenGenerator />
+          <button
+            type="button"
+            onClick={handleShowTokenModal}
+            className="flex items-center px-3 py-1 rounded-md text-sm font-medium text-blue-700 bg-blue-100 dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700"
+            title="Token Details"
+          >
+            <FiEye className="mr-1" />
+            Token Details
+          </button>
           {tokenExpiration !== null && (
             <div
               className={`px-3 py-1 rounded-md text-sm ${tokenExpiration > 5
@@ -558,9 +591,9 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value)}
-            className={`w-32 px-3 py-2 rounded-md border-none text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${methodOptions[method as keyof typeof methodOptions].color}`}
+            className={`w-32 px-3 py-2 rounded-md border-none text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${methodColor[method as keyof typeof methodColor]?.color}`}
           >
-            {Object.values(methodOptions).map((option) => (
+            {Object.values(methodColor).map((option: any) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -803,6 +836,26 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           Continue to YAML Generator
         </button>
       </div>
+
+      <Modal
+        isOpen={showTokenModal}
+        onClose={() => setShowTokenModal(false)}
+        title="Decoded Token"
+        showSaveButton={false}
+        size="lg"
+      >
+        {decodedToken ? (
+          decodedToken.error ? (
+            <div className="text-red-600 dark:text-red-400 font-semibold text-center p-4">{decodedToken.error}</div>
+          ) : (
+            <pre className="bg-gray-100 dark:bg-gray-900 rounded p-4 text-xs overflow-x-auto text-left">
+              {JSON.stringify(decodedToken, null, 2)}
+            </pre>
+          )
+        ) : (
+          <div className="text-gray-500 dark:text-gray-400 text-center p-4">No token decoded.</div>
+        )}
+      </Modal>
     </div >
   );
 };

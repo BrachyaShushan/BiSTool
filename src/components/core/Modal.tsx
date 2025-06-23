@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from "react";
-import { useTheme } from "../../context/ThemeContext";
 import { ModalProps } from "../../types/components/Modal.types";
 import { FiX, FiSave, FiXCircle } from "react-icons/fi";
 
@@ -13,9 +12,8 @@ const Modal: React.FC<ModalProps> = ({
   showCancelButton = true,
   saveButtonText = "Save",
   cancelButtonText = "Cancel",
-  size = "md", // sm, md, lg, xl
+  size = "md", // sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl, 6xl, 7xl, 8xl, 9xl
 }) => {
-  const { isDarkMode } = useTheme();
   const modalRef = useRef<HTMLDivElement>(null);
   const hasFocused = useRef(false);
 
@@ -100,23 +98,20 @@ const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div
         ref={modalRef}
-        className={`w-full ${sizeClasses[size]} rounded-lg shadow-lg p-6 ${isDarkMode ? "bg-gray-800" : "bg-white"
-          } modal-child`}
+        className={`w-full ${sizeClasses[size]} rounded-lg shadow-lg p-6 dark:bg-gray-800 bg-white modal-child`}
         style={{ zIndex: 50 + (document.querySelectorAll('.modal-child').length * 10) }}
       >
         <div className="flex items-center justify-between mb-4">
           <h2
-            className={`text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"
-              }`}
+            className={`text-xl font-bold dark:text-white text-gray-900`}
           >
             {title}
           </h2>
           <button
             onClick={onClose}
-            className={`p-2 rounded-full close-button ${isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-              }`}
+            className={`p-2 rounded-full close-button dark:text-white dark:hover:bg-gray-700 hover:bg-gray-100`}
           >
-            <FiX size={5} />
+            <FiX size={25} />
           </button>
         </div>
 
@@ -126,10 +121,7 @@ const Modal: React.FC<ModalProps> = ({
           {showCancelButton && (
             <button
               onClick={onClose}
-              className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                ? "bg-gray-600 text-white hover:bg-gray-700"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+              className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700 bg-gray-100 text-gray-700 hover:bg-gray-200`}
             >
               <FiXCircle />
               <span>{cancelButtonText}</span>
@@ -138,10 +130,7 @@ const Modal: React.FC<ModalProps> = ({
           {showSaveButton && (
             <button
               onClick={onSave}
-              className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                }`}
+              className={`px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700 bg-blue-100 text-blue-700 hover:bg-blue-200`}
             >
               <FiSave />
               <span>{saveButtonText}</span>

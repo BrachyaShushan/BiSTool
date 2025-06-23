@@ -98,6 +98,7 @@ export interface AppContextType {
   activeSession: ExtendedSession | null;
   savedSessions: ExtendedSession[];
   globalVariables: Record<string, string>;
+  methodColor: Record<string, { value: string; label: string; color: string }>;
   setUrlData: (data: URLData) => void;
   setRequestConfig: (config: RequestConfigData | null) => void;
   setYamlOutput: (yaml: string) => void;

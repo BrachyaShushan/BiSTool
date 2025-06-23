@@ -19,6 +19,7 @@ export interface AppContextType {
   activeSession: ExtendedSession | null;
   savedSessions: ExtendedSession[];
   globalVariables: Record<string, string>;
+  methodColor: Record<string, { value: string; label: string; color: string }>;
   isLoading: boolean;
   error: string | null;
   setUrlData: (data: URLData) => void;

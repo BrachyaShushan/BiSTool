@@ -3,7 +3,7 @@ import { useProjectContext } from "../../context/ProjectContext";
 import { useTheme } from "../../context/ThemeContext";
 import { Project } from "../../types/core/project.types";
 import Modal from "../core/Modal";
-import { FiPlus, FiFolder, FiTrash2, FiEdit2, FiCheck, FiX } from "react-icons/fi";
+import { FiPlus, FiFolder, FiTrash2, FiEdit2, FiCheck } from "react-icons/fi";
 
 interface ProjectManagerProps {
     isOpen: boolean;
@@ -82,11 +82,6 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose }) => {
         setShowEditModal(true);
     };
 
-    const handleModalBackdropClick = (e: React.MouseEvent) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
-    };
 
     const handleReturnToWelcome = () => {
         clearCurrentProject();
@@ -96,48 +91,40 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="flex fixed inset-0 z-50 justify-center items-center bg-black bg-opacity-50" onClick={handleModalBackdropClick}>
-            <div className={`max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden rounded-lg shadow-xl ${isDarkMode ? "text-white bg-gray-800" : "text-gray-900 bg-white"
-                }`}>
-                {/* Header */}
-                <div className={`flex items-center justify-between p-6 border-b ${isDarkMode ? "border-gray-700" : "border-gray-200"
-                    }`}>
-                    <h2 className="text-xl font-semibold">Project Manager</h2>
-                    <div className="flex items-center space-x-2">
-                        <button
-                            onClick={handleReturnToWelcome}
-                            className={`p-2 rounded-lg transition-colors ${isDarkMode
-                                ? "text-gray-300 bg-gray-700 hover:bg-gray-600"
-                                : "text-gray-700 bg-gray-100 hover:bg-gray-200"
-                                }`}
-                            title="Return to Welcome Screen"
-                        >
-                            <span className="text-sm">🏠</span>
-                        </button>
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            className={`p-2 rounded-lg transition-colors ${isDarkMode
-                                ? "text-white bg-blue-600 hover:bg-blue-700"
-                                : "text-blue-700 bg-blue-100 hover:bg-blue-200"
-                                }`}
-                            title="Create New Project"
-                        >
-                            <FiPlus size={16} />
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className={`p-2 rounded-lg transition-colors ${isDarkMode
-                                ? "text-gray-300 bg-gray-700 hover:bg-gray-600"
-                                : "text-gray-700 bg-gray-100 hover:bg-gray-200"
-                                }`}
-                        >
-                            <FiX size={16} />
-                        </button>
-                    </div>
+        <>
+            <Modal
+                isOpen={isOpen}
+                onClose={onClose}
+                title="Project Manager"
+                showSaveButton={false}
+                showCancelButton={false}
+                size="3xl"
+            >
+                {/* Header Actions */}
+                <div className="flex items-center justify-end mb-4 space-x-2">
+                    <button
+                        onClick={handleReturnToWelcome}
+                        className={`p-2 rounded-lg transition-colors ${isDarkMode
+                            ? "text-gray-300 bg-gray-700 hover:bg-gray-600"
+                            : "text-gray-700 bg-gray-100 hover:bg-gray-200"
+                            }`}
+                        title="Return to Welcome Screen"
+                    >
+                        <span className="text-sm">🏠</span>
+                    </button>
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className={`p-2 rounded-lg transition-colors ${isDarkMode
+                            ? "text-white bg-blue-600 hover:bg-blue-700"
+                            : "text-blue-700 bg-blue-100 hover:bg-blue-200"
+                            }`}
+                        title="Create New Project"
+                    >
+                        <FiPlus size={16} />
+                    </button>
                 </div>
-
                 {/* Content */}
-                <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <div className="overflow-y-auto max-h-[60vh]">
                     {error && (
                         <div className="p-3 mb-4 text-red-700 bg-red-100 rounded-lg dark:bg-red-900 dark:text-red-300">
                             {error}
@@ -146,19 +133,12 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose }) => {
 
                     {projects.length === 0 ? (
                         <div className="py-8 text-center">
-                            <FiFolder size={48} className={`mx-auto mb-4 ${isDarkMode ? "text-gray-600" : "text-gray-400"}`} />
-                            <p className={`text-lg ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
-                                No projects yet
-                            </p>
-                            <p className={`text-sm ${isDarkMode ? "text-gray-500" : "text-gray-500"}`}>
-                                Create your first project to get started
-                            </p>
+                            <FiFolder size={48} className={`mx-auto mb-4 dark:text-gray-600 text-gray-400`} />
+                            <p className={`text-lg dark:text-gray-400 text-gray-600`}>No projects yet</p>
+                            <p className={`text-sm dark:text-gray-500 text-gray-500`}>Create your first project to get started</p>
                             <button
                                 onClick={() => setShowCreateModal(true)}
-                                className={`mt-4 px-4 py-2 rounded-lg transition-colors ${isDarkMode
-                                    ? "text-white bg-blue-600 hover:bg-blue-700"
-                                    : "text-blue-700 bg-blue-100 hover:bg-blue-200"
-                                    }`}
+                                className={`mt-4 px-4 py-2 rounded-lg transition-colors dark:text-white dark:bg-blue-600 dark:hover:bg-blue-700 text-blue-700 bg-blue-100 hover:bg-blue-200`}
                             >
                                 Create Project
                             </button>
@@ -169,12 +149,9 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose }) => {
                                 <div
                                     key={project.id}
                                     className={`p-4 rounded-lg border transition-colors ${currentProject?.id === project.id
-                                        ? isDarkMode
-                                            ? "border-blue-500 bg-blue-900 bg-opacity-20"
-                                            : "border-blue-500 bg-blue-50"
-                                        : isDarkMode
-                                            ? "border-gray-700 bg-gray-700 hover:bg-gray-600"
-                                            : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                                        ?
+                                        "dark:border-blue-500 dark:bg-blue-900 dark:bg-opacity-20 border-blue-500 bg-blue-50"
+                                        : "dark:border-gray-700 dark:bg-gray-700 hover:bg-gray-600 border-gray-200 bg-gray-50 hover:bg-gray-100"
                                         }`}
                                 >
                                     <div className="flex justify-between items-center">
@@ -182,32 +159,23 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose }) => {
                                             <FiFolder
                                                 size={20}
                                                 className={currentProject?.id === project.id
-                                                    ? "text-blue-500"
-                                                    : isDarkMode ? "text-gray-400" : "text-gray-600"
+                                                    ? "dark:text-blue-700 text-blue-400"
+                                                    : "dark:text-gray-400 text-gray-600"
                                                 }
                                             />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center space-x-2">
-                                                    <h3 className="font-medium truncate">{project.name}</h3>
+                                                    <h3 className="font-medium dark:text-white text-gray-900 truncate">{project.name}</h3>
                                                     {currentProject?.id === project.id && (
-                                                        <span className={`px-2 py-1 text-xs rounded-full ${isDarkMode
-                                                            ? "text-blue-100 bg-blue-600"
-                                                            : "text-blue-700 bg-blue-100"
-                                                            }`}>
+                                                        <span className={`px-2 py-1 text-xs rounded-full dark:text-blue-100 dark:bg-blue-600 text-blue-700 bg-blue-100`}>
                                                             Active
                                                         </span>
                                                     )}
                                                 </div>
                                                 {project.description && (
-                                                    <p className={`text-sm truncate ${isDarkMode ? "text-gray-400" : "text-gray-600"
-                                                        }`}>
-                                                        {project.description}
-                                                    </p>
+                                                    <p className={`text-sm truncate ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>{project.description}</p>
                                                 )}
-                                                <p className={`text-xs ${isDarkMode ? "text-gray-500" : "text-gray-500"
-                                                    }`}>
-                                                    Created: {new Date(project.createdAt).toLocaleDateString()}
-                                                </p>
+                                                <p className={`text-xs ${isDarkMode ? "text-gray-500" : "text-gray-500"}`}>Created: {new Date(project.createdAt).toLocaleDateString()}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center ml-4 space-x-2">
@@ -250,8 +218,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose }) => {
                         </div>
                     )}
                 </div>
-            </div>
-
+            </Modal>
             {/* Create Project Modal */}
             <Modal
                 isOpen={showCreateModal}
@@ -299,7 +266,6 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose }) => {
                     </div>
                 </div>
             </Modal>
-
             {/* Edit Project Modal */}
             <Modal
                 isOpen={showEditModal}
@@ -343,7 +309,6 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose }) => {
                     </div>
                 </div>
             </Modal>
-
             {/* Delete Project Confirmation Modal */}
             <Modal
                 isOpen={showDeleteModal}
@@ -405,7 +370,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ isOpen, onClose }) => {
                     </div>
                 </div>
             </Modal>
-        </div>
+        </>
     );
 };
 
