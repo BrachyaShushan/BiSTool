@@ -266,7 +266,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
             {session.category && (
               <span className="ml-2 px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">{session.category}</span>
             )}
-            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${methodColor[(session.requestConfig?.method || "GET").toUpperCase() as keyof typeof methodColor]}`}>{session.requestConfig?.method}</span>
+            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${methodColor[(session.requestConfig?.method || "GET").toUpperCase() as keyof typeof methodColor]?.color}`}>{session.requestConfig?.method}</span>
           </div>
           <div className="flex flex-wrap space-x-4">
             <button onClick={() => { handleLoadSession(session as ExtendedSession); setShowModal(false) }} className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode ? "text-white bg-blue-600 hover:bg-blue-700" : "text-blue-700 bg-blue-100 hover:bg-blue-200"}`}><FiFolder /><span>Load</span></button>

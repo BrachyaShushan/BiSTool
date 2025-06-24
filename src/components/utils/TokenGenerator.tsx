@@ -236,7 +236,6 @@ const TokenGenerator: React.FC = () => {
                     'Content-Type': contentType,
                 },
                 body: requestBody,
-                credentials: 'include', // Include cookies in request and response
             });
 
             // Capture response information for debugging
