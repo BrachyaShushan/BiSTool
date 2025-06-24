@@ -71,6 +71,30 @@ export interface Variable {
   value: string;
 }
 
+export interface TokenConfig {
+  domain: string;
+  method: "POST" | "GET";
+  path: string;
+  tokenName: string;
+  headerKey: string;
+  headerValueFormat: string;
+  refreshToken: boolean;
+  refreshTokenName: string;
+  extractionMethods: {
+    json: boolean;
+    jsonPaths: string[];
+    cookies: boolean;
+    cookieNames: string[];
+    headers: boolean;
+    headerNames: string[];
+  };
+  requestMapping: {
+    usernameField: string;
+    passwordField: string;
+    contentType: "form" | "json";
+  };
+}
+
 export interface ResponseCondition {
   status: string; // e.g. "204", "400", "201"
   condition: string; // user-provided text
@@ -98,12 +122,16 @@ export interface AppContextType {
   activeSession: ExtendedSession | null;
   savedSessions: ExtendedSession[];
   globalVariables: Record<string, string>;
+  tokenConfig: TokenConfig;
   methodColor: Record<string, { value: string; label: string; color: string }>;
   setUrlData: (data: URLData) => void;
   setRequestConfig: (config: RequestConfigData | null) => void;
   setYamlOutput: (yaml: string) => void;
   setActiveSection: (section: SectionId) => void;
   setSegmentVariables: (vars: Record<string, string>) => void;
+  setTokenConfig: (
+    config: TokenConfig | ((prev: TokenConfig) => TokenConfig)
+  ) => void;
   updateSharedVariable: (key: string, value: string) => void;
   deleteSharedVariable: (key: string) => void;
   updateGlobalVariable: (key: string, value: string) => void;

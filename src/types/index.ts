@@ -3,6 +3,7 @@ import {
   RequestConfigData,
   Variable,
   SectionId,
+  TokenConfig,
 } from "./core/app.types";
 import { ExtendedSession } from "./features/SavedManager";
 
@@ -19,6 +20,7 @@ export interface AppContextType {
   activeSession: ExtendedSession | null;
   savedSessions: ExtendedSession[];
   globalVariables: Record<string, string>;
+  tokenConfig: TokenConfig;
   methodColor: Record<string, { value: string; label: string; color: string }>;
   isLoading: boolean;
   error: string | null;
@@ -27,6 +29,9 @@ export interface AppContextType {
   setYamlOutput: (yaml: string) => void;
   setActiveSection: (section: SectionId) => void;
   setSegmentVariables: (variables: Record<string, string>) => void;
+  setTokenConfig: (
+    config: TokenConfig | ((prev: TokenConfig) => TokenConfig)
+  ) => void;
   updateSharedVariable: (key: string, value: string) => void;
   deleteSharedVariable: (key: string) => void;
   updateGlobalVariable: (key: string, value: string) => void;

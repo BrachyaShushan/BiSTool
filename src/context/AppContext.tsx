@@ -11,6 +11,7 @@ import {
   RequestConfigData,
   Variable,
   SectionId,
+  TokenConfig,
 } from "../types";
 import { ExtendedSession } from "../types/features/SavedManager";
 
@@ -51,6 +52,29 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
   const [activeSection, setActiveSection] = useState<SectionId>("url");
   const [segmentVariables, setSegmentVariables] = useState<Record<string, string>>({});
   const [sharedVariables, setSharedVariables] = useState<Variable[]>([]);
+  const [tokenConfig, setTokenConfig] = useState<TokenConfig>({
+    domain: "http://{base_url}",
+    method: "POST",
+    path: "/auth/login",
+    tokenName: "x-access-token",
+    headerKey: "x-access-token",
+    headerValueFormat: "{token}",
+    refreshToken: false,
+    refreshTokenName: "refresh_token",
+    extractionMethods: {
+      json: true,
+      jsonPaths: [],
+      cookies: true,
+      cookieNames: [],
+      headers: true,
+      headerNames: [],
+    },
+    requestMapping: {
+      usernameField: "username",
+      passwordField: "password",
+      contentType: "form",
+    },
+  });
   const methodColor = {
     GET: { value: "GET", label: "GET", color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" },
     POST: { value: "POST", label: "POST", color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200" },
@@ -258,6 +282,40 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
       setSharedVariables([]);
     }
 
+    // Reload token config
+    try {
+      const storageKey = getProjectStorageKey("token_config");
+      const savedState = localStorage.getItem(storageKey);
+      if (savedState) {
+        const parsed = safeParseJSON(savedState);
+        setTokenConfig(parsed ?? {
+          domain: "http://{base_url}",
+          method: "POST",
+          path: "/auth/login",
+          tokenName: "x-access-token",
+          headerKey: "x-access-token",
+          headerValueFormat: "{token}",
+          refreshToken: false,
+          refreshTokenName: "refresh_token",
+          extractionMethods: {
+            json: false,
+            jsonPaths: [],
+            cookies: false,
+            cookieNames: [],
+            headers: false,
+            headerNames: [],
+          },
+          requestMapping: {
+            usernameField: "username",
+            passwordField: "password",
+            contentType: "form",
+          },
+        });
+      }
+    } catch (err) {
+      setError("Failed to load token config ERROR: " + err);
+    }
+
     // Set loading to false after all data is loaded
     setIsLoading(false);
 
@@ -316,6 +374,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     }
   }, [savedSessions, getProjectStorageKey]);
 
+  useEffect(() => {
+    try {
+      const storageKey = getProjectStorageKey("token_config");
+      localStorage.setItem(storageKey, JSON.stringify(tokenConfig));
+    } catch (err) {
+      setError("Failed to save token config ERROR: " + err);
+    }
+  }, [tokenConfig, getProjectStorageKey]);
+
   // Effect to handle session changes and load configurations
   useEffect(() => {
     if (activeSession) {
@@ -341,7 +408,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
         setRequestConfig(activeSession.requestConfig || null);
 
         // Load YAML output
-        setYamlOutput(activeSession.yamlOutput || "");
+        setYamlOutput(activeSession.yamlOutput ?? "");
 
         // Load segment variables
         setSegmentVariables(activeSession.segmentVariables || {});
@@ -580,6 +647,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     activeSession,
     savedSessions,
     globalVariables,
+    tokenConfig,
     methodColor,
     isLoading,
     error,
@@ -588,6 +656,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     setYamlOutput,
     setActiveSection,
     setSegmentVariables,
+    setTokenConfig,
     updateSharedVariable,
     deleteSharedVariable,
     updateGlobalVariable,
