@@ -2,10 +2,10 @@ import React from "react";
 import { useAppContext } from "../../context/AppContext";
 import { useTheme } from "../../context/ThemeContext";
 import { TestCase } from "../../types/features/SavedManager";
-import { FiTrash2, FiPlay, FiCopy, FiCheck, FiX, FiArrowRight } from "react-icons/fi";
+import { FiPlay, FiArrowRight } from "react-icons/fi";
 import { FiPlus } from "react-icons/fi";
-import { Editor } from "@monaco-editor/react";
 import { v4 as uuidv4 } from 'uuid';
+import TestCard from "./TestCard";
 
 const TestManager: React.FC = () => {
     const {
@@ -216,16 +216,6 @@ const TestManager: React.FC = () => {
         handleUpdateTest(test.id, { lastResult: result });
     };
 
-    const statusCodeColor = {
-        "200": "dark:bg-blue-500 bg-blue-200",
-        "201": "dark:bg-green-500 bg-green-200",
-        "204": "dark:bg-green-500 bg-green-200",
-        "400": "dark:bg-red-500 bg-red-200",
-        "401": "dark:bg-red-500 bg-red-200",
-        "403": "dark:bg-red-500 bg-red-200",
-        "404": "dark:bg-red-500 bg-red-200",
-        "500": "dark:bg-red-500 bg-red-200",
-    };
 
     if (!requestConfig) {
         return <div>No request configuration available</div>;
@@ -269,175 +259,18 @@ const TestManager: React.FC = () => {
 
             <div className="space-y-6">
                 {tests.map((test: TestCase) => (
-                    <div key={test.id} className={`p-4 bg-gray-50 rounded-lg border border-gray-200 dark:border-gray-700 dark:bg-gray-800`}>
-                        <div className="flex items-center mb-2">
-                            <input
-                                type="text"
-                                value={test.name}
-                                onChange={e => handleUpdateTest(test.id, { name: e.target.value })}
-                                placeholder="Test Name"
-                                className={`px-2 py-1 mr-4 text-gray-900 bg-white rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
-                            />
-                            <button
-                                className={`flex gap-2 items-center px-2 py-1 ml-auto text-blue-700 bg-blue-100 rounded dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700 hover:bg-blue-200`}
-                                onClick={() => handleDuplicateTest(test.id)}
-                            >
-                                <FiCopy />
-                                Duplicate
-                            </button>
-                            <button
-                                className={`flex gap-2 items-center px-2 py-1 ml-auto text-red-700 bg-red-100 rounded dark:bg-red-600 dark:text-white dark:hover:bg-red-800 hover:bg-red-200`}
-                                onClick={() => handleRemoveTest(test.id)}
-                            >
-                                <FiTrash2 />
-                                Remove
-                            </button>
-                        </div>
-
-                        {/* Path variable overrides */}
-                        {urlData?.parsedSegments?.filter((seg: any) => seg.isDynamic).length > 0 && (
-                            <div className="mb-2">
-                                <div className="mb-1 font-medium">Path Variable Overrides</div>
-                                <div className="flex flex-wrap gap-2">
-                                    {urlData.parsedSegments.filter((seg: any) => seg.isDynamic).map((seg: any) => (
-                                        <input
-                                            key={seg.paramName}
-                                            type="text"
-                                            value={test.pathOverrides?.[seg.paramName] ?? ''}
-                                            onChange={e => handleUpdateTest(test.id, { pathOverrides: { ...test.pathOverrides, [seg.paramName]: e.target.value } })}
-                                            placeholder={seg.paramName}
-                                            className={`px-2 py-1 text-gray-900 bg-white rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Query param overrides */}
-                        {requestConfig?.queryParams?.length > 0 && (
-                            <div className="mb-2">
-                                <div className="mb-1 font-medium">Query Param Overrides</div>
-                                <div className="flex flex-wrap gap-2">
-                                    {requestConfig.queryParams.map((param: any) => (
-                                        <input
-                                            key={param.key}
-                                            type="text"
-                                            value={test.queryOverrides?.[param.key] ?? ''}
-                                            onChange={e => handleUpdateTest(test.id, { queryOverrides: { ...test.queryOverrides, [param.key]: e.target.value } })}
-                                            placeholder={param.key}
-                                            className={`px-2 py-1 text-gray-900 bg-white rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Body override */}
-                        {requestConfig?.bodyType === 'json' && (
-                            <div className="mb-2">
-                                <div className="mb-1 font-medium">Body Override (JSON)</div>
-                                <Editor
-                                    height="100px"
-                                    defaultLanguage="json"
-                                    value={test.bodyOverride ?? ''}
-                                    onChange={value => handleUpdateTest(test.id, { bodyOverride: value ?? '' })}
-                                    theme={isDarkMode ? 'vs-dark' : 'light'}
-                                    options={{ minimap: { enabled: false }, fontSize: 14 }}
-                                />
-                            </div>
-                        )}
-
-                        {/* Expected status */}
-                        <div className="mb-2">
-                            <div className="mb-1 font-medium">Expected Status</div>
-                            <input
-                                type="text"
-                                value={test.expectedStatus}
-                                onChange={e => handleUpdateTest(test.id, { expectedStatus: e.target.value })}
-                                className={`px-2 py-1 text-gray-900 bg-white rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
-                            />
-                        </div>
-
-                        {/* Expected response */}
-                        <div className="mb-2">
-                            <div className="flex items-center mb-1">
-                                <span className="mb-1 font-medium">Expected Response (JSON)</span>
-                                <label className="flex items-center ml-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={!!test.expectedPartialResponse}
-                                        onChange={e => handleUpdateTest(test.id, { expectedPartialResponse: e.target.checked ? test.expectedResponse ?? '' : '' })}
-                                    />
-                                    <span className="ml-2">Partial match</span>
-                                </label>
-                            </div>
-                            <Editor
-                                height="100px"
-                                defaultLanguage="json"
-                                value={test.expectedResponse ?? ''}
-                                onChange={value => handleUpdateTest(test.id, { expectedResponse: value ?? '' })}
-                                theme={isDarkMode ? 'vs-dark' : 'light'}
-                                options={{ minimap: { enabled: false }, fontSize: 14 }}
-                            />
-                        </div>
-
-                        {/* Server response*/}
-                        {/* Server status code */}
-                        {test.serverStatusCode && test.serverStatusCode !== 0 ? (
-                            <div className="flex items-center mb-2">
-                                <span className="mr-2 font-medium">Server Status Code:</span>
-                                <span className={`font-medium px-2 py-1 rounded ${statusCodeColor[test.serverStatusCode as unknown as keyof typeof statusCodeColor]}`}>
-                                    {test.serverStatusCode}
-                                </span>
-                            </div>
-                        ) : null}
-
-                        {test.serverResponse && test.serverResponse.trim() !== '' && (
-                            <div className="mb-2">
-                                <div className="mb-1 font-medium">Server Response (JSON)</div>
-                                <Editor
-                                    height="100px"
-                                    defaultLanguage="json"
-                                    value={
-                                        (() => {
-                                            try {
-                                                return JSON.stringify(JSON.parse(test.serverResponse ?? ''), null, 2);
-                                            } catch {
-                                                return test.serverResponse ?? '';
-                                            }
-                                        })()
-                                    }
-                                    theme={isDarkMode ? 'vs-dark' : 'light'}
-                                    options={{ minimap: { enabled: false }, readOnly: true, fontSize: 14 }}
-                                />
-                            </div>
-                        )}
-
-                        {/* Use token checkbox */}
-                        <div className="flex items-center mb-2">
-                            <input
-                                type="checkbox"
-                                checked={test.useToken !== false}
-                                onChange={e => handleUpdateTest(test.id, { useToken: e.target.checked })}
-                                className="mr-2"
-                                id={`use-token-${test.id}`}
-                            />
-                            <label htmlFor={`use-token-${test.id}`}>Use token</label>
-                        </div>
-
-                        {/* Run and result */}
-                        <div className="flex items-center mt-2">
-                            <button
-                                className={`flex gap-2 items-center px-4 py-1 mr-4 text-blue-700 bg-blue-100 rounded dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700 hover:bg-blue-200`}
-                                onClick={() => handleRunTest(test)}
-                            >
-                                <FiPlay />
-                                <span>Run</span>
-                            </button>
-                            {test.lastResult === 'pass' && <FiCheck className="text-green-600" size={30} />}
-                            {test.lastResult === 'fail' && <FiX className="text-red-600" size={30} />}
-                        </div>
-                    </div>
+                    <TestCard
+                        key={test.id}
+                        test={test}
+                        urlData={urlData}
+                        requestConfig={requestConfig}
+                        globalVariables={globalVariables}
+                        activeSession={activeSession}
+                        isDarkMode={isDarkMode}
+                        handleUpdateTest={handleUpdateTest}
+                        handleDuplicateTest={handleDuplicateTest}
+                        handleRemoveTest={handleRemoveTest}
+                    />
                 ))}
             </div>
 

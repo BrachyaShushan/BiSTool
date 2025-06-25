@@ -4,7 +4,7 @@ import { useTheme } from "../../context/ThemeContext";
 import Editor, { OnMount } from "@monaco-editor/react";
 import TokenGenerator from "../utils/TokenGenerator";
 import { RequestConfigProps } from "../../types/components/components.types";
-import { RequestConfigData, Header, QueryParam, FormDataField, AppContextType, ThemeContextType } from "../../types/core/app.types";
+import { RequestConfigData, Header, QueryParam, FormDataField, AppContextType, ThemeContextType } from "../../types";
 import { editor } from "monaco-editor";
 import { FiPlus, FiTrash2, FiEye } from "react-icons/fi";
 import Modal from "../core/Modal";

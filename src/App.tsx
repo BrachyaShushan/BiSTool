@@ -11,7 +11,7 @@ import { AppProvider, useAppContext } from "./context/AppContext";
 import { ProjectProvider, useProjectContext } from "./context/ProjectContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { Section } from "./types/core";
-import { FiFolder, FiSettings } from "react-icons/fi";
+import { FiFolder, FiSettings, FiKey } from "react-icons/fi";
 
 const AppContent: React.FC = () => {
     const {
@@ -31,11 +31,16 @@ const AppContent: React.FC = () => {
         updateSessionVariable,
         deleteGlobalVariable,
         methodColor,
+        tokenConfig,
+        regenerateToken,
     } = useAppContext();
 
     const { currentProject, clearCurrentProject } = useProjectContext();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [showProjectManager, setShowProjectManager] = useState(false);
+    const [isTokenLoading, setIsTokenLoading] = useState(false);
+    const [isTokenExpired, setIsTokenExpired] = useState(false);
+    const [tokenDuration, setTokenDuration] = useState<number | null>(null);
 
     const handleCreateProjectClick = () => {
         setShowProjectManager(true);
@@ -43,6 +48,54 @@ const AppContent: React.FC = () => {
 
     const handleReturnToWelcome = () => {
         clearCurrentProject();
+    };
+
+    // Helper to decode JWT and check expiration
+    const checkTokenExpiration = React.useCallback(() => {
+        setIsTokenLoading(true);
+        try {
+            const tokenName = (globalVariables && tokenConfig && tokenConfig.tokenName) || "x-access-token";
+            const token = globalVariables?.[tokenName];
+            if (!token || token.trim() === "") {
+                setTokenDuration(null);
+                setIsTokenExpired(true);
+                setIsTokenLoading(false);
+                return;
+            }
+            const parts = token.split(".");
+            if (parts.length < 2 || typeof parts[1] !== "string") {
+                setTokenDuration(null);
+                setIsTokenExpired(true);
+                setIsTokenLoading(false);
+                return;
+            }
+            const payload = JSON.parse(atob(parts[1]));
+            const now = Math.floor(Date.now() / 1000);
+            const exp = payload.exp;
+            const duration = (exp - now) / 60;
+            setTokenDuration(duration);
+            setIsTokenExpired(duration < 1);
+        } catch (e) {
+            setTokenDuration(null);
+            setIsTokenExpired(true);
+        }
+        setIsTokenLoading(false);
+    }, [globalVariables, tokenConfig]);
+
+    React.useEffect(() => {
+        checkTokenExpiration();
+        const interval = setInterval(checkTokenExpiration, 30000);
+        return () => clearInterval(interval);
+    }, [checkTokenExpiration]);
+
+    // Token regeneration logic (reuse from TokenGenerator)
+    const handleRegenerateToken = async () => {
+        setIsTokenLoading(true);
+        try {
+            await regenerateToken();
+        } finally {
+            setIsTokenLoading(false);
+        }
     };
 
     const renderActiveSection = (): React.ReactNode => {
@@ -169,30 +222,20 @@ const AppContent: React.FC = () => {
                                             {isDarkMode ? "☀️" : "🌙"}
                                         </button>
 
-                                        {/* Debug Button */}
+                                        {/* Token Status Key Icon */}
                                         <button
-                                            onClick={() => {
-                                                console.log("=== DEBUG: Current localStorage ===");
-                                                console.log("Current project:", currentProject);
-                                                if (currentProject) {
-                                                    const keys = [
-                                                        `${currentProject.id}_app_state`,
-                                                        `${currentProject.id}_active_session`,
-                                                        `${currentProject.id}_saved_sessions`,
-                                                        `${currentProject.id}_shared_variables`
-                                                    ];
-                                                    keys.forEach(key => {
-                                                        const value = localStorage.getItem(key);
-                                                        console.log(`${key}:`, value ? JSON.parse(value) : null);
-                                                    });
-                                                }
-                                                console.log("All localStorage keys:", Object.keys(localStorage));
-                                            }}
-                                            className={`p-2 text-gray-700 bg-gray-200 rounded-full transition-colors duration-200 dark:bg-gray-700 dark:text-red-300 dark:hover:bg-gray-600 hover:bg-gray-300`}
-                                            title="Debug localStorage"
+                                            onClick={handleRegenerateToken}
+                                            className={`p-2 rounded-full transition-colors duration-200 flex items-center space-x-2
+                                                ${isTokenExpired ? "text-red-500 bg-red-100 dark:bg-red-900 dark:text-red-300" :
+                                                    isTokenLoading ? "animate-spin text-blue-500 bg-blue-100 dark:bg-blue-900 dark:text-blue-300" :
+                                                        "text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-yellow-300 dark:hover:bg-gray-600"}
+                                            `}
+                                            title={isTokenExpired ? "Token expired. Click to regenerate." : isTokenLoading ? "Checking token..." : `Token valid${tokenDuration !== null ? ` (${Math.round(tokenDuration)} min left)` : ""}`}
+                                            aria-label="Regenerate token"
                                         >
-                                            🐛
+                                            <FiKey size={16} />
                                         </button>
+
                                     </div>
                                 </div>
                             </div>

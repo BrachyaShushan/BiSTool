@@ -124,6 +124,8 @@ export interface AppContextType {
   globalVariables: Record<string, string>;
   tokenConfig: TokenConfig;
   methodColor: Record<string, { value: string; label: string; color: string }>;
+  isLoading: boolean;
+  error: string | null;
   setUrlData: (data: URLData) => void;
   setRequestConfig: (config: RequestConfigData | null) => void;
   setYamlOutput: (yaml: string) => void;
@@ -136,6 +138,7 @@ export interface AppContextType {
   deleteSharedVariable: (key: string) => void;
   updateGlobalVariable: (key: string, value: string) => void;
   updateSessionVariable: (key: string, value: string) => void;
+  deleteSessionVariable: (key: string) => void;
   handleNewSession: () => void;
   handleLoadSession: (session: ExtendedSession) => void;
   handleSaveSession: (name: string, sessionData?: ExtendedSession) => void;
@@ -144,6 +147,7 @@ export interface AppContextType {
   handleRequestConfigSubmit: (data: RequestConfigData) => void;
   handleYAMLGenerated: (yaml: string) => void;
   deleteGlobalVariable: (key: string) => void;
+  regenerateToken: () => Promise<void>;
 }
 
 export interface ThemeContextType {

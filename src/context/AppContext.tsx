@@ -637,6 +637,207 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     }
   };
 
+  const replaceVariables = (str: string): string => {
+    if (!str) return str;
+    return str.replace(/\{([^}]+)\}/g, (match, variableName) => {
+      return globalVariables?.[variableName] || match;
+    });
+  };
+
+  const getCookieValue = (cookieName: string): string | null => {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === cookieName && value) {
+        return decodeURIComponent(value);
+      }
+    }
+    return null;
+  };
+
+  const extractTokenFromJson = (jsonData: any, paths: string[]): string | null => {
+    const defaultPaths = ['token', 'access_token', 'accessToken', 'jwt', 'auth_token'];
+    const searchPaths = paths.length > 0 ? paths : defaultPaths;
+    for (const path of searchPaths) {
+      const value = jsonData[path];
+      if (value && typeof value === 'string') {
+        return value;
+      }
+    }
+    return null;
+  };
+
+  const extractTokenFromCookies = (cookieNames: string[]): string | null => {
+    const defaultNames = ['token', 'access_token', 'auth_token', 'jwt'];
+    const searchNames = cookieNames.length > 0 ? cookieNames : defaultNames;
+    for (const cookieName of searchNames) {
+      const value = getCookieValue(cookieName);
+      if (value) {
+        return value;
+      }
+    }
+    const allCookies = document.cookie.split(';').map(cookie => {
+      const [name, value] = cookie.trim().split('=');
+      return { name: name?.trim(), value: value?.trim() };
+    }).filter(cookie => cookie.name);
+    const tokenCookie = allCookies.find(cookie =>
+      cookie.name?.toLowerCase().includes('token') ||
+      cookie.name?.toLowerCase().includes('auth') ||
+      cookie.name?.toLowerCase().includes('jwt')
+    );
+    if (tokenCookie) {
+      return tokenCookie.value || null;
+    }
+    return null;
+  };
+
+  const extractTokenFromSetCookieHeader = (response: Response, cookieNames: string[]): string | null => {
+    const setCookieHeader = response.headers.get('set-cookie');
+    if (!setCookieHeader) {
+      return null;
+    }
+    const cookies = setCookieHeader.split(',').map(cookie => {
+      const [nameValue] = cookie.split(';');
+      const [name, value] = nameValue?.trim().split('=') ?? [];
+      return { name: name?.trim(), value: value?.trim() };
+    });
+    const defaultNames = ['token', 'access_token', 'auth_token', 'jwt'];
+    const searchNames = cookieNames.length > 0 ? cookieNames : defaultNames;
+    for (const cookieName of searchNames) {
+      const cookie = cookies.find(c => c.name === cookieName);
+      if (cookie?.value) {
+        return cookie.value;
+      }
+    }
+    const tokenCookie = cookies.find(cookie =>
+      cookie.name?.toLowerCase().includes('token') ||
+      cookie.name?.toLowerCase().includes('auth') ||
+      cookie.name?.toLowerCase().includes('jwt')
+    );
+    if (tokenCookie?.value) {
+      return tokenCookie.value;
+    }
+    return null;
+  };
+
+  const extractTokenFromHeaders = (response: Response, headerNames: string[]): string | null => {
+    const defaultNames = ['authorization', 'x-access-token', 'x-auth-token', 'token'];
+    const searchNames = headerNames.length > 0 ? headerNames : defaultNames;
+    for (const headerName of searchNames) {
+      const value = response.headers.get(headerName);
+      if (value) {
+        return value.replace(/^Bearer\s+/i, '');
+      }
+    }
+    return null;
+  };
+
+  const extractTokenFromResponseText = (responseText: string): string | null => {
+    const jwtPattern = /jwt[=:]\s*([a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/i;
+    const match = responseText.match(jwtPattern);
+    if (match) {
+      return match[1] ?? null;
+    }
+    const tokenPattern = /(?:token|access_token|auth_token)[=:]\s*([a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/i;
+    const tokenMatch = responseText.match(tokenPattern);
+    if (tokenMatch) {
+      return tokenMatch[1] ?? null;
+    }
+    return null;
+  };
+
+  const regenerateToken = async (): Promise<void> => {
+    try {
+      if (!globalVariables['username'] || !globalVariables['password']) {
+        throw new Error("Please set username and password in global variables");
+      }
+      const domain = replaceVariables(tokenConfig.domain);
+      if (!domain) {
+        throw new Error("Please set a valid domain");
+      }
+      const requestUrl = `${domain}${tokenConfig.path}`;
+      let requestBody: string;
+      let contentType: string;
+      if (tokenConfig.requestMapping.contentType === "json") {
+        const bodyData = {
+          [tokenConfig.requestMapping.usernameField]: globalVariables['username'],
+          [tokenConfig.requestMapping.passwordField]: globalVariables['password']
+        };
+        requestBody = JSON.stringify(bodyData);
+        contentType = 'application/json';
+      } else {
+        requestBody = `${tokenConfig.requestMapping.usernameField}=${encodeURIComponent(
+          globalVariables['username']
+        )}&${tokenConfig.requestMapping.passwordField}=${encodeURIComponent(
+          globalVariables['password']
+        )}`;
+        contentType = 'application/x-www-form-urlencoded';
+      }
+      const response = await fetch(requestUrl, {
+        method: tokenConfig.method,
+        headers: {
+          'Accept': '*/*',
+          'Content-Type': contentType,
+        },
+        body: requestBody,
+      });
+      await new Promise(resolve => setTimeout(resolve, 100));
+      let token: string | null = null;
+      let responseText = '';
+      if (tokenConfig.extractionMethods.json) {
+        try {
+          responseText = await response.text();
+          let jsonData: any;
+          try {
+            jsonData = JSON.parse(responseText);
+          } catch (e) { }
+          if (jsonData) {
+            token = extractTokenFromJson(jsonData, tokenConfig.extractionMethods.jsonPaths);
+          }
+        } catch (e) { }
+      }
+      if (!token && tokenConfig.extractionMethods.cookies) {
+        token = extractTokenFromSetCookieHeader(response, tokenConfig.extractionMethods.cookieNames);
+        if (!token) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          token = extractTokenFromCookies(tokenConfig.extractionMethods.cookieNames);
+        }
+      }
+      if (!token && tokenConfig.extractionMethods.headers) {
+        token = extractTokenFromHeaders(response, tokenConfig.extractionMethods.headerNames);
+      }
+      if (!token && tokenConfig.extractionMethods.cookies) {
+        if (!responseText) {
+          responseText = await response.text();
+        }
+        token = extractTokenFromResponseText(responseText);
+      }
+      if (!token) {
+        throw new Error("Token not found in response. Check your extraction configuration.");
+      }
+      updateGlobalVariable(tokenConfig.tokenName, token);
+      updateGlobalVariable("tokenName", tokenConfig.tokenName);
+      if (tokenConfig.refreshToken) {
+        let refreshToken: string | null = null;
+        if (tokenConfig.extractionMethods.json && responseText) {
+          try {
+            const jsonData = JSON.parse(responseText);
+            refreshToken = jsonData.refresh_token || jsonData.refreshToken;
+          } catch (e) { }
+        }
+        if (!refreshToken && tokenConfig.extractionMethods.cookies) {
+          refreshToken = getCookieValue(tokenConfig.refreshTokenName);
+        }
+        if (refreshToken) {
+          updateGlobalVariable(tokenConfig.refreshTokenName, refreshToken);
+        }
+      }
+    } catch (error) {
+      console.error("Token regeneration error:", error);
+      // Optionally, set an error state or show a toast
+    }
+  };
+
   const value: AppContextType = {
     urlData,
     requestConfig,
@@ -670,6 +871,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     handleRequestConfigSubmit,
     handleYAMLGenerated,
     deleteGlobalVariable,
+    regenerateToken,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

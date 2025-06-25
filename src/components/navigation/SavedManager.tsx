@@ -58,6 +58,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
   const [selectedImportVariables, setSelectedImportVariables] = useState<string[]>([]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const valueInputRef = React.useRef<HTMLInputElement>(null);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -70,6 +71,17 @@ const SavedManager: React.FC<SavedManagerProps> = ({
       setError(null);
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      showVariableModal &&
+      modalType === "edit" &&
+      valueInputRef.current
+    ) {
+      valueInputRef.current.focus();
+      valueInputRef.current.select();
+    }
+  }, [showVariableModal, modalType]);
 
   const validateSessionName = (name: string): boolean => {
     if (!name.trim()) {
@@ -760,6 +772,7 @@ const SavedManager: React.FC<SavedManagerProps> = ({
             <input
               type="text"
               value={selectedVariable.value}
+              ref={valueInputRef}
               onChange={(e) =>
                 setSelectedVariable({
                   ...selectedVariable,

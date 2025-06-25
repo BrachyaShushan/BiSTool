@@ -565,16 +565,16 @@ ${config.formData.map(field => `      ${field.key}:
       // Generate OpenAPI 0.9.7.1 YAML with generic template structure
       yaml = `${method} ${title}
 ---
-        tags:
-        - ${category}
+tags:
+  - ${category}
 description: ${description}
 url: ${url}
 security:
-        - ApiKeyAuth: []
+  - ApiKeyAuth: []
 parameters:
-        ${allParameters}${generateRequestBody()}
+${allParameters}${generateRequestBody()}
 responses:
-        ${generateResponses()}`;
+${generateResponses()}`;
     } else if (openApiVersion === "2.0.0") {
       // Generate OpenAPI 2.0 YAML
       yaml = `swagger: '2.0'
