@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAppContext } from "../../context/AppContext";
-import { useTheme } from "../../context/ThemeContext";
 import { URLBuilderProps } from "../../types/components/components.types";
 import { URLData } from "../../types/core/app.types";
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiGlobe, FiLink, FiCopy, FiCheck, FiSettings, FiEye, FiEyeOff, FiArrowRight, FiInfo } from "react-icons/fi";
 
 // Define Segment interface based on the parsedSegments type in URLData
 interface Segment {
@@ -23,7 +22,6 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     activeSession,
     handleSaveSession,
   } = useAppContext();
-  const { isDarkMode } = useTheme();
 
   const [protocol, setProtocol] = useState<string>(() => {
     if (activeSession?.urlData?.processedURL?.startsWith("https"))
@@ -75,6 +73,8 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
   });
 
   const [environment, setEnvironment] = useState<string>("development");
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const initialLoadDone = useRef(false);
 
   // Effect to handle initial load and session changes
@@ -204,100 +204,37 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
       };
       handleSaveSession(activeSession.name, updatedSession);
     }
-  }, [segments, domain, protocol, builtUrl, sessionDescription]);
-
-  // Effect to handle session changes
-  useEffect(() => {
-    if (activeSession?.urlData) {
-      const sessionUrlData = activeSession.urlData;
-
-      // Update protocol
-      if (sessionUrlData.processedURL?.startsWith("https")) {
-        setProtocol("https");
-      } else {
-        setProtocol("http");
-      }
-
-      // Update domain
-      setDomain(sessionUrlData.baseURL || "{base_url}");
-
-      // Update segments
-      if (sessionUrlData.parsedSegments) {
-        setSegments(sessionUrlData.parsedSegments.map((segment: any) => ({
-          value: segment.value || "",
-          isDynamic: segment.isDynamic || false,
-          paramName: segment.paramName || "",
-          description: segment.description || "",
-          required: segment.required || false,
-        })));
-      } else if (
-        sessionUrlData.segments &&
-        typeof sessionUrlData.segments === "string"
-      ) {
-        const parsedSegments = sessionUrlData.segments
-          .split("/")
-          .filter(Boolean)
-          .map((segment: string) => {
-            const isDynamic = segment.startsWith("{") && segment.endsWith("}");
-            const paramName = isDynamic ? segment.slice(1, -1) : "";
-            return {
-              value: isDynamic ? "" : segment,
-              isDynamic,
-              paramName,
-              description: "",
-              required: false,
-            };
-          });
-        setSegments(parsedSegments);
-      }
-
-      // Update built URL
-      if (sessionUrlData.processedURL) {
-        setBuiltUrl(sessionUrlData.processedURL);
-      }
-
-      // Update session description
-      if (sessionUrlData.sessionDescription) {
-        setSessionDescription(sessionUrlData.sessionDescription);
-      }
-
-      // Update environment
-      if (sessionUrlData.environment) {
-        setEnvironment(sessionUrlData.environment);
-      }
-    }
-  }, [activeSession?.id]);
+  }, [
+    segments,
+    domain,
+    protocol,
+    builtUrl,
+    sessionDescription,
+    environment,
+    activeSession?.name, // Only depend on the session name, not the entire object
+  ]);
 
   const getVariableValue = useCallback(
-    (paramName: string, environment: string): string | null => {
-      // First try environment-specific variable in global variables
-      const globalEnvVar = globalVariables?.[`${paramName}_${environment}`];
-      if (globalEnvVar) return globalEnvVar;
+    (paramName: string, env: string) => {
+      // Check global variables first
+      if (globalVariables[paramName]) {
+        return globalVariables[paramName];
+      }
 
-      // Then try base variable in global variables
-      const globalBaseVar = globalVariables?.[paramName];
-      if (globalBaseVar) return globalBaseVar;
+      // Check segment variables (as object)
+      if (segmentVariables && segmentVariables[paramName]) {
+        return segmentVariables[paramName];
+      }
 
-      // Then try environment-specific variable in segment variables
-      const segmentEnvVar = segmentVariables?.[`${paramName}_${environment}`];
-      if (segmentEnvVar) return segmentEnvVar;
-
-      // Then try base variable in segment variables
-      const segmentBaseVar = segmentVariables?.[paramName];
-      if (segmentBaseVar) return segmentBaseVar;
-
-      // Then try environment-specific variable in session variables
-      const sessionEnvVar =
-        activeSession?.sharedVariables?.[`${paramName}_${environment}`];
-      if (sessionEnvVar) return sessionEnvVar;
-
-      // Finally try base variable in session variables
-      const sessionBaseVar = activeSession?.sharedVariables?.[paramName];
-      if (sessionBaseVar) return sessionBaseVar;
+      // Check environment-specific variables
+      const envVar = globalVariables[`${paramName}_${env}`];
+      if (envVar) {
+        return envVar;
+      }
 
       return null;
     },
-    [globalVariables, segmentVariables, activeSession]
+    [globalVariables, segmentVariables]
   );
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
@@ -341,260 +278,326 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     setSegments(newSegments);
   };
 
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(builtUrl);
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy URL:', err);
+    }
+  };
+
   return (
-    <div
-      className={`p-4 bg-white rounded-lg shadow dark:bg-gray-800`}
-    >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="flex-1">
-            <span
-              className={`block mb-1 text-sm font-medium text-gray-700 dark:text-white`}
-            >
-              Protocol
-            </span>
-            <select
-              value={protocol}
-              onChange={(e) => setProtocol(e.target.value)}
-              className={`px-3 py-2 w-full text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
-            >
-              <option value="http">HTTP</option>
-              <option value="https">HTTPS</option>
-            </select>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="overflow-hidden relative p-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border border-blue-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5 dark:opacity-10">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full translate-x-16 -translate-y-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 rounded-full -translate-x-12 translate-y-12"></div>
+        </div>
+
+        <div className="flex relative items-center space-x-4">
+          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+            <FiGlobe className="w-6 h-6 text-white" />
           </div>
-          <div className="flex-1 ml-4">
-            <span
-              className={`block mb-1 text-sm font-medium text-gray-700 dark:text-white`}
-            >
-              Domain
-            </span>
-            <input
-              type="text"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="example.com"
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                ? "text-white bg-gray-700 border-gray-600"
-                : "text-gray-900 bg-white border-gray-300"
-                }`}
+          <div>
+            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+              URL Builder
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300">
+              Construct dynamic URLs with variables and path segments
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Configuration Section */}
+        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+          <div className="flex items-center mb-6 space-x-3">
+            <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
+              <FiSettings className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Configuration</h3>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Protocol */}
+            <div>
+              <label className="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Protocol
+              </label>
+              <select
+                value={protocol}
+                onChange={(e) => setProtocol(e.target.value)}
+                className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="http">HTTP</option>
+                <option value="https">HTTPS</option>
+              </select>
+            </div>
+
+            {/* Domain */}
+            <div>
+              <label className="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Domain
+              </label>
+              <input
+                type="text"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                placeholder="example.com or {base_url}"
+                className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Environment */}
+            <div>
+              <label className="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Environment
+              </label>
+              <select
+                value={environment}
+                onChange={(e) => setEnvironment(e.target.value)}
+                className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="development">Development</option>
+                <option value="staging">Staging</option>
+                <option value="production">Production</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Session Description */}
+          <div className="mt-6">
+            <label className="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Session Description
+            </label>
+            <textarea
+              value={sessionDescription}
+              onChange={(e) => setSessionDescription(e.target.value)}
+              placeholder="Enter a description for this API endpoint..."
+              className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 resize-none dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={3}
             />
           </div>
-          <div className="flex-1 ml-4">
-            <span
-              className={`block mb-1 text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
-                }`}
-            >
-              Environment
-            </span>
-            <select
-              value={environment}
-              onChange={(e) => setEnvironment(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-                ? "text-white bg-gray-700 border-gray-600"
-                : "text-gray-900 bg-white border-gray-300"
-                }`}
-            >
-              <option value="development">Development</option>
-              <option value="staging">Staging</option>
-              <option value="production">Production</option>
-            </select>
-          </div>
         </div>
 
-        <div>
-          <span
-            className={`block mb-1 text-sm font-medium text-gray-700 dark:text-white`}
-          >
-            Session Description
-          </span>
-          <textarea
-            value={sessionDescription}
-            onChange={(e) => setSessionDescription(e.target.value)}
-            placeholder="Enter a description for this API endpoint"
-            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
-              ? "text-white bg-gray-700 border-gray-600"
-              : "text-gray-900 bg-white border-gray-300"
-              }`}
-            rows={3}
-          />
-        </div>
-
-        <div>
-          <span
-            className={`block mb-1 text-sm font-medium text-gray-700 dark:text-white`}
-          >
-            Path Segments
-          </span>
-          <div className="space-y-2">
-            {segments.map((segment, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <div className="w-[30%]">
-                  {segment.isDynamic ? (
-                    <input
-                      type="text"
-                      value={segment.paramName}
-                      onChange={(e) => {
-                        const newSegments = [...segments];
-                        newSegments[index] = {
-                          ...segment,
-                          paramName: e.target.value
-                        };
-                        setSegments(newSegments);
-                      }}
-                      placeholder="Parameter name"
-                      className={`px-3 py-2 w-full text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:text-white dark:bg-gray-700 dark:border-gray-600`}
-                    />
-                  ) : (
-                    <input
-                      type="text"
-                      value={segment.value}
-                      onChange={(e) => {
-                        const newSegments = [...segments];
-                        newSegments[index] = {
-                          ...segment,
-                          value: e.target.value
-                        };
-                        setSegments(newSegments);
-                      }}
-                      placeholder="Segment value"
-                      className={`px-3 py-2 w-full text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:text-white dark:bg-gray-700 dark:border-gray-600`}
-                    />
-                  )}
-                </div>
-                <div className="w-[50%]">
-                  <input
-                    type="text"
-                    value={segment.description ?? ""}
-                    onChange={(e) => {
-                      const newSegments = [...segments];
-                      newSegments[index] = {
-                        ...segment,
-                        description: e.target.value
-                      };
-                      setSegments(newSegments);
-                    }}
-                    placeholder="Description"
-                    className={`px-3 py-2 w-full text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:text-white dark:bg-gray-700 dark:border-gray-600`}
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={segment.isDynamic}
-                      onChange={(e) => {
-                        const newSegments = [...segments];
-                        newSegments[index] = {
-                          ...segment,
-                          isDynamic: e.target.checked,
-                          value: e.target.checked ? "" : segment.value,
-                          paramName: e.target.checked ? segment.paramName : ""
-                        };
-                        setSegments(newSegments);
-                      }}
-                      className={`h-4 w-4 text-blue-600 focus:ring-blue-500 rounded ${isDarkMode ? "border-gray-600" : "border-gray-300"}`}
-                    />
-                    <span className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      Dynamic
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleSegmentRemove(index)}
-                    className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-                      ? "text-white bg-red-600 hover:bg-red-700"
-                      : "text-red-700 bg-red-100 hover:bg-red-200"
-                      }`}
-                  >
-                    <FiTrash2 />
-                    <span>Remove</span>
-                  </button>
-                </div>
+        {/* Path Segments Section */}
+        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+                <FiLink className="w-5 h-5 text-white" />
               </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => handleSegmentAdd()}
-            className={`mt-2 px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-2 ${isDarkMode
-              ? "text-white bg-blue-600 hover:bg-blue-700"
-              : "text-blue-700 bg-blue-100 hover:bg-blue-200"
-              }`}
-          >
-            <FiPlus />
-            <span>Add Segment</span>
-          </button>
-        </div>
-
-        <div
-          className={`p-4 bg-gray-50 rounded-md dark:bg-gray-700`}
-        >
-          <h3
-            className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
-              }`}
-          >
-            URL Preview
-          </h3>
-          <div
-            className={`mt-2 p-2 ${isDarkMode
-              ? "bg-gray-800 border-gray-600"
-              : "bg-white border-gray-200"
-              } rounded border`}
-          >
-            <code
-              className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-900"
-                }`}
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Path Segments</h3>
+            </div>
+            <button
+              type="button"
+              onClick={handleSegmentAdd}
+              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
             >
-              {builtUrl}
-            </code>
+              <FiPlus className="w-4 h-4" />
+              <span>Add Segment</span>
+            </button>
           </div>
-          {segments.some((s) => s.isDynamic) && (
-            <div className="mt-4">
-              <h4
-                className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-gray-700"
-                  }`}
-              >
-                Variable Values
-              </h4>
-              <ul className="mt-2 space-y-1">
-                {segments
-                  .filter((s) => s.isDynamic && s.paramName)
-                  .map((segment, i) => {
-                    const value =
-                      getVariableValue(segment.paramName, environment) ||
-                      "Not set";
-                    return (
-                      <li
-                        key={i}
-                        className="flex items-center space-x-2 text-sm"
+
+          {segments.length === 0 ? (
+            <div className="p-8 text-center rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600">
+              <FiLink className="mx-auto mb-4 w-12 h-12 text-gray-400" />
+              <p className="mb-4 text-gray-500 dark:text-gray-400">No path segments added yet</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">Add segments to build your URL path</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {segments.map((segment, index) => (
+                <div key={index} className="p-4 bg-gray-50 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                  <div className="grid gap-4 items-center md:grid-cols-12">
+                    {/* Segment Type Toggle */}
+                    <div className="md:col-span-2">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={segment.isDynamic}
+                          onChange={(e) => {
+                            const newSegments = [...segments];
+                            newSegments[index] = {
+                              ...segment,
+                              isDynamic: e.target.checked,
+                              value: e.target.checked ? "" : segment.value,
+                              paramName: e.target.checked ? segment.paramName : ""
+                            };
+                            setSegments(newSegments);
+                          }}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2"
+                        />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {segment.isDynamic ? "Variable" : "Static"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Segment Value/Parameter Name */}
+                    <div className="md:col-span-4">
+                      {segment.isDynamic ? (
+                        <input
+                          type="text"
+                          value={segment.paramName}
+                          onChange={(e) => {
+                            const newSegments = [...segments];
+                            newSegments[index] = {
+                              ...segment,
+                              paramName: e.target.value
+                            };
+                            setSegments(newSegments);
+                          }}
+                          placeholder="Variable name (e.g., user_id)"
+                          className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          value={segment.value}
+                          onChange={(e) => {
+                            const newSegments = [...segments];
+                            newSegments[index] = {
+                              ...segment,
+                              value: e.target.value
+                            };
+                            setSegments(newSegments);
+                          }}
+                          placeholder="Segment value (e.g., api)"
+                          className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    <div className="md:col-span-4">
+                      <input
+                        type="text"
+                        value={segment.description ?? ""}
+                        onChange={(e) => {
+                          const newSegments = [...segments];
+                          newSegments[index] = {
+                            ...segment,
+                            description: e.target.value
+                          };
+                          setSegments(newSegments);
+                        }}
+                        placeholder="Description (optional)"
+                        className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="md:col-span-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSegmentRemove(index)}
+                        className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 group dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 hover:scale-105"
+                        title="Remove segment"
                       >
-                        <span
-                          className={`font-mono ${isDarkMode ? "text-gray-300" : "text-gray-900"
-                            }`}
-                        >
-                          {segment.paramName}:
-                        </span>
-                        <span
-                          className={
-                            isDarkMode ? "text-gray-400" : "text-gray-600"
-                          }
-                        >
-                          {value}
-                        </span>
-                      </li>
-                    );
-                  })}
-              </ul>
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
+        {/* URL Preview Section */}
+        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg">
+                <FiEye className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">URL Preview</h3>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => setShowPreview(!showPreview)}
+                className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                title={showPreview ? "Hide preview" : "Show preview"}
+              >
+                {showPreview ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={copyToClipboard}
+                className="p-2 text-gray-600 rounded-lg transition-all duration-200 group dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900"
+                title="Copy URL"
+              >
+                {copiedUrl ? <FiCheck className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {showPreview && (
+            <div className="space-y-4">
+              {/* Generated URL */}
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Generated URL</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Click to copy</span>
+                </div>
+                <div
+                  onClick={copyToClipboard}
+                  className="p-3 bg-white rounded-lg border border-gray-200 transition-all duration-200 cursor-pointer dark:bg-gray-600 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500"
+                >
+                  <code className="text-sm text-gray-900 break-all dark:text-gray-100">
+                    {builtUrl}
+                  </code>
+                </div>
+              </div>
+
+              {/* Variable Values */}
+              {segments.some((s) => s.isDynamic) && (
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 dark:bg-blue-900/20 dark:border-blue-700">
+                  <div className="flex items-center mb-3 space-x-2">
+                    <FiInfo className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Variable Values</span>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {segments
+                      .filter((s) => s.isDynamic && s.paramName)
+                      .map((segment, i) => {
+                        const value = getVariableValue(segment.paramName, environment) || "Not set";
+                        return (
+                          <div key={i} className="flex justify-between items-center p-2 bg-white rounded-lg dark:bg-gray-700">
+                            <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                              {segment.paramName}:
+                            </span>
+                            <span className={`text-sm px-2 py-1 rounded ${value === "Not set"
+                              ? "text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-300"
+                              : "text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300"
+                              }`}>
+                              {value}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Submit Button */}
         <div className="flex justify-end">
           <button
             type="submit"
-            className={`px-4 py-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700`}
+            className="flex items-center px-8 py-4 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
           >
-            Continue to Request Configuration
+            <span>Continue to Request Configuration</span>
+            <FiArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
           </button>
         </div>
       </form>

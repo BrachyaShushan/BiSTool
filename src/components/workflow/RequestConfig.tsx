@@ -6,7 +6,21 @@ import TokenGenerator from "../utils/TokenGenerator";
 import { RequestConfigProps } from "../../types/components/components.types";
 import { RequestConfigData, Header, QueryParam, FormDataField, AppContextType, ThemeContextType } from "../../types";
 import { editor } from "monaco-editor";
-import { FiPlus, FiTrash2, FiEye } from "react-icons/fi";
+import {
+  FiPlus,
+  FiTrash2,
+  FiSettings,
+  FiCode,
+  FiHash,
+  FiFileText,
+  FiArrowRight,
+  FiClock,
+  FiShield,
+  FiZap,
+  FiGlobe,
+  FiDatabase,
+  FiLayers
+} from "react-icons/fi";
 import Modal from "../core/Modal";
 
 interface RequestConfigState {
@@ -33,8 +47,19 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   const [tokenExpiration, setTokenExpiration] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<RequestConfigState["activeTab"]>(
     () => {
-      if (activeSession?.requestConfig?.bodyType === "json") return "body";
-      if (activeSession?.requestConfig?.bodyType === "form") return "body";
+      // Check if the method supports body and if there's body content
+      const supportsBody = ["POST", "PUT", "PATCH"].includes(
+        (activeSession?.requestConfig?.method || savedConfig?.method || "GET").toUpperCase()
+      );
+
+      if (supportsBody) {
+        if (activeSession?.requestConfig?.bodyType === "json") return "body";
+        if (activeSession?.requestConfig?.bodyType === "form") return "body";
+        if (activeSession?.requestConfig?.bodyType === "text") return "body";
+        if (savedConfig?.bodyType === "json") return "body";
+        if (savedConfig?.bodyType === "form") return "body";
+        if (savedConfig?.bodyType === "text") return "body";
+      }
       return "params";
     }
   );
@@ -138,6 +163,25 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     return () => clearInterval(interval);
   }, [checkTokenExpiration]);
 
+  // Function to check if HTTP method supports a body
+  const methodSupportsBody = (httpMethod: string): boolean => {
+    const methodsWithBody = ["POST", "PUT", "PATCH"];
+    return methodsWithBody.includes(httpMethod.toUpperCase());
+  };
+
+  // Effect to handle method changes and body tab visibility
+  useEffect(() => {
+    if (!methodSupportsBody(method)) {
+      // If current method doesn't support body, reset body type and switch tab if needed
+      if (bodyType !== "none") {
+        setBodyType("none");
+      }
+      if (activeTab === "body") {
+        setActiveTab("params");
+      }
+    }
+  }, [method, bodyType, activeTab]);
+
   // Save state to context whenever it changes
   useEffect(() => {
     const config: RequestConfigData = {
@@ -170,7 +214,8 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     }
 
     return undefined;
-  }, [method,
+  }, [
+    method,
     queryParams,
     headers,
     bodyType,
@@ -178,54 +223,10 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     formData,
     textBody,
     savedConfig,
-    activeSession,
     setRequestConfig,
+    activeSession,
     handleSaveSession,
   ]);
-
-  // Effect to handle session changes
-  useEffect(() => {
-    if (activeSession?.requestConfig) {
-      const sessionConfig = activeSession.requestConfig;
-
-      // Only update if the session config is different from current state
-      if (
-        JSON.stringify(sessionConfig) !==
-        JSON.stringify({
-          method,
-          queryParams,
-          headers,
-          bodyType,
-          jsonBody: bodyType === "json" ? jsonBody : undefined,
-          formData: bodyType === "form" ? formData : undefined,
-          textBody: bodyType === "text" ? textBody : undefined,
-        })
-      ) {
-        setMethod(sessionConfig.method || "GET");
-        setQueryParams(sessionConfig.queryParams || []);
-        setHeaders(sessionConfig.headers || []);
-        setBodyType(sessionConfig.bodyType || "none");
-        setJsonBody(sessionConfig.jsonBody || "{\n  \n}");
-        setFormData(
-          sessionConfig.formData || [
-            { key: "", value: "", type: "text", required: false },
-          ]
-        );
-        setTextBody(sessionConfig.textBody || "");
-
-        // Update active tab based on body type
-        if (
-          sessionConfig.bodyType === "json" ||
-          sessionConfig.bodyType === "form" ||
-          sessionConfig.bodyType === "text"
-        ) {
-          setActiveTab("body");
-        } else {
-          setActiveTab("params");
-        }
-      }
-    }
-  }, [activeSession?.id]);
 
   const addQueryParam = (): void => {
     setQueryParams([
@@ -243,17 +244,17 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     field: keyof QueryParam,
     value: string | boolean
   ): void => {
-    const updatedParams = [...queryParams];
-    const currentParam = updatedParams[index];
-    if (currentParam) {
-      updatedParams[index] = {
-        key: field === "key" ? value as string : currentParam.key || "",
-        value: field === "value" ? value as string : currentParam.value || "",
-        description: field === "description" ? value as string : currentParam.description || "",
-        required: field === "required" ? value as boolean : currentParam.required || false,
-      };
-      setQueryParams(updatedParams);
-    }
+    const newQueryParams = [...queryParams];
+    const currentParam = newQueryParams[index];
+    if (!currentParam) return;
+    newQueryParams[index] = {
+      key: currentParam.key,
+      value: currentParam.value,
+      description: currentParam.description || "",
+      required: currentParam.required || false,
+      [field]: value,
+    };
+    setQueryParams(newQueryParams);
   };
 
   const addHeader = (): void => {
@@ -272,42 +273,27 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     field: keyof Header,
     value: string | boolean
   ): void => {
-    const updatedHeaders = [...headers];
-    const currentHeader = updatedHeaders[index];
-    if (currentHeader) {
-      updatedHeaders[index] = {
-        key: field === "key" ? value as string : currentHeader.key || "",
-        value: field === "value" ? value as string : currentHeader.value || "",
-        description: field === "description" ? value as string : currentHeader.description || "",
-        required: field === "required" ? value as boolean : currentHeader.required || false,
-        in: field === "in" ? value as "header" | "path" | "query" : currentHeader.in || "header",
-      };
-      setHeaders(updatedHeaders);
-    }
+    const newHeaders = [...headers];
+    const currentHeader = newHeaders[index];
+    if (!currentHeader) return;
+    newHeaders[index] = {
+      key: currentHeader.key,
+      value: currentHeader.value,
+      description: currentHeader.description || "",
+      required: currentHeader.required || false,
+      in: currentHeader.in,
+      [field]: value,
+    };
+    setHeaders(newHeaders);
   };
 
-  const handleEditorDidMount: OnMount = (editor, monaco) => {
+  const handleEditorDidMount: OnMount = (editor) => {
     editorRef.current = editor;
-    monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-      validate: true,
-      schemas: [
-        {
-          uri: "http://myserver/foo-schema.json",
-          schema: {
-            type: "object",
-            properties: {
-              "*": {
-                type: "object",
-              },
-            },
-          },
-        },
-      ],
-    });
+    editor.focus();
   };
 
   const handleEditorChange = (value: string | undefined): void => {
-    if (value) setJsonBody(value);
+    setJsonBody(value || "");
   };
 
   const addFormDataField = (): void => {
@@ -326,53 +312,33 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     field: keyof FormDataField,
     value: string | boolean
   ): void => {
-    const updatedFormData = [...formData];
-    const currentField = updatedFormData[index];
-    if (currentField) {
-      if (field === "required") {
-        updatedFormData[index] = {
-          key: currentField.key || "",
-          value: currentField.value || "",
-          type: currentField.type || "text",
-          required: value as boolean,
-          description: currentField.description || "",
-        };
-      } else {
-        updatedFormData[index] = {
-          key: field === "key" ? value as string : currentField.key || "",
-          value: field === "value" ? value as string : currentField.value || "",
-          type: field === "type" ? value as "text" | "file" : currentField.type || "text",
-          required: currentField.required || false,
-          description: field === "description" ? value as string : currentField.description || "",
-        };
-      }
-      setFormData(updatedFormData);
-    }
+    const newFormData = [...formData];
+    const currentField = newFormData[index];
+    if (!currentField) return;
+    newFormData[index] = {
+      key: currentField.key,
+      value: currentField.value,
+      type: currentField.type,
+      required: currentField.required,
+      [field]: value,
+    };
+    setFormData(newFormData);
   };
 
   const handleJsonEditorMouseDown = (e: React.MouseEvent): void => {
     e.preventDefault();
-    const startY = e.pageY;
-    const startHeight = jsonEditorContainerRef.current?.getBoundingClientRect().height || 0;
+    const startY = e.clientY;
+    const startHeight = jsonEditorHeight;
 
     function onMouseMove(e: MouseEvent): void {
-      const deltaY = e.pageY - startY;
-      const newHeight = Math.max(100, startHeight + deltaY);
-      if (jsonEditorContainerRef.current) {
-        jsonEditorContainerRef.current.style.height = `${newHeight}px`;
-      }
+      const deltaY = e.clientY - startY;
+      const newHeight = Math.max(100, Math.min(500, startHeight + deltaY));
       setJsonEditorHeight(newHeight);
-      if (editorRef.current) {
-        editorRef.current.layout();
-      }
     }
 
     function onMouseUp(): void {
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup", onMouseUp);
-      if (editorRef.current) {
-        editorRef.current.layout();
-      }
     }
 
     document.addEventListener("mousemove", onMouseMove);
@@ -383,15 +349,34 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     switch (bodyType) {
       case "json":
         return (
-          <div className="mt-4">
-            <label id="jsonBodyLabel" className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-              JSON Body
-            </label>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+                  <FiCode className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">JSON Body</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    try {
+                      const formatted = JSON.stringify(JSON.parse(jsonBody), null, 2);
+                      setJsonBody(formatted);
+                    } catch (e) {
+                      // Invalid JSON, ignore
+                    }
+                  }}
+                  className="px-3 py-1 text-xs font-medium text-purple-600 bg-purple-100 rounded-lg transition-all duration-200 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800"
+                >
+                  Format JSON
+                </button>
+              </div>
+            </div>
             <div
               ref={jsonEditorContainerRef}
-              className="overflow-hidden relative rounded-md border"
+              className="overflow-hidden relative rounded-xl border border-gray-200 shadow-sm dark:border-gray-600"
               style={{ height: `${jsonEditorHeight}px` }}
-              aria-labelledby="jsonBodyLabel"
             >
               <Editor
                 height="100%"
@@ -420,7 +405,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 }}
               />
               <div
-                className="absolute right-0 bottom-0 left-0 h-2 bg-gray-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                className="absolute right-0 bottom-0 left-0 h-2 bg-gradient-to-r from-gray-200 to-gray-300 transition-all duration-200 dark:from-gray-600 dark:to-gray-700 cursor-ns-resize hover:from-gray-300 hover:to-gray-400 dark:hover:from-gray-500 dark:hover:to-gray-600"
                 onMouseDown={handleJsonEditorMouseDown}
               />
             </div>
@@ -428,85 +413,102 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
         );
       case "form":
         return (
-          <div className="mt-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-              Form Data
-            </label>
-            <div className="space-y-2">
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
+                <FiDatabase className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Form Data</span>
+            </div>
+            <div className="space-y-3">
               {formData.map((field, index) => (
                 <div
                   key={`form-field-${index}`}
-                  className="flex items-center p-2 space-x-2 bg-gray-50 rounded-md dark:bg-gray-700"
+                  className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm dark:from-gray-700 dark:to-gray-800 dark:border-gray-600"
                 >
-                  <input
-                    type="text"
-                    value={field.key}
-                    onChange={(e) =>
-                      updateFormDataField(index, "key", e.target.value)
-                    }
-                    placeholder="Key"
-                    className="block px-3 py-2 w-1/2 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:text-white"
-                  />
-                  <input
-                    type="text"
-                    value={field.value}
-                    onChange={(e) =>
-                      updateFormDataField(index, "value", e.target.value)
-                    }
-                    placeholder="Value"
-                    className="block px-3 py-2 w-1/2 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:text-white"
-                  />
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={field.required}
-                      onChange={(e) =>
-                        updateFormDataField(index, "required", e.target.checked)
-                      }
-                      className="w-4 h-4 text-blue-600 bg-white rounded border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
-                    />
-                    <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                      Required
-                    </span>
+                  <div className="grid gap-4 items-center md:grid-cols-12">
+                    <div className="md:col-span-5">
+                      <input
+                        type="text"
+                        value={field.key}
+                        onChange={(e) =>
+                          updateFormDataField(index, "key", e.target.value)
+                        }
+                        placeholder="Field name"
+                        className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      />
+                    </div>
+                    <div className="md:col-span-5">
+                      <input
+                        type="text"
+                        value={field.value}
+                        onChange={(e) =>
+                          updateFormDataField(index, "value", e.target.value)
+                        }
+                        placeholder="Field value"
+                        className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={field.required}
+                          onChange={(e) =>
+                            updateFormDataField(index, "required", e.target.checked)
+                          }
+                          className="w-4 h-4 text-green-600 bg-white rounded border-gray-300 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800"
+                        />
+                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Required</span>
+                      </div>
+                    </div>
+                    <div className="md:col-span-1">
+                      <button
+                        onClick={() => removeFormDataField(index)}
+                        className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 group dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 hover:scale-105"
+                        title="Remove field"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => removeFormDataField(index)}
-                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                  >
-                    ×
-                  </button>
                 </div>
               ))}
             </div>
             <button
               onClick={addFormDataField}
-              className="inline-flex items-center px-3 py-2 mt-2 text-sm font-medium leading-4 text-gray-700 bg-white rounded-md border border-gray-300 shadow-sm dark:border-gray-600 dark:text-gray-300 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-green-600 to-green-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
             >
-              Add Form Field
+              <FiPlus className="w-4 h-4" />
+              <span>Add Form Field</span>
             </button>
           </div>
         );
       case "text":
         return (
-          <div className="mt-4">
-            <label
-              className={`block text-sm font-medium text-gray-700 dark:text-white`}
-            >
-              Text Body
-            </label>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                <FiFileText className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Text Body</span>
+            </div>
             <textarea
               value={textBody}
               onChange={(e) => setTextBody(e.target.value)}
-              placeholder="Enter text body"
-              className={`block mt-2 w-full text-gray-900 bg-white rounded-md border-gray-300 dark:bg-gray-800 dark:text-white`}
+              placeholder="Enter your text body content here..."
+              className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 resize-none dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={8}
             />
           </div>
         );
       case "none":
       default:
         return (
-          <div className="p-4 text-sm text-center text-gray-500 rounded border border-gray-300 border-dashed dark:text-gray-400">
-            No body content for this request.
+          <div className="p-8 text-center bg-gray-50 rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600 dark:bg-gray-700">
+            <FiLayers className="mx-auto mb-4 w-12 h-12 text-gray-400" />
+            <p className="mb-2 text-gray-500 dark:text-gray-400">No body content for this request</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">This HTTP method doesn't support a request body</p>
           </div>
         );
     }
@@ -556,284 +558,342 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   };
 
   return (
-    <div
-      className={`p-4 bg-white rounded-lg shadow dark:bg-gray-800`}
-    >
-      <div className="flex justify-between items-center mb-4">
-        <h2
-          className={`text-xl font-bold text-gray-900 dark:text-white`}
-        >
-          Request Configuration
-        </h2>
-        <div className="flex items-center space-x-2">
-          <TokenGenerator />
-          <button
-            type="button"
-            onClick={handleShowTokenModal}
-            className="flex items-center px-3 py-1 rounded-md text-sm font-medium text-blue-700 bg-blue-100 dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700"
-            title="Token Details"
-          >
-            <FiEye className="mr-1" />
-            Token Details
-          </button>
-          {tokenExpiration !== null && (
-            <div
-              className={`px-3 py-1 rounded-md text-sm ${tokenExpiration > 5
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="overflow-hidden relative p-6 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-indigo-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5 dark:opacity-10">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full translate-x-16 -translate-y-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500 rounded-full -translate-x-12 translate-y-12"></div>
+        </div>
+
+        <div className="flex relative justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+              <FiSettings className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                Request Configuration
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Configure HTTP method, headers, parameters, and request body
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <TokenGenerator />
+            <button
+              type="button"
+              onClick={handleShowTokenModal}
+              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+              title="Token Details"
+            >
+              <FiShield className="w-4 h-4" />
+              <span>Token Details</span>
+            </button>
+            {tokenExpiration !== null && (
+              <div className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 ${tokenExpiration > 5
                 ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
                 : tokenExpiration > 1
                   ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"
                   : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
                 }`}
+              >
+                <FiClock className="w-4 h-4" />
+                <span>{Math.floor(tokenExpiration)}m</span>
+              </div>
+            )}
+            <select
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              className={`px-4 py-2 rounded-xl border-none text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200 shadow-lg ${methodColor[method as keyof typeof methodColor]?.color}`}
             >
-              Token expires in: {Math.floor(tokenExpiration)} minutes
-            </div>
-          )}
-          <select
-            value={method}
-            onChange={(e) => setMethod(e.target.value)}
-            className={`w-32 px-3 py-2 rounded-md border-none text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${methodColor[method as keyof typeof methodColor]?.color}`}
-          >
-            {Object.values(methodColor).map((option: any) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+              {Object.values(methodColor).map((option: any) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Tabs Navigation */}
-      <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex -mb-px">
-          <button
-            onClick={() => setActiveTab("params")}
-            className={`mr-4 py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "params"
-              ? "border-blue-500 text-blue-600 dark:text-blue-400"
-              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-              }`}
-          >
-            Query Parameters
-          </button>
-          <button
-            onClick={() => setActiveTab("headers")}
-            className={`mr-4 py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "headers"
-              ? "border-blue-500 text-blue-600 dark:text-blue-400"
-              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-              }`}
-          >
-            Headers
-          </button>
-          <button
-            onClick={() => setActiveTab("body")}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "body"
-              ? "border-blue-500 text-blue-600 dark:text-blue-400"
-              : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-              }`}
-          >
-            Body
-          </button>
-        </nav>
-      </div>
+      <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Request Configuration</h3>
+          <div className="flex items-center p-1 space-x-1 bg-gray-100 rounded-xl dark:bg-gray-700">
+            <button
+              onClick={() => setActiveTab("params")}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === "params"
+                ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+            >
+              <FiHash className="w-4 h-4" />
+              <span>Parameters</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("headers")}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === "headers"
+                ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+            >
+              <FiGlobe className="w-4 h-4" />
+              <span>Headers</span>
+            </button>
+            {methodSupportsBody(method) && (
+              <button
+                onClick={() => setActiveTab("body")}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === "body"
+                  ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+              >
+                <FiZap className="w-4 h-4" />
+                <span>Body</span>
+              </button>
+            )}
+          </div>
+        </div>
 
-      {/* Tab Content */}
-      <div className="mt-4">
-        {/* Query Parameters Tab */}
-        {activeTab === "params" && (
-          <div>
+        {/* Tab Content */}
+        <div className="space-y-6">
+          {/* Query Parameters Tab */}
+          {activeTab === "params" && (
             <div className="space-y-4">
-              <div>
-                <label
-                  className={`block text-sm font-medium text-gray-700 dark:text-white`}
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg">
+                    <FiHash className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Query Parameters</span>
+                </div>
+                <button
+                  onClick={addQueryParam}
+                  className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-orange-600 to-orange-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
                 >
-                  Query Parameters
-                </label>
-                <div className="space-y-2">
+                  <FiPlus className="w-4 h-4" />
+                  <span>Add Parameter</span>
+                </button>
+              </div>
+
+              {queryParams.length === 0 ? (
+                <div className="p-8 text-center rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600">
+                  <FiHash className="mx-auto mb-4 w-12 h-12 text-gray-400" />
+                  <p className="mb-4 text-gray-500 dark:text-gray-400">No query parameters added yet</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500">Add parameters to include in your request URL</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
                   {queryParams.map((param, index) => (
                     <div
                       key={`query-param-${index}`}
-                      className={`flex items-center p-2 space-x-2 bg-gray-50 rounded-md dark:bg-gray-700`}
+                      className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm dark:from-gray-700 dark:to-gray-800 dark:border-gray-600"
                     >
-                      <input
-                        type="text"
-                        value={param.key}
-                        onChange={(e) =>
-                          updateQueryParam(index, "key", e.target.value)
-                        }
-                        placeholder="Key"
-                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
-                      />
-                      <input
-                        type="text"
-                        value={param.value}
-                        onChange={(e) =>
-                          updateQueryParam(index, "value", e.target.value)
-                        }
-                        placeholder="Value"
-                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
-                      />
-                      <input
-                        type="text"
-                        value={param.description}
-                        onChange={(e) =>
-                          updateQueryParam(index, "description", e.target.value)
-                        }
-                        placeholder="Description (optional)"
-                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
-                      />
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={param.required}
-                          onChange={(e) =>
-                            updateQueryParam(
-                              index,
-                              "required",
-                              e.target.checked
-                            )
-                          }
-                          className={`w-4 h-4 text-blue-600 bg-white rounded border border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800`}
-                        />
-                        <span
-                          className={`ml-2 text-sm text-gray-500 dark:text-gray-400`}
-                        >
-                          Required
-                        </span>
+                      <div className="grid gap-4 items-center md:grid-cols-12">
+                        <div className="md:col-span-3">
+                          <input
+                            type="text"
+                            value={param.key}
+                            onChange={(e) =>
+                              updateQueryParam(index, "key", e.target.value)
+                            }
+                            placeholder="Parameter name"
+                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <input
+                            type="text"
+                            value={param.value}
+                            onChange={(e) =>
+                              updateQueryParam(index, "value", e.target.value)
+                            }
+                            placeholder="Parameter value"
+                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <input
+                            type="text"
+                            value={param.description}
+                            onChange={(e) =>
+                              updateQueryParam(index, "description", e.target.value)
+                            }
+                            placeholder="Description (optional)"
+                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={param.required}
+                              onChange={(e) =>
+                                updateQueryParam(index, "required", e.target.checked)
+                              }
+                              className="w-4 h-4 text-orange-600 bg-white rounded border-gray-300 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800"
+                            />
+                            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Required</span>
+                          </div>
+                        </div>
+                        <div className="md:col-span-1">
+                          <button
+                            onClick={() => removeQueryParam(index)}
+                            className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 group dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 hover:scale-105"
+                            title="Remove parameter"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => removeQueryParam(index)}
-                        className={`p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700`}
-                      >
-                        ×
-                      </button>
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={() => addQueryParam()}
-                  className={`flex items-center px-3 py-1 space-x-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-700 hover:bg-blue-200`}
-                >
-                  <FiPlus />
-                  <span>Add Query Parameter</span>
-                </button>
-              </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Headers Tab */}
-        {activeTab === "headers" && (
-          <div>
+          {/* Headers Tab */}
+          {activeTab === "headers" && (
             <div className="space-y-4">
-              <div>
-                <label
-                  className={`block text-sm font-medium text-gray-700 dark:text-white`}
-                >
-                  Headers
-                </label>
-                <div className="space-y-2">
-                  {headers.map((header, index) => (
-                    <div
-                      key={`header-${index}`}
-                      className={`flex items-center p-2 space-x-2 bg-gray-50 rounded-md dark:bg-gray-700`}
-                    >
-                      <input
-                        type="text"
-                        value={header.key}
-                        onChange={(e) =>
-                          updateHeader(index, "key", e.target.value)
-                        }
-                        placeholder="Key"
-                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
-                      />
-                      <input
-                        type="text"
-                        value={header.value}
-                        onChange={(e) =>
-                          updateHeader(index, "value", e.target.value)
-                        }
-                        placeholder="Value"
-                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
-                      />
-                      <input
-                        type="text"
-                        value={header.description}
-                        onChange={(e) =>
-                          updateHeader(index, "description", e.target.value)
-                        }
-                        placeholder="Description (optional)"
-                        className={`block px-3 py-2 w-1/3 text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
-                      />
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={header.required}
-                          onChange={(e) =>
-                            updateHeader(index, "required", e.target.checked)
-                          }
-                          className={`w-4 h-4 text-blue-600 bg-white rounded border border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800`}
-                        />
-                        <span
-                          className={`ml-2 text-sm text-gray-500 dark:text-gray-400`}
-                        >
-                          Required
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => removeHeader(index)}
-                        className={`flex items-center px-3 py-1 space-x-2 text-sm font-medium text-red-700 bg-red-100 rounded-md dark:bg-red-600 dark:text-white hover:bg-red-700 hover:bg-red-200`}
-                      >
-                        <FiTrash2 />
-                        <span>Remove</span>
-                      </button>
-                    </div>
-                  ))}
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                    <FiGlobe className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Request Headers</span>
                 </div>
                 <button
-                  onClick={() => addHeader()}
-                  className={`flex items-center px-3 py-1 space-x-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-700 hover:bg-blue-200`}
+                  onClick={addHeader}
+                  className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
                 >
-                  <FiPlus />
+                  <FiPlus className="w-4 h-4" />
                   <span>Add Header</span>
                 </button>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* Body Tab */}
-        {activeTab === "body" && (
-          <div>
-            <div className="mb-4">
-              <label
-                className={`block mb-2 text-sm font-medium text-gray-700 dark:text-white`}
-              >
-                Body Type
-              </label>
-              <select
-                value={bodyType}
-                onChange={(e) =>
-                  setBodyType(e.target.value as "none" | "json" | "form" | "text")
-                }
-                className={`w-full text-gray-900 bg-white rounded-md border border-gray-300 shadow-sm md:w-1/3 focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white`}
-              >
-                <option value="none">None</option>
-                <option value="json">JSON</option>
-                <option value="form">Form Data</option>
-                <option value="text">Text</option>
-              </select>
+              {headers.length === 0 ? (
+                <div className="p-8 text-center rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600">
+                  <FiGlobe className="mx-auto mb-4 w-12 h-12 text-gray-400" />
+                  <p className="mb-4 text-gray-500 dark:text-gray-400">No headers added yet</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500">Add headers to include in your request</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {headers.map((header, index) => (
+                    <div
+                      key={`header-${index}`}
+                      className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm dark:from-gray-700 dark:to-gray-800 dark:border-gray-600"
+                    >
+                      <div className="grid gap-4 items-center md:grid-cols-12">
+                        <div className="md:col-span-3">
+                          <input
+                            type="text"
+                            value={header.key}
+                            onChange={(e) =>
+                              updateHeader(index, "key", e.target.value)
+                            }
+                            placeholder="Header name"
+                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <input
+                            type="text"
+                            value={header.value}
+                            onChange={(e) =>
+                              updateHeader(index, "value", e.target.value)
+                            }
+                            placeholder="Header value"
+                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <input
+                            type="text"
+                            value={header.description}
+                            onChange={(e) =>
+                              updateHeader(index, "description", e.target.value)
+                            }
+                            placeholder="Description (optional)"
+                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={header.required}
+                              onChange={(e) =>
+                                updateHeader(index, "required", e.target.checked)
+                              }
+                              className="w-4 h-4 text-blue-600 bg-white rounded border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
+                            />
+                            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Required</span>
+                          </div>
+                        </div>
+                        <div className="md:col-span-1">
+                          <button
+                            onClick={() => removeHeader(index)}
+                            className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 group dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 hover:scale-105"
+                            title="Remove header"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+          )}
 
-            <div className="mt-4">{getBodyContent()}</div>
-          </div>
-        )}
+          {/* Body Tab */}
+          {activeTab === "body" && methodSupportsBody(method) && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+                    <FiZap className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Request Body</span>
+                </div>
+                <select
+                  value={bodyType}
+                  onChange={(e) =>
+                    setBodyType(e.target.value as "none" | "json" | "form" | "text")
+                  }
+                  className="px-4 py-2 text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="none">None</option>
+                  <option value="json">JSON</option>
+                  <option value="form">Form Data</option>
+                  <option value="text">Text</option>
+                </select>
+              </div>
+
+              <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                {getBodyContent()}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="mt-6">
+      {/* Submit Button */}
+      <div className="flex justify-end">
         <button
           onClick={handleSubmit}
-          className="inline-flex justify-center px-4 py-2 w-full text-sm font-medium text-blue-700 bg-blue-100 rounded-md border border-transparent shadow-sm dark:text-white dark:bg-blue-600 hover:bg-blue-200 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="flex items-center px-8 py-4 space-x-2 font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
         >
-          Continue to YAML Generator
+          <span>Continue to YAML Generator</span>
+          <FiArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
         </button>
       </div>
 
@@ -846,17 +906,17 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
       >
         {decodedToken ? (
           decodedToken.error ? (
-            <div className="text-red-600 dark:text-red-400 font-semibold text-center p-4">{decodedToken.error}</div>
+            <div className="p-4 font-semibold text-center text-red-600 dark:text-red-400">{decodedToken.error}</div>
           ) : (
-            <pre className="bg-gray-100 dark:bg-gray-900 rounded p-4 text-xs overflow-x-auto text-left">
+            <pre className="overflow-x-auto p-4 text-xs text-left bg-gray-100 rounded dark:bg-gray-900">
               {JSON.stringify(decodedToken, null, 2)}
             </pre>
           )
         ) : (
-          <div className="text-gray-500 dark:text-gray-400 text-center p-4">No token decoded.</div>
+          <div className="p-4 text-center text-gray-500 dark:text-gray-400">No token decoded.</div>
         )}
       </Modal>
-    </div >
+    </div>
   );
 };
 

@@ -8,8 +8,22 @@ import {
   EditorRef,
   EditorMountParams,
   AnthropicResponse,
-} from "../../types/components/AITestGenerator";
-import { FiCopy } from "react-icons/fi";
+} from "../../types/components/components.types";
+import {
+  FiCopy,
+  FiCode,
+  FiSettings,
+  FiCheck,
+  FiAlertCircle,
+  FiDownload,
+  FiStar,
+  FiCpu,
+  FiActivity,
+  FiFileText,
+  FiRefreshCw,
+  FiEye,
+  FiTarget,
+} from "react-icons/fi";
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
@@ -19,6 +33,9 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [generatedTest, setGeneratedTest] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [copiedPrompt, setCopiedPrompt] = useState<boolean>(false);
+  const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  const [showPreview, setShowPreview] = useState<boolean>(true);
   const editorRef = useRef<EditorRef["current"]>(null);
   const [lastYamlData, setLastYamlData] = useState<string>("");
 
@@ -136,7 +153,8 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
         : "Please generate the test code in functional style"
       }`;
     return prompt;
-  }
+  };
+
   const generatePytestCode = async (): Promise<void> => {
     setIsLoading(true);
     setError("");
@@ -390,165 +408,311 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
     return Math.min(Math.max(lineCount * 20, 200), 800); // Min 200px, max 800px
   };
 
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(promptGenerator());
+      setCopiedPrompt(true);
+      setTimeout(() => setCopiedPrompt(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy prompt:', err);
+    }
+  };
+
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedTest);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+    }
+  };
+
+  const downloadTestFile = () => {
+    const blob = new Blob([generatedTest], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'generated_test.py';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div
-      className={`p-4 ${isDarkMode ? "bg-gray-800" : "bg-gray-50"
-        } rounded-lg shadow`}
-    >
-      <h2
-        className={`text-xl font-bold mb-4 ${isDarkMode ? "text-white" : "text-gray-900"
-          }`}
-      >
-        AI Test Generator
-      </h2>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="overflow-hidden relative p-6 bg-gradient-to-r from-purple-50 via-pink-50 to-indigo-50 rounded-2xl border border-purple-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5 dark:opacity-10">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500 rounded-full translate-x-16 -translate-y-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500 rounded-full -translate-x-12 translate-y-12"></div>
+        </div>
 
-      <div className="mb-4">
-        <label
-          className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
-            }`}
-        >
-          Additional Test Requirements
-        </label>
-        <textarea
-          value={requirements}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-            setRequirements(e.target.value)
-          }
-          placeholder="Specify any additional test requirements, edge cases, or specific scenarios you want to test..."
-          className={`w-full h-32 p-2 border rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 ${isDarkMode
-            ? "bg-gray-700 border-gray-600 text-white"
-            : "bg-white border-gray-300 text-gray-900"
-            }`}
-        />
+        <div className="flex relative justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
+              <FiStar className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+                AI Test Generator
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Generate comprehensive pytest tests using AI-powered code generation
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-green-100 to-green-200 rounded-xl dark:from-green-900 dark:to-green-800">
+              <FiCpu className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <span className="text-sm font-semibold text-green-700 dark:text-green-300">AI-Powered</span>
+            </div>
+            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl dark:from-blue-900 dark:to-blue-800">
+              <FiTarget className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">BDD Style</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="flex items-center mb-4">
-        <input
-          type="checkbox"
-          id="use-oop"
-          checked={useOOP}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setUseOOP(e.target.checked)
-          }
-          className={`h-4 w-4 text-blue-600 focus:ring-blue-500 rounded ${isDarkMode ? "border-gray-600" : "border-gray-300"
-            }`}
-        />
-        <label
-          htmlFor="use-oop"
-          className={`ml-2 block text-sm ${isDarkMode ? "text-white" : "text-gray-700"
-            }`}
-        >
-          Use Object-Oriented Programming style for test classes
-        </label>
-        <button
-          onClick={() => navigator.clipboard.writeText(promptGenerator())}
-          className={`ml-4 inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md ${isDarkMode
-            ? "bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
-            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-        >
-          <FiCopy />
-          <span className="ml-2">Copy Prompt to AI</span>
-        </button>
+      {/* Configuration Section */}
+      <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex items-center mb-6 space-x-3">
+          <div className="p-2 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg">
+            <FiSettings className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Test Configuration</h3>
+        </div>
+
+        <div className="space-y-6">
+          {/* Requirements Input */}
+          <div>
+            <label className="block mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Additional Test Requirements
+            </label>
+            <textarea
+              value={requirements}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                setRequirements(e.target.value)
+              }
+              placeholder="Specify any additional test requirements, edge cases, or specific scenarios you want to test..."
+              className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 resize-none dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              rows={4}
+            />
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Describe specific test scenarios, edge cases, or validation requirements for your API endpoint
+            </p>
+          </div>
+
+          {/* Options Row */}
+          <div className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="use-oop"
+                  checked={useOOP}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setUseOOP(e.target.checked)
+                  }
+                  className="w-4 h-4 text-indigo-600 bg-white rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
+                />
+                <label
+                  htmlFor="use-oop"
+                  className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Use Object-Oriented Programming style
+                </label>
+              </div>
+            </div>
+
+            <button
+              onClick={handleCopyPrompt}
+              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+            >
+              {copiedPrompt ? (
+                <>
+                  <FiCheck className="w-4 h-4" />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <FiCopy className="w-4 h-4" />
+                  <span>Copy Prompt</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="mb-6">
+      {/* Generate Button */}
+      <div className="flex justify-center">
         <button
           onClick={handleGenerateCode}
           disabled={isLoading || !yamlData}
-          className={`w-full inline-flex justify-center items-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${isLoading || !yamlData
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className={`group px-8 py-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-3 ${isLoading || !yamlData
+            ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+            : "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:scale-105"
             }`}
         >
           {isLoading ? (
             <>
-              <svg
-                className="w-5 h-5 mr-3 -ml-1 text-white animate-spin"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Generating...
+              <FiRefreshCw className="w-5 h-5 animate-spin" />
+              <span>Generating Tests...</span>
             </>
           ) : (
-            "Generate Pytest Code"
+            <>
+              <FiStar className="w-5 h-5" />
+              <span>Generate Pytest Code</span>
+            </>
           )}
         </button>
-
       </div>
 
+      {/* Error Display */}
       {error && (
-        <div
-          className={`mb-4 p-3 rounded ${isDarkMode ? "bg-red-900 text-red-100" : "bg-red-100 text-red-700"
-            }`}
-        >
-          {error}
+        <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200 dark:from-red-900 dark:to-red-800 dark:border-red-700">
+          <div className="flex items-center space-x-3">
+            <FiAlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <div>
+              <h4 className="text-sm font-semibold text-red-800 dark:text-red-200">Generation Error</h4>
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Generated Code Section */}
       {generatedTest && (
-        <div>
-          <div className="flex justify-between mt-4">
-            <h3
-              className={`text-lg font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-700"
-                }`}
-            >
-              Generated Pytest Code
-            </h3>
-            <button
-              onClick={() => navigator.clipboard.writeText(generatedTest)}
-              className={`inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md ${isDarkMode
-                ? "bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-            >
-              Copy Code
-            </button>
+        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
+                <FiCode className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Generated Pytest Code</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  AI-generated test code ready for your API endpoint
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowPreview(!showPreview)}
+                className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                title={showPreview ? "Hide preview" : "Show preview"}
+              >
+                {showPreview ? <FiEye className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={handleCopyCode}
+                className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+              >
+                {copiedCode ? (
+                  <>
+                    <FiCheck className="w-4 h-4" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <FiCopy className="w-4 h-4" />
+                    <span>Copy Code</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={downloadTestFile}
+                className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-green-600 to-green-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+              >
+                <FiDownload className="w-4 h-4" />
+                <span>Download</span>
+              </button>
+            </div>
           </div>
-          <div
-            className={`border rounded-md overflow-hidden ${isDarkMode ? "border-gray-600" : "border-gray-300"
-              }`}
-          >
-            <Editor
-              height={getEditorHeight()}
-              defaultLanguage="python"
-              value={generatedTest}
-              theme={isDarkMode ? "vs-dark" : "vs-light"}
-              options={{
-                readOnly: true,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                fontSize: 14,
-                lineNumbers: "on",
-                roundedSelection: false,
-                scrollbar: {
-                  vertical: "visible",
-                  horizontal: "visible",
-                  useShadows: false,
-                  verticalScrollbarSize: 10,
-                  horizontalScrollbarSize: 10,
-                },
-                automaticLayout: true,
-                wordWrap: "on",
-              }}
-              onMount={handleEditorDidMount}
-            />
-          </div>
+
+          {showPreview && (
+            <div className="space-y-4">
+              {/* Code Statistics */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
+                  <div className="flex items-center space-x-2">
+                    <FiFileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Lines of Code</span>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
+                    {generatedTest.split('\n').length}
+                  </p>
+                </div>
+                <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200 dark:from-green-900 dark:to-green-800 dark:border-green-700">
+                  <div className="flex items-center space-x-2">
+                    <FiCpu className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-semibold text-green-700 dark:text-green-300">Test Functions</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-800 dark:text-green-200">
+                    {(generatedTest.match(/def test_/g) || []).length}
+                  </p>
+                </div>
+                <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl border border-purple-200 dark:from-purple-900 dark:to-purple-800 dark:border-purple-700">
+                  <div className="flex items-center space-x-2">
+                    <FiTarget className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Test Cases</span>
+                  </div>
+                  <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">
+                    {(generatedTest.match(/@pytest\.mark\.parametrize/g) || []).length}
+                  </p>
+                </div>
+                <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl border border-orange-200 dark:from-orange-900 dark:to-orange-800 dark:border-orange-700">
+                  <div className="flex items-center space-x-2">
+                    <FiActivity className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                    <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">Coverage</span>
+                  </div>
+                  <p className="text-2xl font-bold text-orange-800 dark:text-orange-200">High</p>
+                </div>
+              </div>
+
+              {/* Code Editor */}
+              <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-600">
+                <div className="flex justify-between items-center px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  </div>
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">generated_test.py</span>
+                </div>
+                <Editor
+                  height={getEditorHeight()}
+                  defaultLanguage="python"
+                  value={generatedTest}
+                  theme={isDarkMode ? "vs-dark" : "vs-light"}
+                  options={{
+                    readOnly: true,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    fontSize: 14,
+                    lineNumbers: "on",
+                    roundedSelection: false,
+                    scrollbar: {
+                      vertical: "visible",
+                      horizontal: "visible",
+                      useShadows: false,
+                      verticalScrollbarSize: 10,
+                      horizontalScrollbarSize: 10,
+                    },
+                    automaticLayout: true,
+                    wordWrap: "on",
+                  }}
+                  onMount={handleEditorDidMount}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

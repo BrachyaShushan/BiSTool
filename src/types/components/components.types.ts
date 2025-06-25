@@ -35,6 +35,25 @@ export interface EditorRef {
   current: any; // Monaco editor type
 }
 
+export interface EditorMountParams {
+  editor: any; // Monaco editor instance
+  monaco: {
+    languages: {
+      register: (options: { id: string }) => void;
+      setMonarchTokensProvider: (languageId: string, provider: any) => void;
+    };
+  };
+}
+
+export interface AnthropicResponse {
+  content: Array<{
+    text?: string;
+    type: string;
+  }>;
+  role: string;
+  _request_id?: string | null;
+}
+
 export interface RequestConfigState {
   activeTab: "params" | "headers" | "body";
   queryParams: QueryParam[];

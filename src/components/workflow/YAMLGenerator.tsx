@@ -2,7 +2,31 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { useTheme } from "../../context/ThemeContext";
 import { Editor } from "@monaco-editor/react";
-import { FiDownload, FiCopy, FiMaximize2, FiMinimize2, FiPlay, FiCheck, FiArrowRight } from "react-icons/fi";
+import {
+  FiDownload,
+  FiCopy,
+  FiMaximize2,
+  FiMinimize2,
+  FiPlay,
+  FiCheck,
+  FiArrowRight,
+  FiCode,
+  FiSettings,
+  FiZap,
+  FiTarget,
+  FiGlobe,
+  FiFileText,
+  FiShield,
+  FiRefreshCw,
+  FiAlertCircle,
+  FiPlus,
+  FiTrash2,
+  FiCpu,
+  FiLayers,
+  FiActivity,
+  FiWifi,
+  FiServer
+} from "react-icons/fi";
 import { YAMLGeneratorProps } from "../../types/components/components.types";
 import {
   EditorOptions,
@@ -16,7 +40,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 // Extract variables from URL in {variable} format, excluding the base URL
 const extractVariables = (url: string): string[] => {
   if (!url) return [];
-  url = url.split("//")[1] || url;
+  url = url.split("//")[1] ?? url;
   // Handle both {variable} and %7Bvariable%7D formats
   const matches = url.match(/(?:{([^}]+)}|%7B([^%]+)%7D)/g) || [];
   return matches.map((match) => {
@@ -41,7 +65,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
   } = useAppContext();
 
   const { isDarkMode } = useTheme();
-  const [yamlOutput, setLocalYamlOutput] = useState<string>("");
+  const [localYamlOutput, setLocalYamlOutput] = useState<string>("");
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [statusCode, setStatusCode] = useState<string>("200");
@@ -253,10 +277,10 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
 
   // Update YAML editor height when content changes
   useEffect(() => {
-    if (yamlEditorRef.current && yamlOutput) {
+    if (yamlEditorRef.current && localYamlOutput) {
       // Add any necessary layout updates here
     }
-  }, [yamlOutput]);
+  }, [localYamlOutput]);
 
   const handleFetchRequest = async () => {
     setIsGenerating(true);
@@ -322,14 +346,24 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
         return acc;
       }, {} as Record<string, string>);
 
+      // Function to check if HTTP method supports a body
+      const methodSupportsBody = (httpMethod: string): boolean => {
+        const methodsWithBody = ["POST", "PUT", "PATCH"];
+        return methodsWithBody.includes(httpMethod.toUpperCase());
+      };
+
       let body = null;
-      if (requestConfig?.bodyType === "json" && requestConfig.jsonBody) {
-        body = requestConfig.jsonBody;
-      } else if (requestConfig?.bodyType === "form" && requestConfig.formData) {
-        body = requestConfig.formData.map(field => `${field.key}=${field.value}`).join("&");
-      } else if (requestConfig?.bodyType === "text" && requestConfig.jsonBody) {
-        body = requestConfig.jsonBody;
+      // Only add body if method supports it
+      if (methodSupportsBody(requestConfig?.method ?? "GET")) {
+        if (requestConfig?.bodyType === "json" && requestConfig.jsonBody) {
+          body = requestConfig.jsonBody;
+        } else if (requestConfig?.bodyType === "form" && requestConfig.formData) {
+          body = requestConfig.formData.map(field => `${field.key}=${field.value}`).join("&");
+        } else if (requestConfig?.bodyType === "text" && requestConfig.textBody) {
+          body = requestConfig.textBody;
+        }
       }
+
       if (body && requestConfig?.bodyType === "json") {
         headers["Content-Type"] = "application/json; charset=utf-8";
       } else if (body && requestConfig?.bodyType === "form") {
@@ -401,6 +435,12 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
     if (!responseData || !config) {
       return "";
     }
+
+    // Function to check if HTTP method supports a body
+    const methodSupportsBody = (httpMethod: string): boolean => {
+      const methodsWithBody = ["POST", "PUT", "PATCH"];
+      return methodsWithBody.includes(httpMethod.toUpperCase());
+    };
 
     // Get the URL from urlData
     const url = urlData?.builtUrl || "";
@@ -511,9 +551,9 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
     const schema = generateSchema(responseData, "      ");
     let yaml = "";
 
-    // Generate request body schema if method is not GET
+    // Generate request body schema if method supports body
     const generateRequestBody = (): string => {
-      if (method === "GET") return "";
+      if (!methodSupportsBody(method)) return "";
 
       let bodySchema = "\n";
       if (config.bodyType === "json" && config.jsonBody) {
@@ -616,7 +656,7 @@ ${generateRequestBody()}
 
   const handleCopyYAML = () => {
     navigator.clipboard
-      .writeText(yamlOutput)
+      .writeText(localYamlOutput)
       .then(() => {
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
@@ -627,7 +667,7 @@ ${generateRequestBody()}
   };
 
   const handleDownloadYAML = () => {
-    const blob = new Blob([yamlOutput], { type: "text/yaml" });
+    const blob = new Blob([localYamlOutput], { type: "text/yaml" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -789,8 +829,8 @@ ${generateRequestBody()}
   };
 
   const calculateEditorHeight = useCallback(() => {
-    if (!yamlOutput) return 400;
-    const lineCount = yamlOutput.split("\n").length;
+    if (!localYamlOutput) return 400;
+    const lineCount = localYamlOutput.split("\n").length;
     const lineHeight = 20; // Approximate line height in pixels
     const padding = 40; // Additional padding for editor UI
     const minHeight = 400;
@@ -799,12 +839,12 @@ ${generateRequestBody()}
       lineCount * lineHeight + padding
     );
     return calculatedHeight;
-  }, [yamlOutput]);
+  }, [localYamlOutput]);
 
   useEffect(() => {
     const newHeight = calculateEditorHeight();
     setEditorHeight(newHeight);
-  }, [yamlOutput, calculateEditorHeight]);
+  }, [localYamlOutput, calculateEditorHeight]);
 
   const handleYamlExpand = () => {
     setIsYamlExpanded(!isYamlExpanded);
@@ -895,325 +935,457 @@ ${generateRequestBody()}
 
 
   return (
-    <div
-      className={`p-4 bg-white rounded-lg shadow dark:bg-gray-800`}
-    >
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={handleFetchRequest}
-            disabled={isGenerating}
-            className={`px-4 py-2 rounded-md flex items-center space-x-2 dark:bg-blue-600 dark:text-white bg-blue-100 text-blue-700 hover:bg-blue-200 dark:hover:bg-blue-700 ${isGenerating ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {isGenerating ? (
-              <>
-                <div className="animate-spin">
-                  <FiPlay size={16} />
-                </div>
-                <span>Generating...</span>
-              </>
-            ) : (
-              <>
-                <FiPlay />
-                <span>Fetch & Generate YAML</span>
-              </>
-            )}
-          </button>
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={includeToken && !!tokenExists}
-              onChange={() => setIncludeToken((prev) => !prev)}
-              id="include-token-checkbox"
-              disabled={!tokenExists}
-            />
-            <label
-              htmlFor="include-token-checkbox"
-              className={`text-gray-700 dark:text-white`}
-            >
-              Include Token in Request
-            </label>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="overflow-hidden relative p-6 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-indigo-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5 dark:opacity-10">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full translate-x-16 -translate-y-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500 rounded-full -translate-x-12 translate-y-12"></div>
+        </div>
+
+        <div className="flex relative justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+              <FiCode className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                YAML Generator
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Generate OpenAPI specifications from your API responses
+              </p>
+            </div>
           </div>
-          <select
-            value={openApiVersion}
-            onChange={(e) => setOpenApiVersion(e.target.value)}
-            className={`px-3 py-2 text-gray-900 bg-white rounded-md border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
-          >
-            <option value="3.0.0">OpenAPI 3.0.0</option>
-            <option value="2.0.0">OpenAPI 2.0.0</option>
-            <option value="0.9.7.1">OpenAPI 0.9.7.1</option>
-          </select>
-        </div>
-        <div className="flex justify-between items-center mb-4">
-          <button onClick={() => setActiveSection("ai")} className="flex items-center px-4 py-2 space-x-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700">
-            <FiArrowRight />
-            <span>Continue to AI Test Generator</span>
-          </button>
-        </div>
-      </div>
-      {error && (
-        <div className="p-3 mb-4 text-red-700 bg-red-100 rounded-md">
-          {error}
-        </div>
-      )}
 
-      <div className="mb-4">
-        <label
-          className={`block mb-2 text-sm font-medium text-gray-700 dark:text-white`}
-        >
-          Custom Response
-        </label>
-        <div
-          ref={containerRef}
-          className={`overflow-hidden relative rounded-lg border border-gray-300 dark:border-gray-600`}
-          style={{ height: "200px" }}
-        >
-          <Editor
-            height="100%"
-            defaultLanguage="json"
-            value={customResponse ?? ""}
-            onChange={(value) => setCustomResponse(value ?? "")}
-            onMount={handleEditorDidMount}
-            theme={isDarkMode ? "vs-dark" : "light"}
-            options={editorOptions}
-          />
-          <div
-            className="absolute right-0 bottom-0 left-0 h-2 bg-gray-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
-            onMouseDown={handleMouseDown}
-          />
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleGenerateFromCustomResponse}
-            className={`flex items-center px-4 py-2 mt-2 space-x-2 text-green-700 bg-green-100 rounded-md dark:bg-green-600 dark:text-white hover:bg-green-200 dark:hover:bg-green-700`}
-          >
-            <FiPlay />
-            <span>Generate from Custom Response</span>
-          </button>
-          <button
-            onClick={handleResetCustomResponse}
-            className={`flex items-center px-4 py-2 mt-2 space-x-2 text-yellow-700 bg-yellow-100 rounded-md dark:bg-yellow-600 dark:text-white hover:bg-yellow-200 dark:hover:bg-yellow-700`}
-            type="button"
-          >
-            <span>Reset to Default</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl dark:from-blue-900 dark:to-blue-800">
+              <FiCpu className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">OpenAPI</span>
+            </div>
+            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-green-100 to-green-200 rounded-xl dark:from-green-900 dark:to-green-800">
+              <FiLayers className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <span className="text-sm font-semibold text-green-700 dark:text-green-300">Schema Generation</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {requestConfig?.queryParams?.length > 0 && <div className="mb-4">
-        <label
-          className={`block mb-2 text-sm font-medium text-gray-700 dark:text-white`}
-        >
-          Query Parameters
-        </label>
-        <div
-          className={`p-4 bg-gray-50 rounded-lg dark:bg-gray-700`}
-        >
-          {requestConfig?.queryParams?.map((param) => (
-            <label key={param.key} className="flex items-center mb-2">
-              <input
-                type="checkbox"
-                checked={selectedQueries[param.key]}
-                disabled={param.required}
-                onChange={() => handleQueryToggle(param.key)}
-                className={`mr-2 text-blue-600 dark:text-blue-500`}
-              />
-              <span
-                className={`text-gray-700 dark:text-white`}
+      {/* Configuration Section */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Left Column - Configuration */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Generation Controls */}
+          <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+            <div className="flex items-center mb-4 space-x-3">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                <FiZap className="w-4 h-4 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Generation Controls</h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
+              <button
+                onClick={handleFetchRequest}
+                disabled={isGenerating}
+                className="flex overflow-hidden relative justify-center items-center p-4 space-x-2 font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl border transition-all duration-300 group hover:scale-105 hover:shadow-xl hover:shadow-blue-500/25 border-blue-400/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
               >
-                {param.key}: {param.value}
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>}
-
-      <div className="mb-4">
-        <label
-          className={`block mb-2 text-sm font-medium text-gray-700 dark:text-white`}
-        >
-          Request URL
-        </label>
-        <div
-          className={`p-3 bg-gray-50 rounded-lg dark:bg-gray-700`}
-        >
-          <div className="flex items-center space-x-2">
-            <code
-              className={`text-gray-700 dark:text-gray-300`}
-            >
-              {getColoredUrl()}
-            </code>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <label
-          className={`block mb-2 text-sm font-medium text-gray-700 dark:text-white`}
-        >
-          Response Conditions
-        </label>
-        <div
-          className={`p-4 bg-gray-50 rounded-lg dark:bg-gray-700`}
-        >
-          <div className="space-y-4">
-            {responseConditions.map((condition, idx) => (
-              <div key={`${idx}-${condition.status}`} className="flex items-center mb-2 space-x-2">
-                {/* Status code dropdown or input */}
-                <select
-                  value={condition.status}
-                  onChange={e => {
-                    const updated = [...responseConditions];
-                    updated[idx] = { ...condition, status: e.target.value };
-                    setResponseConditions(updated);
-                  }}
-                  className={`px-2 py-1 text-gray-900 bg-white rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
-                >
-                  <option disabled value="">Select Status Code</option>
-                  {statusOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                  <option value="custom">Custom Status Code</option>
-
-                  {/* Show custom code if not in the list */}
-                  {condition.status && !statusOptions.some(opt => opt.value === condition.status) && (
-                    <option value={condition.status}>{condition.status}</option>
-                  )}
-                </select>
-                {condition.status === "custom" && (
-                  <div className="flex items-center space-x-2 w-full">
-                    <input type="text" id={`custom-status-${idx}`} defaultValue={condition.status}
-                      className={`px-2 py-1 text-gray-900 bg-white rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white`} />
-                    <button type="button" onClick={() => {
-                      const input = document.getElementById(`custom-status-${idx}`) as HTMLInputElement;
-                      const updated = [...responseConditions];
-                      updated[idx] = { ...condition, status: input.value };
-                      setResponseConditions(updated);
-                    }} className={`px-2 py-1 rounded border ${isDarkMode ? "text-white bg-green-700 border-green-600" : "text-green-700 bg-green-200 hover:bg-green-300"}`}>
-                      <FiCheck />
-                    </button>
-                  </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent transition-transform duration-700 -translate-x-full via-white/10 group-hover:translate-x-full"></div>
+                {isGenerating ? (
+                  <>
+                    <FiRefreshCw className="w-5 h-5 animate-spin" />
+                    <span className="relative">Generating...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiPlay className="w-5 h-5" />
+                    <span className="relative">Fetch & Generate YAML</span>
+                  </>
                 )}
-                {/* Condition text input */}
-                <input
-                  type="text"
-                  value={condition.condition}
-                  onChange={e => {
-                    const updated = [...responseConditions];
-                    updated[idx] = { ...condition, condition: e.target.value };
-                    setResponseConditions(updated);
-                  }}
-                  placeholder="Condition (optional)"
-                  className={`flex-1 px-2 py-1 text-gray-900 bg-white rounded border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
-                />
-                {/* Include checkbox */}
+              </button>
+
+              <button
+                onClick={handleGenerateFromCustomResponse}
+                className="flex overflow-hidden relative justify-center items-center p-4 space-x-2 font-semibold text-white bg-gradient-to-br from-green-500 to-green-600 rounded-xl border transition-all duration-300 group hover:scale-105 hover:shadow-xl hover:shadow-green-500/25 border-green-400/20"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent transition-transform duration-700 -translate-x-full via-white/10 group-hover:translate-x-full"></div>
+                <FiCode className="w-5 h-5" />
+                <span className="relative">Generate from Custom Response</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="flex items-center p-3 space-x-2 bg-gray-50 rounded-lg dark:bg-gray-700">
+                <FiShield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 <input
                   type="checkbox"
-                  checked={condition.include}
-                  onChange={e => {
-                    const updated = [...responseConditions];
-                    updated[idx] = { ...condition, include: e.target.checked };
-                    setResponseConditions(updated);
-                  }}
-                  className={`text-blue-600 dark:text-blue-500`}
-                  title="Include this response"
+                  checked={includeToken && !!tokenExists}
+                  onChange={() => setIncludeToken((prev) => !prev)}
+                  id="include-token-checkbox"
+                  disabled={!tokenExists}
+                  className="w-4 h-4 text-purple-600 bg-white rounded border-gray-300 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-800"
                 />
-                {/* Remove button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResponseConditions(responseConditions.filter((_, i) => i !== idx));
-                  }}
-                  className={`px-2 py-1 text-red-700 bg-red-200 rounded dark:bg-red-700 dark:text-white dark:hover:bg-red-800 hover:bg-red-300`}
+                <label
+                  htmlFor="include-token-checkbox"
+                  className="text-sm font-medium text-gray-700 dark:text-white"
                 >
-                  Remove
-                </button>
+                  Include Token
+                </label>
               </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => setResponseConditions([...responseConditions, { status: "", condition: "", include: true }])}
-              className={`flex items-center px-4 py-2 mt-2 space-x-2 text-green-700 bg-green-100 rounded-md dark:bg-green-600 dark:text-white hover:bg-green-200 dark:hover:bg-green-700`}
+
+              <div className="flex items-center p-3 space-x-2 bg-gray-50 rounded-lg dark:bg-gray-700">
+                <FiSettings className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <select
+                  value={openApiVersion}
+                  onChange={(e) => setOpenApiVersion(e.target.value)}
+                  className="flex-1 px-3 py-2 text-sm text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                >
+                  <option value="3.0.0">OpenAPI 3.0.0</option>
+                  <option value="2.0.0">OpenAPI 2.0.0</option>
+                  <option value="0.9.7.1">OpenAPI 0.9.7.1</option>
+                </select>
+              </div>
+
+              <button
+                onClick={handleResetCustomResponse}
+                className="flex justify-center items-center p-3 space-x-2 font-medium text-amber-700 bg-gradient-to-r from-amber-100 to-amber-200 rounded-lg transition-all duration-200 group dark:from-amber-900 dark:to-amber-800 dark:text-amber-300 hover:scale-105"
+              >
+                <FiRefreshCw className="w-4 h-4" />
+                <span>Reset to Default</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Custom Response Editor */}
+          <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+            <div className="flex items-center mb-4 space-x-3">
+              <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+                <FiFileText className="w-4 h-4 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Custom Response</h3>
+            </div>
+
+            <div
+              ref={containerRef}
+              className="overflow-hidden relative bg-gray-50 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700"
+              style={{ height: "300px" }}
             >
-              Add Status Code
+              <Editor
+                height="100%"
+                defaultLanguage="json"
+                value={customResponse ?? ""}
+                onChange={(value) => setCustomResponse(value ?? "")}
+                onMount={handleEditorDidMount}
+                theme={isDarkMode ? "vs-dark" : "light"}
+                options={{
+                  ...editorOptions,
+                  scrollBeyondLastLine: false,
+                  minimap: { enabled: false },
+                  padding: { top: 10, bottom: 10 }
+                }}
+              />
+              <div
+                className="absolute right-0 bottom-0 left-0 h-2 bg-gray-200 transition-colors duration-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500"
+                onMouseDown={handleMouseDown}
+              />
+            </div>
+          </div>
+
+          {/* Query Parameters */}
+          {requestConfig?.queryParams?.length > 0 && (
+            <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+              <div className="flex items-center mb-4 space-x-3">
+                <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
+                  <FiGlobe className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Query Parameters</h3>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {requestConfig?.queryParams?.map((param) => (
+                  <div key={param.key} className="flex items-center p-3 space-x-3 bg-gray-50 rounded-lg dark:bg-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedQueries[param.key]}
+                      disabled={param.required}
+                      onChange={() => handleQueryToggle(param.key)}
+                      className="w-4 h-4 text-green-600 bg-white rounded border-gray-300 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{param.key}</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{param.value}</p>
+                    </div>
+                    {param.required && (
+                      <span className="px-2 py-1 text-xs text-red-800 bg-red-100 rounded-full dark:bg-red-900 dark:text-red-200">
+                        Required
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Request URL */}
+          <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+            <div className="flex items-center mb-4 space-x-3">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                <FiWifi className="w-4 h-4 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Request URL</h3>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+              <code className="text-sm text-gray-700 break-all dark:text-gray-300">
+                {getColoredUrl()}
+              </code>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Response Conditions & Navigation */}
+        <div className="space-y-6">
+          {/* Response Conditions */}
+          <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+            <div className="flex items-center mb-4 space-x-3">
+              <div className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg">
+                <FiTarget className="w-4 h-4 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Response Conditions</h3>
+            </div>
+
+            <div className="space-y-3">
+              {responseConditions.map((condition, idx) => (
+                <div key={`${idx}-${condition.status}`} className="p-3 bg-gray-50 rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <select
+                        value={condition.status}
+                        onChange={e => {
+                          const updated = [...responseConditions];
+                          updated[idx] = { ...condition, status: e.target.value };
+                          setResponseConditions(updated);
+                        }}
+                        className="flex-1 px-3 py-2 text-sm text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                      >
+                        <option disabled value="">Select Status Code</option>
+                        {statusOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                        <option value="custom">Custom Status Code</option>
+                        {condition.status && !statusOptions.some(opt => opt.value === condition.status) && (
+                          <option value={condition.status}>{condition.status}</option>
+                        )}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResponseConditions(responseConditions.filter((_, i) => i !== idx));
+                        }}
+                        className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {condition.status === "custom" && (
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          id={`custom-status-${idx}`}
+                          defaultValue={condition.status}
+                          className="flex-1 px-3 py-2 text-sm text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById(`custom-status-${idx}`) as HTMLInputElement;
+                            const updated = [...responseConditions];
+                            updated[idx] = { ...condition, status: input.value };
+                            setResponseConditions(updated);
+                          }}
+                          className="p-2 text-green-600 bg-green-100 rounded-lg transition-all duration-200 dark:bg-green-900 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800"
+                        >
+                          <FiCheck className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+
+                    <input
+                      type="text"
+                      value={condition.condition}
+                      onChange={e => {
+                        const updated = [...responseConditions];
+                        updated[idx] = { ...condition, condition: e.target.value };
+                        setResponseConditions(updated);
+                      }}
+                      placeholder="Condition (optional)"
+                      className="px-3 py-2 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                    />
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={condition.include}
+                        onChange={e => {
+                          const updated = [...responseConditions];
+                          updated[idx] = { ...condition, include: e.target.checked };
+                          setResponseConditions(updated);
+                        }}
+                        className="w-4 h-4 text-orange-600 bg-white rounded border-gray-300 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Include this response</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setResponseConditions([...responseConditions, { status: "", condition: "", include: true }])}
+                className="flex justify-center items-center p-3 space-x-2 w-full font-medium text-orange-700 bg-gradient-to-r from-orange-100 to-orange-200 rounded-lg transition-all duration-200 dark:from-orange-900 dark:to-orange-800 dark:text-orange-300 hover:scale-105"
+              >
+                <FiPlus className="w-4 h-4" />
+                <span>Add Status Code</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="p-6 bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl border border-blue-200 dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
+            <div className="flex items-center mb-4 space-x-3">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                <FiActivity className="w-4 h-4 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100">Next Steps</h3>
+            </div>
+
+            <button
+              onClick={() => setActiveSection("ai")}
+              className="flex justify-center items-center p-4 space-x-2 w-full font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl border transition-all duration-300 group hover:scale-105 hover:shadow-xl hover:shadow-blue-500/25 border-blue-400/20"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent transition-transform duration-700 -translate-x-full via-white/10 group-hover:translate-x-full"></div>
+              <FiArrowRight className="w-5 h-5" />
+              <span className="relative">Continue to AI Test Generator</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="mt-4">
-        <div className="flex justify-between items-center mb-2">
-          <label
-            className={`block text-sm font-medium text-gray-700 dark:text-white`}
-          >
-            Generated Output
-          </label>
-          <button
-            onClick={handleCopyYAML}
-            disabled={!yamlOutput}
-            className={`flex items-center px-4 py-2 space-x-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700 ${!yamlOutput ? "text-gray-400 bg-gray-200 cursor-not-allowed" : ""}`}
-          >
-            {copySuccess ? (
-              <>
-                <FiCheck />
-                <span>Copied!</span>
-              </>
-            ) : (
-              <>
-                <FiCopy />
-                <span>Copy YAML</span>
-              </>
-            )}
-          </button>
-          <button
-            onClick={handleDownloadYAML}
-            disabled={!yamlOutput}
-            className={`flex items-center px-4 py-2 space-x-2 text-blue-700 bg-blue-100 rounded-md dark:bg-blue-600 dark:text-white hover:bg-blue-200 dark:hover:bg-blue-700 ${!yamlOutput ? "text-gray-400 bg-gray-200 cursor-not-allowed" : ""}`}
-          >
-            <FiDownload />
-            <span>Download YAML</span>
-          </button>
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200 dark:from-red-900 dark:to-red-800 dark:border-red-700">
+          <div className="flex items-center space-x-2">
+            <FiAlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <span className="font-medium text-red-800 dark:text-red-200">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Generated Output */}
+      <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg">
+              <FiServer className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Generated Output</h3>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center px-3 py-1 space-x-1 bg-gray-100 rounded-lg dark:bg-gray-700">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</span>
+              <span className={`px-2 py-1 text-sm font-semibold rounded ${statusCodeColor[statusCode as keyof typeof statusCodeColor]}`}>
+                {statusCode}
+              </span>
+            </div>
+
+            <div className="flex items-center p-1 bg-gray-100 rounded-lg dark:bg-gray-700">
+              <button
+                className={`px-3 py-1 rounded text-sm font-medium transition-all duration-200 ${outputViewMode === 'yaml'
+                  ? 'bg-white text-gray-900 dark:bg-gray-600 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                onClick={() => setOutputViewMode('yaml')}
+              >
+                YAML
+              </button>
+              <button
+                className={`px-3 py-1 rounded text-sm font-medium transition-all duration-200 ${outputViewMode === 'json'
+                  ? 'bg-white text-gray-900 dark:bg-gray-600 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                onClick={() => setOutputViewMode('json')}
+              >
+                JSON
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleCopyYAML}
+              disabled={!localYamlOutput}
+              className="flex items-center px-4 py-2 space-x-2 font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg transition-all duration-200 group hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              {copySuccess ? (
+                <>
+                  <FiCheck className="w-4 h-4" />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <FiCopy className="w-4 h-4" />
+                  <span>Copy YAML</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleDownloadYAML}
+              disabled={!localYamlOutput}
+              className="flex items-center px-4 py-2 space-x-2 font-medium text-white bg-gradient-to-r from-green-500 to-green-600 rounded-lg transition-all duration-200 group hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              <FiDownload className="w-4 h-4" />
+              <span>Download YAML</span>
+            </button>
+          </div>
+
           <button
             onClick={handleYamlExpand}
-            className={`flex items-center px-2 py-1 space-x-2 text-sm text-gray-700 bg-gray-200 rounded-md dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 hover:bg-gray-300`}
+            className="flex items-center px-4 py-2 space-x-2 font-medium text-gray-700 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg transition-all duration-200 group dark:from-gray-700 dark:to-gray-600 dark:text-gray-300 hover:scale-105"
           >
             {isYamlExpanded ? (
               <>
-                <FiMinimize2 />
+                <FiMinimize2 className="w-4 h-4" />
                 <span>Collapse</span>
               </>
             ) : (
               <>
-                <FiMaximize2 />
+                <FiMaximize2 className="w-4 h-4" />
                 <span>Expand</span>
               </>
             )}
           </button>
-          <div className="flex items-center">
-            <span className="mr-2 font-medium">Status Code:</span>
-            <span className={`px-2 py-1 mr-2 rounded-md dark:text-white dark:font-medium ${statusCodeColor[statusCode as keyof typeof statusCodeColor]}`}>{statusCode}</span>
-            <span className="mr-2 font-medium">View as:</span>
-            <button
-              className={`px-2 py-1 rounded-l ${outputViewMode === 'yaml' ? 'dark:bg-blue-600 dark:text-white bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-200 text-gray-700'}`}
-              onClick={() => setOutputViewMode('yaml')}
-            >
-              YAML
-            </button>
-            <button
-              className={`px-2 py-1 rounded-r ${outputViewMode === 'json' ? 'dark:bg-blue-600 dark:text-white bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-200 text-gray-700'}`}
-              onClick={() => setOutputViewMode('json')}
-            >
-              JSON
-            </button>
-          </div>
         </div>
+
         <div
           ref={yamlContainerRef}
-          className={`overflow-hidden relative rounded-lg border border-gray-300 dark:border-gray-600`}
+          className="overflow-hidden relative bg-gray-50 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700"
           style={{ height: isYamlExpanded ? "calc(100vh - 200px)" : editorHeight }}
         >
           {isGenerating ? (
-            <Skeleton height={isYamlExpanded ? 'calc(100vh - 200px)' : editorHeight} width="100%" count={isYamlExpanded ? 20 : Math.max(10, Math.floor(editorHeight / 20))} style={{ borderRadius: 8 }} />
+            <div className="p-4">
+              <Skeleton
+                height={isYamlExpanded ? 'calc(100vh - 200px)' : editorHeight}
+                width="100%"
+                count={isYamlExpanded ? 20 : Math.max(10, Math.floor(editorHeight / 20))}
+                style={{ borderRadius: 8 }}
+              />
+            </div>
           ) : (
             <Editor
               height="100%"
@@ -1227,14 +1399,14 @@ ${generateRequestBody()}
                 scrollBeyondLastLine: false,
                 minimap: { enabled: false },
                 padding: {
-                  top: 5,
+                  top: 10,
                   bottom: 10
                 }
               }}
             />
           )}
           <div
-            className="absolute right-0 bottom-0 left-0 h-2 bg-gray-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+            className="absolute right-0 bottom-0 left-0 h-2 bg-gray-200 transition-colors duration-200 cursor-ns-resize hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500"
             onMouseDown={handleYamlMouseDown}
           />
         </div>

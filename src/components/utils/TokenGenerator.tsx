@@ -95,7 +95,7 @@ const TokenGenerator: React.FC = () => {
 
         if (tokenCookie) {
             console.log(`Found token cookie: ${tokenCookie.name}`);
-            return tokenCookie.value || null;
+            return tokenCookie.value ?? null;
         }
 
         return null;
@@ -254,7 +254,7 @@ const TokenGenerator: React.FC = () => {
             // Get all cookies from document.cookie
             const allCookies = document.cookie.split(';').map(cookie => {
                 const [name, value] = cookie.trim().split('=');
-                return { name: name?.trim() || '', value: value?.trim() || '' };
+                return { name: name?.trim() ?? '', value: value?.trim() ?? '' };
             }).filter(cookie => cookie.name);
 
             let token: string | null = null;
@@ -345,6 +345,7 @@ const TokenGenerator: React.FC = () => {
                         const jsonData = JSON.parse(responseText);
                         refreshToken = jsonData.refresh_token || jsonData.refreshToken;
                     } catch (e) {
+                        console.log("Failed to extract refresh token from JSON:", e);
                         // Ignore JSON parsing errors for refresh token
                     }
                 }
@@ -422,12 +423,12 @@ const TokenGenerator: React.FC = () => {
             const parts = name.split('.');
             const method = parts[1] as keyof typeof tokenConfig.extractionMethods;
             const field = parts[2];
-
+            const checkedCondition = (type === "checkbox" ? checked : value)
             setTokenConfig((prev) => ({
                 ...prev,
                 extractionMethods: {
                     ...prev.extractionMethods,
-                    [method]: field ? (type === "checkbox" ? checked : value) : checked,
+                    [method]: field ? checkedCondition : checked,
                 },
             }));
         } else if (name.startsWith('requestMapping.')) {
