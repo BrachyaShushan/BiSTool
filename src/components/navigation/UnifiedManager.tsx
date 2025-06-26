@@ -746,7 +746,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                                 style={{ willChange: 'max-height, opacity' }}
                                                 aria-hidden={!isOpen}
                                             >
-                                                <div className="space-y-2 p-2">
+                                                <div className="p-2 space-y-2">
                                                     {sessions.map((session) => sessionCard(session))}
                                                 </div>
                                             </div>
@@ -1417,73 +1417,361 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                 <Modal
                     isOpen={showImportModal}
                     onClose={() => setShowImportModal(false)}
-                    title={importStep === 'options' ? 'Import Sessions & Variables' : 'Choose What to Import'}
+                    title={importStep === 'options' ? 'Import Data' : 'Select Items to Import'}
                     showSaveButton={false}
+                    size="2xl"
                 >
                     {importStep === 'options' ? (
-                        <div className="space-y-4">
-                            <button
-                                className="px-4 py-2 w-full text-white bg-blue-600 rounded hover:bg-blue-700"
-                                onClick={() => handleImportOption('add')}
-                            >
-                                Import and Add (merge, skip duplicates)
-                            </button>
-                            <button
-                                className="px-4 py-2 w-full text-white bg-red-600 rounded hover:bg-red-700"
-                                onClick={() => handleImportOption('override')}
-                            >
-                                Import and Override (replace all)
-                            </button>
-                            <button
-                                className="px-4 py-2 w-full text-white bg-yellow-500 rounded hover:bg-yellow-600"
-                                onClick={() => handleImportOption('choose')}
-                            >
-                                Import and Choose What to Import
-                            </button>
-                        </div>
-                    ) :
                         <div className="space-y-6">
-                            <div>
-                                <h4 className="mb-2 font-semibold">Sessions</h4>
-                                <div className="overflow-y-auto space-y-1 max-h-40">
-                                    {(importData.savedSessions || []).map((s: any) => (
-                                        <div key={s.id} className="flex items-center space-x-2">
-                                            <button onClick={() => toggleSession(s.id)} className="focus:outline-none">
-                                                {selectedImportSessions.includes(s.id) ? <FiCheckSquare /> : <FiSquare />}
-                                            </button>
-                                            <span>{s.name}</span>
-                                            {savedSessions.some(sess => sess.id === s.id) && (
-                                                <span className="ml-2 text-xs text-red-500">(already exists)</span>
-                                            )}
+                            {/* Import Summary */}
+                            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-600">
+                                <div className="flex items-center space-x-3">
+                                    <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900">
+                                        <FiUpload className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-semibold ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                            Import Summary
+                                        </h4>
+                                        <div className="flex items-center mt-1 space-x-4 text-sm">
+                                            <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${isDarkMode ? "text-blue-200 bg-blue-900" : "text-blue-800 bg-blue-100"}`}>
+                                                {(importData?.savedSessions || []).length} sessions
+                                            </span>
+                                            <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${isDarkMode ? "text-green-200 bg-green-900" : "text-green-800 bg-green-100"}`}>
+                                                {Object.keys(importData?.globalVariables || {}).length} variables
+                                            </span>
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
                             </div>
-                            <div>
-                                <h4 className="mb-2 font-semibold">Global Variables</h4>
-                                <div className="overflow-y-auto space-y-1 max-h-40">
-                                    {Object.entries(importData.globalVariables || {}).map(([k, _]) => (
-                                        <div key={k} className="flex items-center space-x-2">
-                                            <button onClick={() => toggleVariable(k)} className="focus:outline-none">
-                                                {selectedImportVariables.includes(k) ? <FiCheckSquare /> : <FiSquare />}
-                                            </button>
-                                            <span>{k}</span>
-                                            {globalVariables[k] !== undefined && (
-                                                <span className="ml-2 text-xs text-red-500">(already exists)</span>
-                                            )}
+
+                            {/* Import Options */}
+                            <div className="space-y-4">
+                                <h4 className={`text-lg font-semibold ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                    Choose Import Strategy
+                                </h4>
+
+                                {/* Add Option */}
+                                <button
+                                    onClick={() => handleImportOption('add')}
+                                    className={`w-full p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg group ${isDarkMode
+                                        ? "border-gray-600 bg-gray-800 hover:border-blue-500 hover:bg-gray-700"
+                                        : "border-gray-200 bg-white hover:border-blue-500 hover:bg-blue-50"
+                                        }`}
+                                >
+                                    <div className="flex items-start space-x-4">
+                                        <div className={`p-3 rounded-lg ${isDarkMode ? "bg-green-900" : "bg-green-100"}`}>
+                                            <FiPlus className={`w-6 h-6 ${isDarkMode ? "text-green-400" : "text-green-600"}`} />
                                         </div>
-                                    ))}
-                                </div>
+                                        <div className="flex-1 text-left">
+                                            <h5 className={`font-semibold mb-1 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                                Merge & Add
+                                            </h5>
+                                            <p className={`text-sm mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                                                Import new items and merge with existing data. Duplicates will be skipped.
+                                            </p>
+                                            <div className="flex items-center space-x-2 text-xs">
+                                                <span className={`px-2 py-1 rounded-full ${isDarkMode ? "text-gray-300 bg-gray-700" : "text-gray-600 bg-gray-100"}`}>
+                                                    Safe option
+                                                </span>
+                                                <span className={`px-2 py-1 rounded-full ${isDarkMode ? "text-green-300 bg-green-900" : "text-green-700 bg-green-100"}`}>
+                                                    Recommended
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className={`p-2 rounded-lg transition-colors ${isDarkMode ? "text-gray-400 group-hover:text-green-400" : "text-gray-500 group-hover:text-green-600"}`}>
+                                            <FiChevronDown className="w-5 h-5" />
+                                        </div>
+                                    </div>
+                                </button>
+
+                                {/* Override Option */}
+                                <button
+                                    onClick={() => handleImportOption('override')}
+                                    className={`w-full p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg group ${isDarkMode
+                                        ? "border-gray-600 bg-gray-800 hover:border-red-500 hover:bg-gray-700"
+                                        : "border-gray-200 bg-white hover:border-red-500 hover:bg-red-50"
+                                        }`}
+                                >
+                                    <div className="flex items-start space-x-4">
+                                        <div className={`p-3 rounded-lg ${isDarkMode ? "bg-red-900" : "bg-red-100"}`}>
+                                            <FiTrash2 className={`w-6 h-6 ${isDarkMode ? "text-red-400" : "text-red-600"}`} />
+                                        </div>
+                                        <div className="flex-1 text-left">
+                                            <h5 className={`font-semibold mb-1 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                                Replace All
+                                            </h5>
+                                            <p className={`text-sm mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                                                Replace all existing data with imported data. This will overwrite everything.
+                                            </p>
+                                            <div className="flex items-center space-x-2 text-xs">
+                                                <span className={`px-2 py-1 rounded-full ${isDarkMode ? "text-red-300 bg-red-900" : "text-red-700 bg-red-100"}`}>
+                                                    Destructive
+                                                </span>
+                                                <span className={`px-2 py-1 rounded-full ${isDarkMode ? "text-gray-300 bg-gray-700" : "text-gray-600 bg-gray-100"}`}>
+                                                    Use with caution
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className={`p-2 rounded-lg transition-colors ${isDarkMode ? "text-gray-400 group-hover:text-red-400" : "text-gray-500 group-hover:text-red-600"}`}>
+                                            <FiChevronDown className="w-5 h-5" />
+                                        </div>
+                                    </div>
+                                </button>
+
+                                {/* Choose Option */}
+                                <button
+                                    onClick={() => handleImportOption('choose')}
+                                    className={`w-full p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg group ${isDarkMode
+                                        ? "border-gray-600 bg-gray-800 hover:border-yellow-500 hover:bg-gray-700"
+                                        : "border-gray-200 bg-white hover:border-yellow-500 hover:bg-yellow-50"
+                                        }`}
+                                >
+                                    <div className="flex items-start space-x-4">
+                                        <div className={`p-3 rounded-lg ${isDarkMode ? "bg-yellow-900" : "bg-yellow-100"}`}>
+                                            <FiCheckSquare className={`w-6 h-6 ${isDarkMode ? "text-yellow-400" : "text-yellow-600"}`} />
+                                        </div>
+                                        <div className="flex-1 text-left">
+                                            <h5 className={`font-semibold mb-1 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                                Selective Import
+                                            </h5>
+                                            <p className={`text-sm mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                                                Choose exactly which sessions and variables to import.
+                                            </p>
+                                            <div className="flex items-center space-x-2 text-xs">
+                                                <span className={`px-2 py-1 rounded-full ${isDarkMode ? "text-yellow-300 bg-yellow-900" : "text-yellow-700 bg-yellow-100"}`}>
+                                                    Granular control
+                                                </span>
+                                                <span className={`px-2 py-1 rounded-full ${isDarkMode ? "text-gray-300 bg-gray-700" : "text-gray-600 bg-gray-100"}`}>
+                                                    Most flexible
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className={`p-2 rounded-lg transition-colors ${isDarkMode ? "text-gray-400 group-hover:text-yellow-400" : "text-gray-500 group-hover:text-yellow-600"}`}>
+                                            <FiChevronDown className="w-5 h-5" />
+                                        </div>
+                                    </div>
+                                </button>
                             </div>
-                            <button
-                                className="px-4 py-2 mt-4 w-full text-white bg-blue-600 rounded hover:bg-blue-700"
-                                onClick={handleChooseImport}
-                            >
-                                Import Selected
-                            </button>
                         </div>
-                    }
-                    {error && <p className="mt-2 text-red-500">{error}</p>}
+                    ) : (
+                        <div className="space-y-6">
+                            {/* Selection Summary */}
+                            <div className="p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl border border-purple-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-600">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900">
+                                            <FiCheckSquare className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                        </div>
+                                        <div>
+                                            <h4 className={`font-semibold ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                                Selection Summary
+                                            </h4>
+                                            <div className="flex items-center mt-1 space-x-4 text-sm">
+                                                <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${isDarkMode ? "text-purple-200 bg-purple-900" : "text-purple-800 bg-purple-100"}`}>
+                                                    {selectedImportSessions.length} of {(importData?.savedSessions || []).length} sessions
+                                                </span>
+                                                <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${isDarkMode ? "text-purple-200 bg-purple-900" : "text-purple-800 bg-purple-100"}`}>
+                                                    {selectedImportVariables.length} of {Object.keys(importData?.globalVariables || {}).length} variables
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleChooseImport}
+                                        disabled={selectedImportSessions.length === 0 && selectedImportVariables.length === 0}
+                                        className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${isDarkMode
+                                            ? "text-white bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 shadow-purple-500/25"
+                                            : "text-white bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 shadow-purple-500/25"
+                                            }`}
+                                    >
+                                        Import Selected
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Sessions Section */}
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h4 className={`text-lg font-semibold flex items-center space-x-2 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                        <FiFolder className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                        <span>Sessions</span>
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${isDarkMode ? "text-blue-200 bg-blue-900" : "text-blue-800 bg-blue-100"}`}>
+                                            {(importData?.savedSessions || []).length}
+                                        </span>
+                                    </h4>
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            onClick={() => setSelectedImportSessions((importData?.savedSessions || []).map((s: any) => s.id))}
+                                            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${isDarkMode
+                                                ? "text-blue-400 hover:text-blue-300 hover:bg-blue-900"
+                                                : "text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                                                }`}
+                                        >
+                                            Select All
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedImportSessions([])}
+                                            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${isDarkMode
+                                                ? "text-gray-400 hover:text-gray-300 hover:bg-gray-700"
+                                                : "text-gray-600 hover:text-gray-700 hover:bg-gray-100"
+                                                }`}
+                                        >
+                                            Clear All
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="overflow-y-auto p-3 space-y-2 max-h-60 rounded-lg border border-gray-200 dark:border-gray-600">
+                                    {(importData?.savedSessions || []).map((s: any) => {
+                                        const isSelected = selectedImportSessions.includes(s.id);
+                                        const alreadyExists = savedSessions.some(sess => sess.id === s.id);
+                                        return (
+                                            <div
+                                                key={s.id}
+                                                className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md ${isSelected
+                                                    ? "bg-blue-50 border-blue-500 dark:bg-blue-900/20"
+                                                    : "bg-gray-50 border-gray-200 dark:border-gray-600 dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
+                                                    }`}
+                                                onClick={() => toggleSession(s.id)}
+                                            >
+                                                <div className="flex items-center space-x-3">
+                                                    <div className={`p-1 rounded ${isSelected
+                                                        ? "bg-blue-100 dark:bg-blue-900"
+                                                        : "bg-gray-100 dark:bg-gray-600"
+                                                        }`}>
+                                                        {isSelected ? (
+                                                            <FiCheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                        ) : (
+                                                            <FiSquare className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center space-x-2">
+                                                            <h5 className={`font-medium truncate ${isSelected
+                                                                ? "text-blue-800 dark:text-blue-200"
+                                                                : "text-gray-900 dark:text-white"
+                                                                }`}>
+                                                                {s.name}
+                                                            </h5>
+                                                            {alreadyExists && (
+                                                                <span className={`px-2 py-1 text-xs rounded-full ${isDarkMode
+                                                                    ? "text-orange-200 bg-orange-900"
+                                                                    : "text-orange-700 bg-orange-100"
+                                                                    }`}>
+                                                                    Exists
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className={`text-xs mt-1 ${isSelected
+                                                            ? "text-blue-600 dark:text-blue-300"
+                                                            : "text-gray-500 dark:text-gray-400"
+                                                            }`}>
+                                                            {s.requestConfig?.method || 'GET'} • {new Date(s.timestamp).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Variables Section */}
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h4 className={`text-lg font-semibold flex items-center space-x-2 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
+                                        <FiKey className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                        <span>Global Variables</span>
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${isDarkMode ? "text-green-200 bg-green-900" : "text-green-800 bg-green-100"}`}>
+                                            {Object.keys(importData?.globalVariables || {}).length}
+                                        </span>
+                                    </h4>
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            onClick={() => setSelectedImportVariables(Object.keys(importData?.globalVariables || {}))}
+                                            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${isDarkMode
+                                                ? "text-green-400 hover:text-green-300 hover:bg-green-900"
+                                                : "text-green-600 hover:text-green-700 hover:bg-green-100"
+                                                }`}
+                                        >
+                                            Select All
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedImportVariables([])}
+                                            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${isDarkMode
+                                                ? "text-gray-400 hover:text-gray-300 hover:bg-gray-700"
+                                                : "text-gray-600 hover:text-gray-700 hover:bg-gray-100"
+                                                }`}
+                                        >
+                                            Clear All
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="overflow-y-auto p-3 space-y-2 max-h-60 rounded-lg border border-gray-200 dark:border-gray-600">
+                                    {Object.entries(importData?.globalVariables || {}).map(([k, _]) => {
+                                        const isSelected = selectedImportVariables.includes(k);
+                                        const alreadyExists = globalVariables[k] !== undefined;
+                                        return (
+                                            <div
+                                                key={k}
+                                                className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md ${isSelected
+                                                    ? "bg-green-50 border-green-500 dark:bg-green-900/20"
+                                                    : "bg-gray-50 border-gray-200 dark:border-gray-600 dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
+                                                    }`}
+                                                onClick={() => toggleVariable(k)}
+                                            >
+                                                <div className="flex items-center space-x-3">
+                                                    <div className={`p-1 rounded ${isSelected
+                                                        ? "bg-green-100 dark:bg-green-900"
+                                                        : "bg-gray-100 dark:bg-gray-600"
+                                                        }`}>
+                                                        {isSelected ? (
+                                                            <FiCheckSquare className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                                        ) : (
+                                                            <FiSquare className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center space-x-2">
+                                                            <h5 className={`font-medium truncate ${isSelected
+                                                                ? "text-green-800 dark:text-green-200"
+                                                                : "text-gray-900 dark:text-white"
+                                                                }`}>
+                                                                {k}
+                                                            </h5>
+                                                            {alreadyExists && (
+                                                                <span className={`px-2 py-1 text-xs rounded-full ${isDarkMode
+                                                                    ? "text-orange-200 bg-orange-900"
+                                                                    : "text-orange-700 bg-orange-100"
+                                                                    }`}>
+                                                                    Exists
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className={`text-xs mt-1 truncate ${isSelected
+                                                            ? "text-green-600 dark:text-green-300"
+                                                            : "text-gray-500 dark:text-gray-400"
+                                                            }`}>
+                                                            {_ as string}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {error && (
+                        <div className="p-3 mt-4 bg-red-50 rounded-lg border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+                            <p className={`text-sm ${isDarkMode ? "text-red-300" : "text-red-600"}`}>
+                                {error}
+                            </p>
+                        </div>
+                    )}
                 </Modal>
             )}
         </>

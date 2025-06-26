@@ -18,7 +18,7 @@ export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave?: () => void;
-  title: string;
+  title: string | ReactNode;
   children: ReactNode;
   showSaveButton?: boolean;
   showCancelButton?: boolean;

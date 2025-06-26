@@ -329,14 +329,47 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
               <label className="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Protocol
               </label>
-              <select
-                value={protocol}
-                onChange={(e) => setProtocol(e.target.value)}
-                className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="http">HTTP</option>
-                <option value="https">HTTPS</option>
-              </select>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  {
+                    id: 'http',
+                    label: 'HTTP',
+                    icon: '🌐',
+                    description: 'Unsecured protocol',
+                    color: 'from-gray-200 to-gray-300',
+                    selectedColor: 'from-blue-500 to-blue-600',
+                  },
+                  {
+                    id: 'https',
+                    label: 'HTTPS',
+                    icon: '🔒',
+                    description: 'Secured with SSL',
+                    color: 'from-gray-200 to-gray-300',
+                    selectedColor: 'from-green-500 to-green-600',
+                  },
+                ].map((option) => {
+                  const isSelected = protocol === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setProtocol(option.id)}
+                      className={`relative flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-200 focus:outline-none group shadow-sm overflow-hidden
+                        bg-gradient-to-br ${isSelected ? option.selectedColor + ' border-transparent shadow-lg scale-105' : option.color + ' border-gray-200 dark:border-gray-600 hover:scale-105 hover:shadow-md'}
+                        ${isSelected ? 'ring-2 ring-offset-2 ring-blue-400' : ''}
+                      `}
+                      aria-pressed={isSelected}
+                    >
+                      <span className="text-2xl mb-1">{option.icon}</span>
+                      <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>{option.label}</span>
+                      <span className={`text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>{option.description}</span>
+                      {isSelected && (
+                        <span className="absolute top-2 right-2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white dark:border-gray-900"></span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Domain */}
@@ -358,15 +391,55 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
               <label className="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Environment
               </label>
-              <select
-                value={environment}
-                onChange={(e) => setEnvironment(e.target.value)}
-                className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="development">Development</option>
-                <option value="staging">Staging</option>
-                <option value="production">Production</option>
-              </select>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  {
+                    id: 'development',
+                    label: 'Development',
+                    icon: '🛠️',
+                    description: 'Local/test environment',
+                    color: 'from-green-200 to-green-300',
+                    selectedColor: 'from-green-500 to-green-600',
+                  },
+                  {
+                    id: 'staging',
+                    label: 'Staging',
+                    icon: '🚧',
+                    description: 'Pre-production testing',
+                    color: 'from-yellow-100 to-yellow-200',
+                    selectedColor: 'from-yellow-400 to-yellow-500',
+                  },
+                  {
+                    id: 'production',
+                    label: 'Production',
+                    icon: '🚀',
+                    description: 'Live environment',
+                    color: 'from-red-100 to-red-200',
+                    selectedColor: 'from-red-500 to-red-600',
+                  },
+                ].map((option) => {
+                  const isSelected = environment === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setEnvironment(option.id)}
+                      className={`relative flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-200 focus:outline-none group shadow-sm overflow-hidden
+                        bg-gradient-to-br ${isSelected ? option.selectedColor + ' border-transparent shadow-lg scale-105' : option.color + ' border-gray-200 dark:border-gray-600 hover:scale-105 hover:shadow-md'}
+                        ${isSelected ? 'ring-2 ring-offset-2 ring-green-400' : ''}
+                      `}
+                      aria-pressed={isSelected}
+                    >
+                      <span className="text-2xl mb-1">{option.icon}</span>
+                      <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>{option.label}</span>
+                      <span className={`text-xs ${isSelected ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'}`}>{option.description}</span>
+                      {isSelected && (
+                        <span className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

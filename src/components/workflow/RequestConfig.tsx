@@ -582,7 +582,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex justify-end items-center space-x-3 w-8/12">
             <TokenGenerator />
             <button
               type="button"
@@ -605,17 +605,100 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 <span>{Math.floor(tokenExpiration)}m</span>
               </div>
             )}
-            <select
-              value={method}
-              onChange={(e) => setMethod(e.target.value)}
-              className={`px-4 py-2 rounded-xl border-none text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200 shadow-lg ${methodColor[method as keyof typeof methodColor]?.color}`}
-            >
-              {Object.values(methodColor).map((option: any) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            {/* Expert HTTP Method Selector */}
+            <div className="flex-shrink p-4 w-1/3 min-w-0 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center space-x-2">
+                  <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg">
+                    <FiZap className="w-3 h-3 text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">HTTP Method</span>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Select method</div>
+              </div>
+
+              {/* Scrollable Method Container */}
+              <div className="relative w-full group">
+                {/* Left Arrow */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const container = document.getElementById('http-methods-scroll');
+                    if (container) {
+                      container.scrollBy({ left: -200, behavior: 'smooth' });
+                    }
+                  }}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 bg-white dark:bg-gray-700 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 hover:shadow-xl"
+                  title="Scroll left"
+                >
+                  <FiArrowRight className="w-3 h-3 text-gray-600 rotate-180 dark:text-gray-300" />
+                </button>
+
+                {/* Right Arrow */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const container = document.getElementById('http-methods-scroll');
+                    if (container) {
+                      container.scrollBy({ left: 200, behavior: 'smooth' });
+                    }
+                  }}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-1.5 bg-white dark:bg-gray-700 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 hover:shadow-xl"
+                  title="Scroll right"
+                >
+                  <FiArrowRight className="w-3 h-3 text-gray-600 dark:text-gray-300" />
+                </button>
+
+                {/* Scrollable Content */}
+                <div
+                  id="http-methods-scroll"
+                  className="flex overflow-x-auto items-center px-6 space-x-2 w-full scrollbar-hide scroll-smooth"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {Object.values(methodColor).map((option: any) => {
+                    const isSelected = method === option.value;
+                    // Map method to icon
+                    const methodIcons: Record<string, string> = {
+                      GET: '🔍',
+                      POST: '➕',
+                      PUT: '♻️',
+                      PATCH: '🩹',
+                      DELETE: '🗑️',
+                      HEAD: '🧠',
+                      OPTIONS: '⚙️',
+                    };
+                    const icon = methodIcons[option.value] || '🔗';
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => setMethod(option.value)}
+                        className={`relative px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-300 transform hover:scale-105 group overflow-hidden flex-shrink-0 ${isSelected
+                          ? `${option.color} shadow-lg shadow-opacity-25`
+                          : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600"
+                          }`}
+                      >
+                        <div className={`absolute inset-0 transition-opacity duration-300 ${isSelected ? 'opacity-10' : 'opacity-0 group-hover:opacity-5'
+                          }`}>
+                          <div className="absolute top-0 right-0 w-8 h-8 bg-current rounded-full opacity-20 translate-x-4 -translate-y-4"></div>
+                          <div className="absolute bottom-0 left-0 w-6 h-6 bg-current rounded-full opacity-20 -translate-x-3 translate-y-3"></div>
+                        </div>
+                        <span className="flex relative z-10 items-center space-x-1">
+                          <span className="text-lg">{icon}</span>
+                          <span>{option.label}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Scroll Indicator */}
+                <div className="flex justify-center mt-2 space-x-1">
+                  <div className="w-1.5 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                  <div className="w-1.5 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                  <div className="w-1.5 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -864,18 +947,131 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   </div>
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Request Body</span>
                 </div>
-                <select
-                  value={bodyType}
-                  onChange={(e) =>
-                    setBodyType(e.target.value as "none" | "json" | "form" | "text")
-                  }
-                  className="px-4 py-2 text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                >
-                  <option value="none">None</option>
-                  <option value="json">JSON</option>
-                  <option value="form">Form Data</option>
-                  <option value="text">Text</option>
-                </select>
+                {/* Modern Dataset Tab Interface for Body Type */}
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    {
+                      id: 'none',
+                      label: 'None',
+                      description: 'No body',
+                      icon: '🚫',
+                      color: 'gray'
+                    },
+                    {
+                      id: 'json',
+                      label: 'JSON',
+                      description: 'JSON data',
+                      icon: '🔧',
+                      color: 'purple'
+                    },
+                    {
+                      id: 'form',
+                      label: 'Form Data',
+                      description: 'Form fields',
+                      icon: '📝',
+                      color: 'green'
+                    },
+                    {
+                      id: 'text',
+                      label: 'Text',
+                      description: 'Plain text',
+                      icon: '📄',
+                      color: 'blue'
+                    }
+                  ].map((option) => {
+                    const isSelected = bodyType === option.id;
+                    const colorClasses = {
+                      gray: {
+                        selected: isDarkMode
+                          ? "bg-gray-600 border-gray-500 text-white shadow-lg shadow-gray-500/25"
+                          : "bg-gray-600 border-gray-500 text-white shadow-lg shadow-gray-500/25",
+                        unselected: isDarkMode
+                          ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500"
+                          : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+                      },
+                      purple: {
+                        selected: isDarkMode
+                          ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/25"
+                          : "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/25",
+                        unselected: isDarkMode
+                          ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-purple-500"
+                          : "bg-white border-gray-300 text-gray-700 hover:bg-purple-50 hover:border-purple-300"
+                      },
+                      green: {
+                        selected: isDarkMode
+                          ? "bg-green-600 border-green-500 text-white shadow-lg shadow-green-500/25"
+                          : "bg-green-600 border-green-500 text-white shadow-lg shadow-green-500/25",
+                        unselected: isDarkMode
+                          ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-green-500"
+                          : "bg-white border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-300"
+                      },
+                      blue: {
+                        selected: isDarkMode
+                          ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/25"
+                          : "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/25",
+                        unselected: isDarkMode
+                          ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-blue-500"
+                          : "bg-white border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300"
+                      }
+                    };
+
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => setBodyType(option.id as "none" | "json" | "form" | "text")}
+                        className={`relative p-3 rounded-lg border-2 transition-all duration-300 transform hover:scale-105 group overflow-hidden ${isSelected
+                          ? colorClasses[option.color as keyof typeof colorClasses].selected
+                          : colorClasses[option.color as keyof typeof colorClasses].unselected
+                          }`}
+                      >
+                        {/* Background Pattern */}
+                        <div className={`absolute inset-0 opacity-5 transition-opacity duration-300 ${isSelected ? 'opacity-10' : 'opacity-0 group-hover:opacity-5'
+                          }`}>
+                          <div className={`absolute top-0 right-0 w-8 h-8 rounded-full translate-x-4 -translate-y-4 ${option.color === 'gray' ? 'bg-gray-500' :
+                            option.color === 'purple' ? 'bg-purple-500' :
+                              option.color === 'green' ? 'bg-green-500' : 'bg-blue-500'
+                            }`}></div>
+                          <div className={`absolute bottom-0 left-0 w-6 h-6 rounded-full -translate-x-3 translate-y-3 ${option.color === 'gray' ? 'bg-gray-400' :
+                            option.color === 'purple' ? 'bg-purple-400' :
+                              option.color === 'green' ? 'bg-green-400' : 'bg-blue-400'
+                            }`}></div>
+                        </div>
+
+                        <div className="flex relative z-10 flex-col items-center space-y-1 text-center">
+                          <div className={`text-lg transition-transform duration-300 ${isSelected ? 'scale-110' : 'group-hover:scale-105'
+                            }`}>
+                            {option.icon}
+                          </div>
+                          <div>
+                            <h4 className={`font-semibold text-xs ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'
+                              }`}>
+                              {option.label}
+                            </h4>
+                            <p className={`text-xs ${isSelected
+                              ? 'text-gray-100 dark:text-gray-200'
+                              : 'text-gray-500 dark:text-gray-400'
+                              }`}>
+                              {option.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Selection Indicator */}
+                        {isSelected && (
+                          <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${option.color === 'gray' ? 'bg-gray-200' :
+                            option.color === 'purple' ? 'bg-purple-200' :
+                              option.color === 'green' ? 'bg-green-200' : 'bg-blue-200'
+                            } flex items-center justify-center`}>
+                            <div className={`w-1 h-1 rounded-full ${option.color === 'gray' ? 'bg-gray-600' :
+                              option.color === 'purple' ? 'bg-purple-600' :
+                                option.color === 'green' ? 'bg-green-600' : 'bg-blue-600'
+                              }`}></div>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600">

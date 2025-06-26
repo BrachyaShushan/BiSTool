@@ -138,11 +138,11 @@ const AppContent: React.FC = () => {
                 >
                     <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                         {/* Header */}
-                        <header className="relative overflow-hidden bg-gradient-to-r from-white via-gray-50 to-white dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-lg">
+                        <header className="overflow-hidden relative bg-gradient-to-r from-white via-gray-50 to-white border-b border-gray-200 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-700">
                             {/* Background Pattern */}
                             <div className="absolute inset-0 opacity-5 dark:opacity-10">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full -translate-y-16 translate-x-16"></div>
-                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 rounded-full translate-y-12 -translate-x-12"></div>
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full translate-x-16 -translate-y-16"></div>
+                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 rounded-full -translate-x-12 translate-y-12"></div>
                             </div>
 
                             <div className="relative px-4 py-6 mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -151,20 +151,20 @@ const AppContent: React.FC = () => {
                                     <div className="flex items-center space-x-4">
                                         <button
                                             onClick={handleReturnToWelcome}
-                                            className="group flex items-center space-x-3 transition-all duration-200 hover:scale-105"
+                                            className="flex items-center space-x-3 transition-all duration-200 group hover:scale-105"
                                             title="Return to Welcome Screen"
                                         >
                                             <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
                                                 <h1 className="text-2xl font-bold text-white">B</h1>
                                             </div>
                                             <div className="flex flex-col">
-                                                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                                                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
                                                     BiSTool
                                                 </h1>
                                                 {currentProject && (
-                                                    <div className="flex items-center space-x-2 mt-1">
+                                                    <div className="flex items-center mt-1 space-x-2">
                                                         <FiFolder size={14} className="text-gray-500 dark:text-gray-400" />
-                                                        <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+                                                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                                                             {currentProject.name}
                                                         </span>
                                                     </div>
@@ -172,124 +172,123 @@ const AppContent: React.FC = () => {
                                             </div>
                                         </button>
                                     </div>
-
-                                    {/* Collapsible Header Content */}
-                                    <div className={`flex items-center space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
-                                        {/* Sessions of Current Category */}
-                                        {activeSession?.category && (
-                                            <div className="flex gap-2 p-3 bg-white dark:bg-gray-700 rounded-xl shadow-md border border-gray-200 dark:border-gray-600">
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                                        {activeSession.category}
-                                                    </span>
-                                                    <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
-                                                </div>
-                                                {savedSessions.filter((s: any) => s.category === activeSession.category).length > 0 ? (
-                                                    <div className="flex gap-1">
-                                                        {savedSessions
-                                                            .filter((s: any) => s.category === activeSession.category)
-                                                            .map((session: any) => (
-                                                                <button
-                                                                    key={session.id}
-                                                                    onClick={() => handleLoadSession(session)}
-                                                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color
-                                                                        } ${activeSession.id === session.id
-                                                                            ? "bg-opacity-100 shadow-md"
-                                                                            : "bg-opacity-30 dark:bg-opacity-30 hover:bg-opacity-50"
-                                                                        }`}
-                                                                >
-                                                                    {session.name}
-                                                                </button>
-                                                            ))}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-sm text-gray-500 dark:text-gray-400">No other sessions</span>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Active Session Method Badge */}
-                                        {activeSession?.requestConfig && (
+                                    {/* Sessions of Current Category */}
+                                    {activeSession?.category && (
+                                        <div className={`flex gap-2 p-3 bg-white rounded-xl border border-gray-200 shadow-md ${isHeaderCollapsed ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
                                             <div className="flex items-center space-x-2">
-                                                <span className={`px-3 py-2 rounded-lg text-xs font-bold shadow-md ${methodColor[activeSession.requestConfig.method as keyof typeof methodColor]?.color
-                                                    }`}>
-                                                    {activeSession.requestConfig.method}
+                                                <span className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                                                    {activeSession.category}
                                                 </span>
+                                                <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
                                             </div>
-                                        )}
+                                            {savedSessions.filter((s: any) => s.category === activeSession.category).length > 0 ? (
+                                                <div className="flex gap-1">
+                                                    {savedSessions
+                                                        .filter((s: any) => s.category === activeSession.category)
+                                                        .map((session: any) => (
+                                                            <button
+                                                                key={session.id}
+                                                                onClick={() => handleLoadSession(session)}
+                                                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color
+                                                                    } ${activeSession.id === session.id
+                                                                        ? "bg-opacity-100 shadow-md"
+                                                                        : "bg-opacity-30 dark:bg-opacity-30 hover:bg-opacity-50"
+                                                                    }`}
+                                                            >
+                                                                {session.name}
+                                                            </button>
+                                                        ))}
+                                                </div>
+                                            ) : (
+                                                <span className="text-sm text-gray-500 dark:text-gray-400">No other sessions</span>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2 justify-end items-center">
+                                        {/* Collapsible Header Content */}
+                                        <div className={`flex items-center space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
 
-                                        {/* Action Buttons */}
-                                        <div className="flex items-center space-x-2">
-                                            {/* Project Manager Button */}
-                                            <button
-                                                onClick={() => setShowUnifiedManager(true)}
-                                                className={`group p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md ${isDarkMode
-                                                    ? "text-gray-300 bg-gray-700 hover:bg-gray-600 hover:text-white"
-                                                    : "text-gray-700 bg-gray-100 hover:bg-gray-200 hover:text-gray-900"
-                                                    }`}
-                                                title="Manager"
-                                            >
-                                                <FiSettings size={18} className="transition-transform duration-200 group-hover:rotate-90" />
-                                            </button>
 
-                                            {/* Dark Mode Toggle */}
-                                            <button
-                                                onClick={toggleDarkMode}
-                                                className={`group p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md ${isDarkMode
-                                                    ? "text-yellow-300 bg-gray-700 hover:bg-gray-600"
-                                                    : "text-gray-700 bg-gray-100 hover:bg-gray-200"
-                                                    }`}
-                                                aria-label="Toggle dark mode"
-                                                title="Toggle dark mode"
-                                            >
-                                                <span className="text-lg transition-transform duration-200 group-hover:scale-110">
-                                                    {isDarkMode ? "☀️" : "🌙"}
-                                                </span>
-                                            </button>
 
-                                            {/* Token Status */}
-                                            <button
-                                                onClick={handleRegenerateToken}
-                                                className={`group p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md ${isTokenExpired
-                                                    ? "text-red-500 bg-red-100 dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800"
-                                                    : isTokenLoading
-                                                        ? "text-blue-500 bg-blue-100 dark:bg-blue-900 dark:text-blue-300"
-                                                        : "text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800"
-                                                    }`}
-                                                title={
-                                                    isTokenExpired
-                                                        ? "Token expired. Click to regenerate."
+                                            {/* Action Buttons */}
+                                            <div className="flex items-center space-x-2">
+                                                {/* Active Session Method Badge */}
+                                                {activeSession?.requestConfig && (
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className={`px-3 py-2 rounded-lg text-xs font-bold shadow-md ${methodColor[activeSession.requestConfig.method]?.color
+                                                            }`}>
+                                                            {activeSession.requestConfig.method}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {/* Project Manager Button */}
+                                                <button
+                                                    onClick={() => setShowUnifiedManager(true)}
+                                                    className={`group p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md ${isDarkMode
+                                                        ? "text-gray-300 bg-gray-700 hover:bg-gray-600 hover:text-white"
+                                                        : "text-gray-700 bg-gray-100 hover:bg-gray-200 hover:text-gray-900"
+                                                        }`}
+                                                    title="Manager"
+                                                >
+                                                    <FiSettings size={18} className="transition-transform duration-200 group-hover:rotate-90" />
+                                                </button>
+
+                                                {/* Dark Mode Toggle */}
+                                                <button
+                                                    onClick={toggleDarkMode}
+                                                    className={`p-2 text-gray-700 bg-gray-100 rounded-xl shadow-md transition-all duration-200 group hover:scale-105 dark:text-yellow-300 dark:bg-gray-700 dark:hover:bg-gray-600 hover:bg-gray-200`}
+                                                    aria-label="Toggle dark mode"
+                                                    title="Toggle dark mode"
+                                                >
+                                                    <span className="text-lg transition-transform duration-200 group-hover:scale-110">
+                                                        {isDarkMode ? "☀️" : "🌙"}
+                                                    </span>
+                                                </button>
+
+                                                {/* Token Status */}
+                                                <button
+                                                    onClick={handleRegenerateToken}
+                                                    className={`group p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md ${isTokenExpired
+                                                        ? "text-red-500 bg-red-100 dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800"
                                                         : isTokenLoading
-                                                            ? "Checking token..."
-                                                            : `Token valid${tokenDuration !== null ? ` (${Math.round(tokenDuration)} min left)` : ""}`
-                                                }
-                                                aria-label="Regenerate token"
-                                            >
-                                                <FiKey size={18} className={`transition-transform duration-200 group-hover:scale-110 ${isTokenLoading ? 'animate-spin' : ''}`} />
-                                            </button>
+                                                            ? "text-blue-500 bg-blue-100 dark:bg-blue-900 dark:text-blue-300"
+                                                            : "text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800"
+                                                        }`}
+                                                    title={
+                                                        isTokenExpired
+                                                            ? "Token expired. Click to regenerate."
+                                                            : isTokenLoading
+                                                                ? "Checking token..."
+                                                                : `Token valid${tokenDuration !== null ? ` (${Math.round(tokenDuration)} min left)` : ""}`
+                                                    }
+                                                    aria-label="Regenerate token"
+                                                >
+                                                    <FiKey size={18} className={`transition-transform duration-200 group-hover:scale-110 ${isTokenLoading ? 'animate-spin' : ''}`} />
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* Hamburger Menu Button */}
-                                    <button
-                                        onClick={toggleHeaderCollapse}
-                                        className={`group flex justify-center items-center p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md ${isDarkMode
-                                            ? "text-gray-300 bg-gray-700 hover:bg-gray-600"
-                                            : "text-gray-700 bg-gray-100 hover:bg-gray-200"
-                                            }`}
-                                        title={isHeaderCollapsed ? "Expand header" : "Collapse header"}
-                                        aria-label={isHeaderCollapsed ? "Expand header" : "Collapse header"}
-                                    >
-                                        <div className="transition-transform duration-200 group-hover:scale-110">
-                                            {isHeaderCollapsed ? <FiMenu size={18} /> : <FiX size={18} />}
-                                        </div>
-                                    </button>
+                                        {/* Hamburger Menu Button */}
+                                        <button
+                                            onClick={toggleHeaderCollapse}
+                                            className={`group flex justify-center items-center p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md ${isDarkMode
+                                                ? "text-gray-300 bg-gray-700 hover:bg-gray-600"
+                                                : "text-gray-700 bg-gray-100 hover:bg-gray-200"
+                                                }`}
+                                            title={isHeaderCollapsed ? "Expand header" : "Collapse header"}
+                                            aria-label={isHeaderCollapsed ? "Expand header" : "Collapse header"}
+                                        >
+                                            <div className="transition-transform duration-200 group-hover:scale-110">
+                                                {isHeaderCollapsed ? <FiMenu size={18} /> : <FiX size={18} />}
+                                            </div>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </header>
 
                         {/* Navigation */}
-                        <nav className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <nav className="overflow-hidden mt-6 bg-white rounded-xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
                             <div className="flex p-2 space-x-1">
                                 {sections.map((section) => (
                                     <button
@@ -308,8 +307,8 @@ const AppContent: React.FC = () => {
 
                         {/* Main Content */}
                         <main className="mt-4">{renderActiveSection()}</main>
-                    </div>
-                </div>
+                    </div >
+                </div >
             )}
 
             {/* Unified Manager Modal */}
