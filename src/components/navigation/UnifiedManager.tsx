@@ -8,8 +8,7 @@ import {
     ModalType,
 } from "../../types/features/SavedManager";
 import { Project } from "../../types/core/project.types";
-import { FiPlus, FiEdit2, FiCopy, FiTrash2, FiChevronDown, FiGlobe, FiFolder, FiCheck, FiSettings, FiKey } from "react-icons/fi";
-import { Disclosure, DisclosureButton, DisclosurePanel, Transition } from '@headlessui/react';
+import { FiPlus, FiEdit2, FiCopy, FiTrash2, FiChevronDown, FiGlobe, FiFolder, FiCheck, FiSettings, FiKey, FiDownload, FiUpload, FiCheckSquare, FiSquare } from "react-icons/fi";
 import { useAppContext } from "../../context/AppContext";
 
 interface UnifiedManagerProps {
@@ -82,6 +81,20 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
     const [newProjectDescription, setNewProjectDescription] = useState("");
     const [editProjectName, setEditProjectName] = useState("");
     const [editProjectDescription, setEditProjectDescription] = useState("");
+
+    // Import/export states
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importData, setImportData] = useState<any>(null);
+    const [importStep, setImportStep] = useState<'options' | 'choose'>('options');
+    const [selectedImportSessions, setSelectedImportSessions] = useState<string[]>([]);
+    const [selectedImportVariables, setSelectedImportVariables] = useState<string[]>([]);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    // Add state for open categories
+    const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+    const toggleCategory = (cat: string) => {
+        setOpenCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
+    };
 
     // Cleanup on unmount
     useEffect(() => {
@@ -449,6 +462,86 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
     // Get unique categories from savedSessions
     const existingCategories = Array.from(new Set(savedSessions.map(s => (s.category || '').trim()).filter(Boolean)));
 
+    // Export handler
+    const handleExport = () => {
+        const safeGlobalVariables = Object.fromEntries(Object.entries(globalVariables).map(([key, _]) => [key, '']));
+        const data = {
+            savedSessions,
+            globalVariables: safeGlobalVariables,
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'saved_manager_export.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // Import handlers
+    const handleImportClick = () => {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        fileInputRef.current?.click();
+    };
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target?.result as string);
+                setImportData(data);
+                setImportStep('options');
+                setShowImportModal(true);
+                setSelectedImportSessions(data.savedSessions?.map((s: any) => s.id) || []);
+                setSelectedImportVariables(Object.keys(data.globalVariables || {}));
+            } catch (err) {
+                setError('Invalid import file');
+            }
+        };
+        reader.readAsText(file);
+    };
+    const handleImportOption = (option: 'add' | 'override' | 'choose') => {
+        if (!importData) return;
+        if (option === 'add') {
+            // Merge sessions (skip duplicates by id)
+            const newSessions = importData.savedSessions?.filter((s: any) => !savedSessions.some(sess => sess.id === s.id)) || [];
+            const mergedSessions = [...savedSessions, ...newSessions];
+            // Merge variables (skip duplicates by key)
+            const newVars = Object.entries(importData.globalVariables || {}).filter(([k]) => !(k in globalVariables));
+            const mergedVars = { ...globalVariables, ...Object.fromEntries(newVars) };
+            // Save
+            mergedSessions.forEach(s => handleSaveSession(s.name, s));
+            Object.entries(mergedVars).forEach(([k, v]) => updateGlobalVariable(k, v as string));
+            setShowImportModal(false);
+        } else if (option === 'override') {
+            // Replace all
+            (importData.savedSessions || []).forEach((s: any) => handleSaveSession(s.name, s));
+            Object.entries(importData.globalVariables || {}).forEach(([k, v]) => updateGlobalVariable(k, v as string));
+            setShowImportModal(false);
+        } else if (option === 'choose') {
+            setImportStep('choose');
+        }
+    };
+    const handleChooseImport = () => {
+        if (!importData) return;
+        // Sessions
+        const chosenSessions = (importData.savedSessions || []).filter((s: any) => selectedImportSessions.includes(s.id));
+        chosenSessions.forEach((s: any) => handleSaveSession(s.name, s));
+        // Variables
+        const chosenVars = Object.fromEntries(
+            Object.entries(importData.globalVariables || {}).filter(([k]) => selectedImportVariables.includes(k))
+        );
+        Object.entries(chosenVars).forEach(([k, v]) => updateGlobalVariable(k, v as string));
+        setShowImportModal(false);
+    };
+    const toggleSession = (id: string) => {
+        setSelectedImportSessions(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+    const toggleVariable = (key: string) => {
+        setSelectedImportVariables(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -544,16 +637,33 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                     {/* Action Button */}
                                     <div className="flex items-center space-x-3">
                                         <button
-                                            onClick={() => handleSessionAction("new")}
+                                            onClick={handleExport}
                                             className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden ${isDarkMode
-                                                ? "text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25"
-                                                : "text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25"
+                                                ? "text-white bg-gradient-to-r from-gray-700 via-gray-600 to-gray-800 hover:from-gray-800 hover:via-gray-700 hover:to-gray-900 shadow-gray-500/25"
+                                                : "text-gray-800 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-300 hover:from-gray-200 hover:via-gray-300 hover:to-gray-400 shadow-gray-500/25"
                                                 }`}
                                         >
-                                            <div className="absolute inset-0 bg-gradient-to-r transition-transform duration-700 transform -translate-x-full -skew-x-12 from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
-                                            <FiPlus className="relative z-10 w-4 h-4" />
-                                            <span className="relative z-10">Create Session</span>
+                                            <FiDownload className="relative z-10 w-4 h-4" />
+                                            <span className="relative z-10">Export</span>
                                         </button>
+                                        <button
+                                            onClick={handleImportClick}
+                                            className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden ${isDarkMode
+                                                ? "text-white bg-gradient-to-r from-gray-700 via-gray-600 to-gray-800 hover:from-gray-800 hover:via-gray-700 hover:to-gray-900 shadow-gray-500/25"
+                                                : "text-gray-800 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-300 hover:from-gray-200 hover:via-gray-300 hover:to-gray-400 shadow-gray-500/25"
+                                                }`}
+                                        >
+                                            <FiUpload className="relative z-10 w-4 h-4" />
+                                            <span className="relative z-10">Import</span>
+                                        </button>
+                                        {/* Hidden file input for import */}
+                                        <input
+                                            type="file"
+                                            accept="application/json"
+                                            ref={fileInputRef}
+                                            style={{ display: 'none' }}
+                                            onChange={handleFileChange}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -615,35 +725,34 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
 
                             {/* Session List */}
                             {divideBy === 'category' ? (
-                                Object.entries(groupByCategory(orderSessions(savedSessions))).map(([cat, sessions]) => (
-                                    <Disclosure key={cat}>
-                                        {({ open }: { open: boolean }) => (
-                                            <div className="mb-4">
-                                                <DisclosureButton className={`flex items-center w-full text-left font-semibold mb-2 focus:outline-none ${isDarkMode ? 'text-blue-200' : 'text-blue-700'}`}>
-                                                    <FiChevronDown
-                                                        className={`transition-transform duration-200 mr-2 ${open ? 'rotate-180' : ''}`}
-                                                    />
-                                                    {cat}
-                                                </DisclosureButton>
-                                                <Transition
-                                                    show={open}
-                                                    enter="transition-all duration-500 ease-in-out"
-                                                    enterFrom="max-h-0 opacity-0"
-                                                    enterTo="max-h-96 opacity-100"
-                                                    leave="transition-all duration-500 ease-in-out"
-                                                    leaveFrom="max-h-96 opacity-100"
-                                                    leaveTo="max-h-0 opacity-0"
-                                                >
-                                                    <DisclosurePanel>
-                                                        <div className="space-y-2">
-                                                            {sessions.map((session) => sessionCard(session))}
-                                                        </div>
-                                                    </DisclosurePanel>
-                                                </Transition>
+                                Object.entries(groupByCategory(orderSessions(savedSessions))).map(([cat, sessions]) => {
+                                    const isOpen = openCategories[cat] || false;
+                                    return (
+                                        <div key={cat} className="mb-4">
+                                            <button
+                                                className={`flex items-center w-full text-left font-semibold mb-2 px-4 py-3 rounded-lg transition-colors focus:outline-none border border-transparent hover:border-blue-300 focus:border-blue-400 bg-white dark:bg-gray-800 ${isOpen ? (isDarkMode ? 'shadow-lg' : 'shadow-md') : ''}`}
+                                                onClick={() => toggleCategory(cat)}
+                                                aria-expanded={isOpen}
+                                            >
+                                                <FiChevronDown
+                                                    className={`transition-transform duration-200 mr-2 ${isOpen ? 'rotate-180' : ''}`}
+                                                    aria-hidden="true"
+                                                />
+                                                <span className="flex-1">{cat}</span>
+                                                <span className="text-xs text-gray-400">{sessions.length} session{sessions.length !== 1 ? 's' : ''}</span>
+                                            </button>
+                                            <div
+                                                className={`overflow-hidden transition-all duration-300 ${isOpen ? 'opacity-100' : 'max-h-0 opacity-0'}`}
+                                                style={{ willChange: 'max-height, opacity' }}
+                                                aria-hidden={!isOpen}
+                                            >
+                                                <div className="space-y-2 p-2">
+                                                    {sessions.map((session) => sessionCard(session))}
+                                                </div>
                                             </div>
-                                        )}
-                                    </Disclosure>
-                                ))
+                                        </div>
+                                    );
+                                })
                             ) : (
                                 <div className="space-y-2">
                                     {orderSessions(savedSessions).map((session) => sessionCard(session))}
@@ -1302,6 +1411,81 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                     Are you sure you want to delete the project "{deletingProject?.name}"? This action cannot be undone.
                 </p>
             </Modal>
+
+            {/* Import Modal */}
+            {showImportModal && (
+                <Modal
+                    isOpen={showImportModal}
+                    onClose={() => setShowImportModal(false)}
+                    title={importStep === 'options' ? 'Import Sessions & Variables' : 'Choose What to Import'}
+                    showSaveButton={false}
+                >
+                    {importStep === 'options' ? (
+                        <div className="space-y-4">
+                            <button
+                                className="px-4 py-2 w-full text-white bg-blue-600 rounded hover:bg-blue-700"
+                                onClick={() => handleImportOption('add')}
+                            >
+                                Import and Add (merge, skip duplicates)
+                            </button>
+                            <button
+                                className="px-4 py-2 w-full text-white bg-red-600 rounded hover:bg-red-700"
+                                onClick={() => handleImportOption('override')}
+                            >
+                                Import and Override (replace all)
+                            </button>
+                            <button
+                                className="px-4 py-2 w-full text-white bg-yellow-500 rounded hover:bg-yellow-600"
+                                onClick={() => handleImportOption('choose')}
+                            >
+                                Import and Choose What to Import
+                            </button>
+                        </div>
+                    ) :
+                        <div className="space-y-6">
+                            <div>
+                                <h4 className="mb-2 font-semibold">Sessions</h4>
+                                <div className="overflow-y-auto space-y-1 max-h-40">
+                                    {(importData.savedSessions || []).map((s: any) => (
+                                        <div key={s.id} className="flex items-center space-x-2">
+                                            <button onClick={() => toggleSession(s.id)} className="focus:outline-none">
+                                                {selectedImportSessions.includes(s.id) ? <FiCheckSquare /> : <FiSquare />}
+                                            </button>
+                                            <span>{s.name}</span>
+                                            {savedSessions.some(sess => sess.id === s.id) && (
+                                                <span className="ml-2 text-xs text-red-500">(already exists)</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="mb-2 font-semibold">Global Variables</h4>
+                                <div className="overflow-y-auto space-y-1 max-h-40">
+                                    {Object.entries(importData.globalVariables || {}).map(([k, _]) => (
+                                        <div key={k} className="flex items-center space-x-2">
+                                            <button onClick={() => toggleVariable(k)} className="focus:outline-none">
+                                                {selectedImportVariables.includes(k) ? <FiCheckSquare /> : <FiSquare />}
+                                            </button>
+                                            <span>{k}</span>
+                                            {globalVariables[k] !== undefined && (
+                                                <span className="ml-2 text-xs text-red-500">(already exists)</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <button
+                                className="px-4 py-2 mt-4 w-full text-white bg-blue-600 rounded hover:bg-blue-700"
+                                onClick={handleChooseImport}
+                            >
+                                Import Selected
+                            </button>
+                        </div>
+                    }
+                    {error && <p className="mt-2 text-red-500">{error}</p>}
+                </Modal>
+            )}
         </>
     );
 };
