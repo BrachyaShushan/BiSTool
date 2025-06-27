@@ -62,6 +62,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
     activeSession,
     handleSaveSession,
     setActiveSection,
+    generateAuthHeaders,
   } = useAppContext();
 
   const { isDarkMode } = useTheme();
@@ -311,27 +312,12 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
       url = queryString
         ? `${url}?${queryString}`
         : url;
-      let tokenHeader: Header | null = null;
-      if (includeToken) {
-        const tokenName = getValueFromVariables("tokenName") as string;
-        if (tokenName) {
-          const tokenValue = getValueFromVariables(tokenName);
-          if (tokenValue) {
-            tokenHeader = {
-              key: tokenName,
-              type: "string",
-              in: "header",
-              required: true,
-              description: tokenName,
-              value: tokenValue as string,
-            };
-          }
-        }
-      }
 
-      // Combine headers and ensure token is included
+      // Generate authentication headers based on the chosen auth method
+      const authHeaders = generateAuthHeaders();
+
+      // Combine headers and ensure authentication is included
       const combinedHeaders = [
-        ...(tokenHeader ? [tokenHeader] : []),
         ...(requestConfig?.headers ?? [])
       ].filter(Boolean);
 
@@ -345,6 +331,9 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
         }
         return acc;
       }, {} as Record<string, string>);
+
+      // Add authentication headers
+      Object.assign(headers, authHeaders);
 
       // Function to check if HTTP method supports a body
       const methodSupportsBody = (httpMethod: string): boolean => {
@@ -452,24 +441,21 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
     const category = activeSession?.category ?? "API";
     const description = activeSession?.urlData?.sessionDescription?.split("\n").map(line => line.trim()).join(". ") ?? "";
 
-    if (includeToken) {
-      const tokenName = getValueFromVariables("tokenName") as string;
-      let tokenHeader: Header | null = null;
-      if (tokenName) {
-        const tokenValue = getValueFromVariables(tokenName);
-        if (tokenValue) {
-          tokenHeader = {
-            key: tokenName,
-            type: "string",
-            in: "header",
-            required: true,
-            description: tokenName,
-            value: (tokenValue as string).split(".").map(() => "xxx").join("."),
-          };
-          headers = [tokenHeader, ...headers];
-        }
-      }
+    // Add authentication headers to YAML if authentication is configured
+    const authHeaders = generateAuthHeaders();
+    if (Object.keys(authHeaders).length > 0) {
+      Object.entries(authHeaders).forEach(([key, value]) => {
+        headers.push({
+          key,
+          value: value.includes('.') ? value.split('.').map(() => 'xxx').join('.') : 'xxx',
+          type: "string",
+          in: "header",
+          required: true,
+          description: `Authentication header for ${key}`,
+        });
+      });
     }
+
     // Generate path parameters from dynamic segments
     const pathParameters = urlData?.parsedSegments
       ?.filter((segment) => segment.isDynamic)

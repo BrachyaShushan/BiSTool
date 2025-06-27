@@ -73,13 +73,50 @@ export interface Variable {
 
 export interface TokenConfig {
   domain: string;
-  method: "POST" | "GET";
+  method: "POST" | "GET" | "PUT" | "PATCH";
   path: string;
   tokenName: string;
   headerKey: string;
   headerValueFormat: string;
   refreshToken: boolean;
   refreshTokenName: string;
+
+  // Enhanced authentication types
+  authType: "basic" | "bearer" | "api_key" | "oauth2" | "session" | "custom";
+
+  // OAuth2 specific configuration
+  oauth2?: {
+    grantType:
+      | "authorization_code"
+      | "client_credentials"
+      | "password"
+      | "implicit";
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+    scope: string;
+    authorizationUrl: string;
+    tokenUrl: string;
+    refreshUrl?: string;
+  };
+
+  // API Key configuration
+  apiKey?: {
+    keyName: string;
+    keyValue: string;
+    location: "header" | "query" | "cookie";
+    prefix?: string;
+  };
+
+  // Session-based authentication
+  session?: {
+    sessionIdField: string;
+    sessionTokenField: string;
+    keepAlive: boolean;
+    keepAliveInterval: number;
+  };
+
+  // Enhanced extraction methods with priority and patterns
   extractionMethods: {
     json: boolean;
     jsonPaths: string[];
@@ -87,11 +124,72 @@ export interface TokenConfig {
     cookieNames: string[];
     headers: boolean;
     headerNames: string[];
+    // New extraction methods
+    regex: boolean;
+    regexPatterns: string[];
+    xpath: boolean;
+    xpathExpressions: string[];
+    css: boolean;
+    cssSelectors: string[];
+    // Advanced JSON extraction with nested paths
+    nestedJson: boolean;
+    nestedPaths: Array<{
+      path: string;
+      type: "string" | "object" | "array";
+      transform?: "base64_decode" | "url_decode" | "json_parse" | "none";
+    }>;
   };
+
+  // Enhanced request mapping for different auth types
   requestMapping: {
     usernameField: string;
     passwordField: string;
-    contentType: "form" | "json";
+    contentType: "form" | "json" | "xml" | "multipart";
+    // Additional fields for different auth types
+    additionalFields: Array<{
+      name: string;
+      value: string;
+      type: "static" | "variable" | "dynamic";
+      required: boolean;
+    }>;
+    // Custom headers for the request
+    customHeaders: Array<{
+      name: string;
+      value: string;
+      type: "static" | "variable";
+    }>;
+  };
+
+  // Token validation and refresh configuration
+  validation: {
+    validateOnExtract: boolean;
+    validationEndpoint?: string;
+    validationMethod: "GET" | "POST";
+    validationHeaders: Array<{
+      name: string;
+      value: string;
+    }>;
+    autoRefresh: boolean;
+    refreshThreshold: number; // minutes before expiry
+    maxRefreshAttempts: number;
+  };
+
+  // Security and encryption
+  security: {
+    encryptToken: boolean;
+    encryptionKey?: string;
+    hashToken: boolean;
+    hashAlgorithm: "sha256" | "sha512" | "md5";
+    maskTokenInLogs: boolean;
+  };
+
+  // Error handling and fallback
+  errorHandling: {
+    retryOnFailure: boolean;
+    maxRetries: number;
+    retryDelay: number;
+    fallbackAuth?: "basic" | "api_key" | "session";
+    customErrorMessages: Record<string, string>;
   };
 }
 
@@ -148,6 +246,9 @@ export interface AppContextType {
   handleYAMLGenerated: (yaml: string) => void;
   deleteGlobalVariable: (key: string) => void;
   regenerateToken: () => Promise<void>;
+  generateAuthHeaders: () => Record<string, string>;
+  getCurrentToken: () => string | null;
+  isAuthenticated: () => boolean;
 }
 
 export interface ThemeContextType {

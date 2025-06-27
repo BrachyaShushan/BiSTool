@@ -14,6 +14,7 @@ import {
   TokenConfig,
 } from "../types";
 import { ExtendedSession } from "../types/features/SavedManager";
+import { TokenManager } from "../utils/tokenHandlers";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -61,6 +62,39 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     headerValueFormat: "{token}",
     refreshToken: false,
     refreshTokenName: "refresh_token",
+
+    // Enhanced authentication types
+    authType: "bearer",
+
+    // OAuth2 specific configuration
+    oauth2: {
+      grantType: "password",
+      clientId: "",
+      clientSecret: "",
+      redirectUri: "",
+      scope: "",
+      authorizationUrl: "",
+      tokenUrl: "",
+      refreshUrl: "",
+    },
+
+    // API Key configuration
+    apiKey: {
+      keyName: "X-API-Key",
+      keyValue: "",
+      location: "header",
+      prefix: "",
+    },
+
+    // Session-based authentication
+    session: {
+      sessionIdField: "session_id",
+      sessionTokenField: "session_token",
+      keepAlive: false,
+      keepAliveInterval: 300,
+    },
+
+    // Enhanced extraction methods with priority and patterns
     extractionMethods: {
       json: true,
       jsonPaths: [],
@@ -68,11 +102,55 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
       cookieNames: [],
       headers: true,
       headerNames: [],
+      // New extraction methods
+      regex: false,
+      regexPatterns: [],
+      xpath: false,
+      xpathExpressions: [],
+      css: false,
+      cssSelectors: [],
+      // Advanced JSON extraction with nested paths
+      nestedJson: false,
+      nestedPaths: [],
     },
+
+    // Enhanced request mapping for different auth types
     requestMapping: {
       usernameField: "username",
       passwordField: "password",
       contentType: "form",
+      // Additional fields for different auth types
+      additionalFields: [],
+      // Custom headers for the request
+      customHeaders: [],
+    },
+
+    // Token validation and refresh configuration
+    validation: {
+      validateOnExtract: false,
+      validationEndpoint: "",
+      validationMethod: "GET",
+      validationHeaders: [],
+      autoRefresh: false,
+      refreshThreshold: 5, // minutes before expiry
+      maxRefreshAttempts: 3,
+    },
+
+    // Security and encryption
+    security: {
+      encryptToken: false,
+      encryptionKey: "",
+      hashToken: false,
+      hashAlgorithm: "sha256",
+      maskTokenInLogs: true,
+    },
+
+    // Error handling and fallback
+    errorHandling: {
+      retryOnFailure: true,
+      maxRetries: 3,
+      retryDelay: 1000,
+      customErrorMessages: {},
     },
   });
   const methodColor = {
@@ -297,6 +375,39 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
           headerValueFormat: "{token}",
           refreshToken: false,
           refreshTokenName: "refresh_token",
+
+          // Enhanced authentication types
+          authType: "bearer",
+
+          // OAuth2 specific configuration
+          oauth2: {
+            grantType: "password",
+            clientId: "",
+            clientSecret: "",
+            redirectUri: "",
+            scope: "",
+            authorizationUrl: "",
+            tokenUrl: "",
+            refreshUrl: "",
+          },
+
+          // API Key configuration
+          apiKey: {
+            keyName: "X-API-Key",
+            keyValue: "",
+            location: "header",
+            prefix: "",
+          },
+
+          // Session-based authentication
+          session: {
+            sessionIdField: "session_id",
+            sessionTokenField: "session_token",
+            keepAlive: false,
+            keepAliveInterval: 300,
+          },
+
+          // Enhanced extraction methods with priority and patterns
           extractionMethods: {
             json: false,
             jsonPaths: [],
@@ -304,11 +415,55 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
             cookieNames: [],
             headers: false,
             headerNames: [],
+            // New extraction methods
+            regex: false,
+            regexPatterns: [],
+            xpath: false,
+            xpathExpressions: [],
+            css: false,
+            cssSelectors: [],
+            // Advanced JSON extraction with nested paths
+            nestedJson: false,
+            nestedPaths: [],
           },
+
+          // Enhanced request mapping for different auth types
           requestMapping: {
             usernameField: "username",
             passwordField: "password",
             contentType: "form",
+            // Additional fields for different auth types
+            additionalFields: [],
+            // Custom headers for the request
+            customHeaders: [],
+          },
+
+          // Token validation and refresh configuration
+          validation: {
+            validateOnExtract: false,
+            validationEndpoint: "",
+            validationMethod: "GET",
+            validationHeaders: [],
+            autoRefresh: false,
+            refreshThreshold: 5, // minutes before expiry
+            maxRefreshAttempts: 3,
+          },
+
+          // Security and encryption
+          security: {
+            encryptToken: false,
+            encryptionKey: "",
+            hashToken: false,
+            hashAlgorithm: "sha256",
+            maskTokenInLogs: true,
+          },
+
+          // Error handling and fallback
+          errorHandling: {
+            retryOnFailure: true,
+            maxRetries: 3,
+            retryDelay: 1000,
+            customErrorMessages: {},
           },
         });
       }
@@ -544,6 +699,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
 
   const handleSaveSession = useCallback(
     (name: string, sessionData?: ExtendedSession) => {
+      console.log('handleSaveSession called with name:', name, 'sessionData:', sessionData);
+
       const newSession: ExtendedSession = sessionData || {
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         name,
@@ -568,8 +725,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
         activeSection: activeSection,
       };
 
+      console.log('Created new session:', newSession);
+
       // Validate session data
       if (!newSession.id || !newSession.name || !newSession.timestamp) {
+        console.error('Invalid session data:', newSession);
         throw new Error("Invalid session data");
       }
 
@@ -578,18 +738,22 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
         if (existingIndex >= 0) {
           const updated = [...prev];
           updated[existingIndex] = newSession;
+          console.log('Updated existing session at index:', existingIndex);
           return updated;
         }
+        console.log('Adding new session to saved sessions');
         return [...prev, newSession];
       });
 
       setActiveSession(newSession);
+      console.log('Set active session:', newSession);
 
       // Save to localStorage immediately
       const activeSessionStorageKey = getProjectStorageKey("active_session");
       const savedSessionsStorageKey = getProjectStorageKey("saved_sessions");
       localStorage.setItem(activeSessionStorageKey, JSON.stringify(newSession));
       localStorage.setItem(savedSessionsStorageKey, JSON.stringify(savedSessions));
+      console.log('Saved to localStorage');
     },
     [
       urlData,
@@ -751,91 +915,107 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
       if (!globalVariables['username'] || !globalVariables['password']) {
         throw new Error("Please set username and password in global variables");
       }
+
       const domain = replaceVariables(tokenConfig.domain);
       if (!domain) {
         throw new Error("Please set a valid domain");
       }
-      const requestUrl = `${domain}${tokenConfig.path}`;
-      let requestBody: string;
-      let contentType: string;
-      if (tokenConfig.requestMapping.contentType === "json") {
-        const bodyData = {
-          [tokenConfig.requestMapping.usernameField]: globalVariables['username'],
-          [tokenConfig.requestMapping.passwordField]: globalVariables['password']
-        };
-        requestBody = JSON.stringify(bodyData);
-        contentType = 'application/json';
-      } else {
-        requestBody = `${tokenConfig.requestMapping.usernameField}=${encodeURIComponent(
-          globalVariables['username']
-        )}&${tokenConfig.requestMapping.passwordField}=${encodeURIComponent(
-          globalVariables['password']
-        )}`;
-        contentType = 'application/x-www-form-urlencoded';
-      }
-      const response = await fetch(requestUrl, {
-        method: tokenConfig.method,
-        headers: {
-          'Accept': '*/*',
-          'Content-Type': contentType,
-        },
-        body: requestBody,
-      });
-      await new Promise(resolve => setTimeout(resolve, 100));
-      let token: string | null = null;
-      let responseText = '';
-      if (tokenConfig.extractionMethods.json) {
-        try {
-          responseText = await response.text();
-          let jsonData: any;
-          try {
-            jsonData = JSON.parse(responseText);
-          } catch (e) { }
-          if (jsonData) {
-            token = extractTokenFromJson(jsonData, tokenConfig.extractionMethods.jsonPaths);
-          }
-        } catch (e) { }
-      }
-      if (!token && tokenConfig.extractionMethods.cookies) {
-        token = extractTokenFromSetCookieHeader(response, tokenConfig.extractionMethods.cookieNames);
-        if (!token) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          token = extractTokenFromCookies(tokenConfig.extractionMethods.cookieNames);
-        }
-      }
-      if (!token && tokenConfig.extractionMethods.headers) {
-        token = extractTokenFromHeaders(response, tokenConfig.extractionMethods.headerNames);
-      }
-      if (!token && tokenConfig.extractionMethods.cookies) {
-        if (!responseText) {
-          responseText = await response.text();
-        }
-        token = extractTokenFromResponseText(responseText);
-      }
-      if (!token) {
-        throw new Error("Token not found in response. Check your extraction configuration.");
-      }
-      updateGlobalVariable(tokenConfig.tokenName, token);
+
+      // Create TokenManager instance
+      const tokenManager = new TokenManager(tokenConfig, globalVariables);
+
+      // Generate token using the manager
+      const result = await tokenManager.generateToken();
+
+      // Update global variables with the extracted token
+      updateGlobalVariable(tokenConfig.tokenName, result.token);
       updateGlobalVariable("tokenName", tokenConfig.tokenName);
-      if (tokenConfig.refreshToken) {
-        let refreshToken: string | null = null;
-        if (tokenConfig.extractionMethods.json && responseText) {
-          try {
-            const jsonData = JSON.parse(responseText);
-            refreshToken = jsonData.refresh_token || jsonData.refreshToken;
-          } catch (e) { }
-        }
-        if (!refreshToken && tokenConfig.extractionMethods.cookies) {
-          refreshToken = getCookieValue(tokenConfig.refreshTokenName);
-        }
-        if (refreshToken) {
-          updateGlobalVariable(tokenConfig.refreshTokenName, refreshToken);
-        }
+
+      // Handle refresh token if available
+      if (result.refreshToken) {
+        updateGlobalVariable(tokenConfig.refreshTokenName, result.refreshToken);
       }
+
+      console.log(`Token extracted from ${result.source} successfully!`);
     } catch (error) {
       console.error("Token regeneration error:", error);
-      // Optionally, set an error state or show a toast
+      throw error;
     }
+  };
+
+  // Generate authentication headers for API requests
+  const generateAuthHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {};
+
+    switch (tokenConfig.authType) {
+      case 'bearer':
+        const token = globalVariables[tokenConfig.tokenName];
+        if (token) {
+          const headerKey = tokenConfig.headerKey || 'Authorization';
+          const headerValue = tokenConfig.headerValueFormat.replace('{token}', token);
+          headers[headerKey] = headerValue;
+        }
+        break;
+
+      case 'basic':
+        const username = globalVariables['username'];
+        const password = globalVariables['password'];
+        if (username && password) {
+          const credentials = btoa(`${username}:${password}`);
+          headers['Authorization'] = `Basic ${credentials}`;
+        }
+        break;
+
+      case 'oauth2':
+        const oauthToken = globalVariables[tokenConfig.tokenName];
+        if (oauthToken) {
+          headers['Authorization'] = `Bearer ${oauthToken}`;
+        }
+        break;
+
+      case 'api_key':
+        const apiKey = tokenConfig.apiKey?.keyValue || globalVariables[tokenConfig.apiKey?.keyName || 'api_key'];
+        if (apiKey) {
+          const keyName = tokenConfig.apiKey?.keyName || 'X-API-Key';
+          const prefix = tokenConfig.apiKey?.prefix || '';
+          headers[keyName] = `${prefix}${apiKey}`;
+        }
+        break;
+
+      case 'session':
+        const sessionId = globalVariables[tokenConfig.session?.sessionIdField || 'session_id'];
+        const sessionToken = globalVariables[tokenConfig.session?.sessionTokenField || 'session_token'];
+        if (sessionId) {
+          headers['Cookie'] = `${tokenConfig.session?.sessionIdField || 'session_id'}=${sessionId}`;
+        }
+        if (sessionToken) {
+          headers['X-Session-Token'] = sessionToken;
+        }
+        break;
+
+      case 'custom':
+        // For custom auth, use the configured header key and value format
+        const customToken = globalVariables[tokenConfig.tokenName];
+        if (customToken) {
+          const headerKey = tokenConfig.headerKey || 'Authorization';
+          const headerValue = tokenConfig.headerValueFormat.replace('{token}', customToken);
+          headers[headerKey] = headerValue;
+        }
+        break;
+    }
+
+    return headers;
+  };
+
+  // Get the current token value
+  const getCurrentToken = (): string | null => {
+    return globalVariables[tokenConfig.tokenName] || null;
+  };
+
+  // Check if authentication is configured
+  const isAuthenticated = (): boolean => {
+    const token = getCurrentToken();
+    return !!token;
   };
 
   const value: AppContextType = {
@@ -872,6 +1052,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     handleYAMLGenerated,
     deleteGlobalVariable,
     regenerateToken,
+    generateAuthHeaders,
+    getCurrentToken,
+    isAuthenticated,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

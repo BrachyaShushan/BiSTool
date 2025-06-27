@@ -29,6 +29,7 @@ const TestManager: React.FC = () => {
         activeSession,
         handleSaveSession,
         setActiveSection,
+        generateAuthHeaders,
     } = useAppContext();
 
     const { isDarkMode } = useTheme();
@@ -45,18 +46,32 @@ const TestManager: React.FC = () => {
 
     // Add Test handler
     const handleAddTest = () => {
-        if (!activeSession) return;
+        console.log('handleAddTest called');
+        console.log('activeSession:', activeSession);
+
+        if (!activeSession) {
+            console.error('No active session available');
+            return;
+        }
+
         const newTest: TestCase = {
             id: uuidv4(),
             name: '',
             expectedStatus: '200',
             expectedResponse: '',
         };
+
+        console.log('Creating new test:', newTest);
+
         const updatedSession = {
             ...activeSession,
             tests: [...(activeSession.tests || []), newTest],
         };
+
+        console.log('Updated session:', updatedSession);
+
         handleSaveSession(activeSession.name, updatedSession);
+        console.log('Test added successfully');
     };
 
     // Update Test handler
@@ -200,14 +215,9 @@ const TestManager: React.FC = () => {
             return acc;
         }, {});
 
-        // Add token header if useToken is true (or undefined)
-        if (test.useToken !== false) {
-            const tokenName = globalVariables?.['tokenName'] ?? 'x-access-token';
-            const tokenValue = globalVariables[tokenName];
-            if (tokenName && tokenValue) {
-                headers[tokenName] = tokenValue;
-            }
-        }
+        // Generate authentication headers based on the chosen auth method
+        const authHeaders = generateAuthHeaders();
+        Object.assign(headers, authHeaders);
 
         // Only add body if method supports it
         if (methodSupportsBody(requestConfig?.method ?? 'GET')) {
@@ -252,25 +262,39 @@ const TestManager: React.FC = () => {
                 if (test.expectedPartialResponse) {
                     responseMatch = isPartialMatch(test.expectedResponse, test.serverResponse);
                 } else {
-                    const respJson = await response.json();
-                    responseMatch = JSON.stringify(respJson) === test.expectedResponse;
+                    try {
+                        const respJson = await response.json();
+                        responseMatch = JSON.stringify(respJson) === test.expectedResponse;
+                    } catch {
+                        // If response is not JSON, compare as text
+                        responseMatch = test.serverResponse === test.expectedResponse;
+                    }
                 }
             }
             result = statusMatch && responseMatch ? 'pass' : 'fail';
             test.serverStatusCode = response.status;
-        } catch {
+        } catch (error) {
+            console.error('Test execution error:', error);
             result = 'fail';
             test.serverStatusCode = 0;
+            test.serverResponse = error instanceof Error ? error.message : 'Unknown error';
         }
         handleUpdateTest(test.id, { lastResult: result });
     };
 
-    if (!requestConfig) {
+    if (!activeSession) {
         return (
             <div className="p-8 text-center bg-gray-50 rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600 dark:bg-gray-700">
                 <FiAlertTriangle className="mx-auto mb-4 w-12 h-12 text-gray-400" />
-                <p className="mb-2 text-gray-500 dark:text-gray-400">No request configuration available</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">Please configure your request before creating tests</p>
+                <p className="mb-2 text-gray-500 dark:text-gray-400">No active session available</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">Please create or load a session before creating tests</p>
+                <button
+                    onClick={() => setActiveSection("url")}
+                    className="flex items-center px-4 py-2 mx-auto mt-4 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+                >
+                    <FiArrowRight className="w-4 h-4" />
+                    <span>Manage Sessions</span>
+                </button>
             </div>
         );
     }
@@ -479,6 +503,7 @@ const TestManager: React.FC = () => {
                             handleUpdateTest={handleUpdateTest}
                             handleDuplicateTest={handleDuplicateTest}
                             handleRemoveTest={handleRemoveTest}
+                            generateAuthHeaders={generateAuthHeaders}
                         />
                     ))
                 )}

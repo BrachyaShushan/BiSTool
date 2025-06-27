@@ -30,6 +30,7 @@ interface TestCardProps {
     handleUpdateTest: (id: string, update: Partial<TestCase>) => void;
     handleDuplicateTest: (id: string) => void;
     handleRemoveTest: (id: string) => void;
+    generateAuthHeaders: () => Record<string, string>;
 }
 
 const statusCodeColor = {
@@ -93,6 +94,7 @@ const TestCard: React.FC<TestCardProps> = ({
     handleUpdateTest,
     handleDuplicateTest,
     handleRemoveTest,
+    generateAuthHeaders,
 }) => {
     const [loading, setLoading] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
@@ -141,14 +143,9 @@ const TestCard: React.FC<TestCardProps> = ({
             return acc;
         }, {});
 
-        // Add token header if useToken is true (or undefined)
-        if (test.useToken !== false) {
-            const tokenName = globalVariables?.['tokenName'] ?? 'x-access-token';
-            const tokenValue = globalVariables[tokenName];
-            if (tokenName && tokenValue) {
-                headers[tokenName] = tokenValue;
-            }
-        }
+        // Generate authentication headers based on the chosen auth method
+        const authHeaders = generateAuthHeaders();
+        Object.assign(headers, authHeaders);
 
         // Only add body if method supports it
         if (methodSupportsBody(requestConfig?.method ?? 'GET')) {
@@ -191,15 +188,22 @@ const TestCard: React.FC<TestCardProps> = ({
                 if (test.expectedPartialResponse) {
                     responseMatch = isPartialMatch(test.expectedResponse, test.serverResponse);
                 } else {
-                    const respJson = await response.json();
-                    responseMatch = JSON.stringify(respJson) === test.expectedResponse;
+                    try {
+                        const respJson = await response.json();
+                        responseMatch = JSON.stringify(respJson) === test.expectedResponse;
+                    } catch {
+                        // If response is not JSON, compare as text
+                        responseMatch = test.serverResponse === test.expectedResponse;
+                    }
                 }
             }
             result = statusMatch && responseMatch ? 'pass' : 'fail';
             test.serverStatusCode = response.status;
-        } catch {
+        } catch (error) {
+            console.error('Test execution error:', error);
             result = 'fail';
             test.serverStatusCode = 0;
+            test.serverResponse = error instanceof Error ? error.message : 'Unknown error';
         }
         handleUpdateTest(test.id, { lastResult: result });
         setLoading(false);

@@ -344,12 +344,9 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
             <div className="flex justify-between items-start">
                 <div className="flex flex-1 items-start space-x-3 min-w-0">
                     {/* Method Icon */}
-                    <div className={`p-2 rounded-lg flex-shrink-0 ${activeSession?.id === session.id
-                        ? "bg-blue-100 dark:bg-blue-900"
-                        : "bg-gray-100 dark:bg-gray-600"
+                    <div className={`p-2 rounded-lg flex-shrink-0 ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color || "text-gray-600 dark:text-gray-400"
                         }`}>
-                        <span className={`text-xs font-bold ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color || "text-gray-600 dark:text-gray-400"
-                            }`}>
+                        <span className={`text-xs font-bold`}>
                             {session.requestConfig?.method || "GET"}
                         </span>
                     </div>
@@ -637,6 +634,17 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                     {/* Action Button */}
                                     <div className="flex items-center space-x-3">
                                         <button
+                                            onClick={() => handleSessionAction("new")}
+                                            className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden ${isDarkMode
+                                                ? "text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25"
+                                                : "text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25"
+                                                }`}
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r transition-transform duration-700 transform -translate-x-full -skew-x-12 from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
+                                            <FiPlus className="relative z-10 w-4 h-4" />
+                                            <span className="relative z-10">New Session</span>
+                                        </button>
+                                        <button
                                             onClick={handleExport}
                                             className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden ${isDarkMode
                                                 ? "text-white bg-gradient-to-r from-gray-700 via-gray-600 to-gray-800 hover:from-gray-800 hover:via-gray-700 hover:to-gray-900 shadow-gray-500/25"
@@ -677,17 +685,39 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                             <label className={`text-sm font-semibold ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                                                 Group by:
                                             </label>
-                                            <select
-                                                value={divideBy}
-                                                onChange={e => setDivideBy(e.target.value as 'none' | 'category')}
-                                                className={`px-4 py-2 rounded-lg text-sm border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm ${isDarkMode
-                                                    ? 'text-white bg-gray-700 border-gray-600 focus:bg-gray-600 hover:bg-gray-600'
-                                                    : 'text-gray-900 bg-white border-gray-300 focus:bg-white hover:bg-gray-50'
-                                                    }`}
-                                            >
-                                                <option value="none">No grouping</option>
-                                                <option value="category">By category</option>
-                                            </select>
+                                            <div className="relative group">
+                                                <select
+                                                    value={divideBy}
+                                                    onChange={e => setDivideBy(e.target.value as 'none' | 'category')}
+                                                    className={`appearance-none px-4 py-2 pr-10 rounded-lg text-sm border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm cursor-pointer ${isDarkMode
+                                                        ? 'text-white bg-gray-700 border-gray-600 focus:bg-gray-600 hover:bg-gray-600 focus:border-blue-400'
+                                                        : 'text-gray-900 bg-white border-gray-300 focus:bg-white hover:bg-gray-50 focus:border-blue-500'
+                                                        }`}
+                                                    data-grouping-options="none,category"
+                                                    data-default-value="category"
+                                                    data-control-type="grouping-selector"
+                                                    data-available-options='[{"value":"none","label":"No grouping","icon":"📋","description":"Display all sessions in a flat list"},{"value":"category","label":"By category","icon":"📁","description":"Group sessions by their categories"}]'
+                                                    data-current-selection={divideBy}
+                                                    data-session-count={savedSessions.length}
+                                                    data-category-count={Object.keys(groupByCategory(savedSessions)).length}
+                                                >
+                                                    <option value="none" className={`${isDarkMode ? 'text-white bg-gray-700' : 'text-gray-900 bg-white'}`}>
+                                                        📋 No grouping
+                                                    </option>
+                                                    <option value="category" className={`${isDarkMode ? 'text-white bg-gray-700' : 'text-gray-900 bg-white'}`}>
+                                                        📁 By category
+                                                    </option>
+                                                </select>
+                                                <div className={`absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </div>
+                                                {/* Expert Design Tooltip */}
+                                                <div className={`absolute -bottom-8 left-0 px-2 py-1 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none ${isDarkMode ? 'text-gray-300 bg-gray-800' : 'text-gray-100 bg-gray-900'}`}>
+                                                    {divideBy === 'none' ? 'Flat list view' : 'Category-based grouping'}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -730,7 +760,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                     return (
                                         <div key={cat} className="mb-4">
                                             <button
-                                                className={`flex items-center w-full text-left font-semibold mb-2 px-4 py-3 rounded-lg transition-colors focus:outline-none border border-transparent hover:border-blue-300 focus:border-blue-400 bg-white dark:bg-gray-800 ${isOpen ? (isDarkMode ? 'shadow-lg' : 'shadow-md') : ''}`}
+                                                className={`flex items-center w-full text-left font-semibold mb-2 px-4 py-3 rounded-lg transition-colors focus:outline-none border border-transparent hover:border-blue-300 focus:border-blue-400 bg-white dark:bg-gray-800 dark:text-gray-100 ${isOpen ? (isDarkMode ? 'shadow-lg' : 'shadow-md') : ''}`}
                                                 onClick={() => toggleCategory(cat)}
                                                 aria-expanded={isOpen}
                                             >

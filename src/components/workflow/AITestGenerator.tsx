@@ -27,7 +27,7 @@ import {
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
-  const { activeSession, handleSaveSession } = useAppContext();
+  const { activeSession, handleSaveSession, tokenConfig, generateAuthHeaders, isAuthenticated } = useAppContext();
   const [requirements, setRequirements] = useState<string>("");
   const [useOOP, setUseOOP] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -71,9 +71,22 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   }, [requirements]);
 
   const promptGenerator = (): string => {
+    // Generate authentication information for the prompt
+    const authHeaders = generateAuthHeaders();
+    const authInfo = Object.keys(authHeaders).length > 0
+      ? `Authentication Configuration:
+    - Type: ${tokenConfig.authType}
+    - Headers: ${Object.entries(authHeaders).map(([key, value]) => `${key}: ${value.includes('.') ? value.split('.').map(() => 'xxx').join('.') : 'xxx'}`).join(', ')}
+    - Token Name: ${tokenConfig.tokenName}
+    - Header Key: ${tokenConfig.headerKey}
+    - Header Format: ${tokenConfig.headerValueFormat}`
+      : 'No authentication configured';
+
     const prompt = `Create BDD-style pytest tests for the following Flask API endpoint based on this OpenAPI YAML specification:
 
     ${yamlData}
+    
+    ${authInfo}
     
     IMPORTANT: The tests must follow the exact style and structure of my existing test files, with these requirements:
     

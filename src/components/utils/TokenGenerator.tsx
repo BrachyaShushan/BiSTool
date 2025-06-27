@@ -2,7 +2,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { useTheme } from "../../context/ThemeContext";
 import Modal from "../core/Modal";
-import { FiKey, FiSettings, FiClock, FiCheckCircle, FiAlertCircle, FiEye, FiCopy, FiUpload, FiZap, FiShield, FiGlobe, FiDatabase, FiCode } from "react-icons/fi";
+import {
+    FiSettings, FiClock, FiCheckCircle, FiAlertCircle, FiEye, FiCopy,
+    FiUpload, FiZap, FiShield, FiGlobe, FiDatabase, FiCode, FiLock, FiUnlock,
+    FiRefreshCw, FiHash, FiLayers, FiSearch, FiFilter, FiCpu, FiServer,
+    FiUsers, FiUserCheck, FiKey, FiAward, FiTool, FiWifi
+} from "react-icons/fi";
 
 const TokenGenerator: React.FC = () => {
     const { globalVariables, updateGlobalVariable, tokenConfig, setTokenConfig } = useAppContext();
@@ -12,7 +17,7 @@ const TokenGenerator: React.FC = () => {
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [tokenDuration, setTokenDuration] = useState<number>(0);
     const [successMessage, setSuccessMessage] = useState<string>("");
-    const [activeTab, setActiveTab] = useState<'config' | 'extraction' | 'preview' | 'debug'>('config');
+    const [activeTab, setActiveTab] = useState<'auth' | 'extraction' | 'validation' | 'security' | 'preview' | 'debug'>('auth');
     const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
     const [responseInfo, setResponseInfo] = useState<{
         cookies: Array<{ name: string; value: string }>;
@@ -493,7 +498,7 @@ const TokenGenerator: React.FC = () => {
                     setError(null);
                     setSuccessMessage("");
                     setResponseInfo(null);
-                    setActiveTab('config');
+                    setActiveTab('auth');
                 }}
                 size="6xl"
                 onSave={generateToken}
@@ -512,32 +517,142 @@ const TokenGenerator: React.FC = () => {
                 showSaveButton={true}
             >
                 {/* Tab Navigation */}
-                <div className="flex mb-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex overflow-x-auto mb-6 border-b border-gray-200 dark:border-gray-700">
                     {[
-                        { id: 'config', label: 'Configuration', icon: FiSettings },
-                        { id: 'extraction', label: 'Extraction', icon: FiDatabase },
-                        { id: 'preview', label: 'Preview', icon: FiEye },
-                        { id: 'debug', label: 'Debug', icon: FiCode }
-                    ].map(({ id, label, icon: Icon }) => (
+                        { id: 'auth', label: 'Authentication', icon: FiLock, description: 'Configure auth type and credentials' },
+                        { id: 'extraction', label: 'Extraction', icon: FiDatabase, description: 'Token extraction methods' },
+                        { id: 'validation', label: 'Validation', icon: FiUserCheck, description: 'Token validation & refresh' },
+                        { id: 'security', label: 'Security', icon: FiShield, description: 'Encryption & security settings' },
+                        { id: 'preview', label: 'Preview', icon: FiEye, description: 'Request & token preview' },
+                        { id: 'debug', label: 'Debug', icon: FiCode, description: 'Response analysis' }
+                    ].map(({ id, label, icon: Icon, description }) => (
                         <button
                             key={id}
                             onClick={() => setActiveTab(id as any)}
-                            className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === id
-                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                            className={`flex flex-col items-center space-y-1 px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 min-w-max ${activeTab === id
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                                 }`}
                         >
                             <Icon className="w-4 h-4" />
-                            <span>{label}</span>
+                            <span className="font-medium">{label}</span>
+                            <span className="text-xs opacity-75">{description}</span>
                         </button>
                     ))}
                 </div>
 
                 {/* Tab Content */}
                 <div className="space-y-6">
-                    {/* Configuration Tab */}
-                    {activeTab === 'config' && (
+                    {/* Authentication Tab */}
+                    {activeTab === 'auth' && (
                         <div className="space-y-6">
+                            {/* Authentication Type Selection */}
+                            <div className="p-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl border border-indigo-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-6 space-x-3">
+                                    <div className="p-3 bg-indigo-100 rounded-xl dark:bg-indigo-900">
+                                        <FiLock className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Authentication Type</h3>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">Choose your authentication method</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                    {[
+                                        {
+                                            id: 'bearer',
+                                            label: 'Bearer Token',
+                                            description: 'Username/password login with token response',
+                                            icon: '🔑',
+                                            color: 'blue',
+                                            features: ['Form/JSON login', 'Token extraction', 'Auto refresh']
+                                        },
+                                        {
+                                            id: 'basic',
+                                            label: 'Basic Auth',
+                                            description: 'HTTP Basic Authentication',
+                                            icon: '🛡️',
+                                            color: 'green',
+                                            features: ['Base64 encoded', 'Simple setup', 'Widely supported']
+                                        },
+                                        {
+                                            id: 'oauth2',
+                                            label: 'OAuth 2.0',
+                                            description: 'Modern OAuth2 flows',
+                                            icon: '🔐',
+                                            color: 'purple',
+                                            features: ['Multiple flows', 'Refresh tokens', 'Scopes']
+                                        },
+                                        {
+                                            id: 'api_key',
+                                            label: 'API Key',
+                                            description: 'Simple API key authentication',
+                                            icon: '🗝️',
+                                            color: 'orange',
+                                            features: ['Header/Query/Cookie', 'No login required', 'Fast setup']
+                                        },
+                                        {
+                                            id: 'session',
+                                            label: 'Session Auth',
+                                            description: 'Session-based authentication',
+                                            icon: '👥',
+                                            color: 'teal',
+                                            features: ['Session cookies', 'Keep-alive', 'Server-side']
+                                        },
+                                        {
+                                            id: 'custom',
+                                            label: 'Custom',
+                                            description: 'Custom authentication flow',
+                                            icon: '⚙️',
+                                            color: 'gray',
+                                            features: ['Flexible', 'Advanced', 'Custom headers']
+                                        }
+                                    ].map((authType) => {
+                                        const isSelected = tokenConfig.authType === authType.id;
+                                        const colorClasses = {
+                                            blue: isSelected ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-blue-50 dark:hover:bg-blue-900/10',
+                                            green: isSelected ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'hover:bg-green-50 dark:hover:bg-green-900/10',
+                                            purple: isSelected ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'hover:bg-purple-50 dark:hover:bg-purple-900/10',
+                                            orange: isSelected ? 'ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'hover:bg-orange-50 dark:hover:bg-orange-900/10',
+                                            teal: isSelected ? 'ring-2 ring-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'hover:bg-teal-50 dark:hover:bg-teal-900/10',
+                                            gray: isSelected ? 'ring-2 ring-gray-500 bg-gray-50 dark:bg-gray-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-900/10'
+                                        };
+
+                                        return (
+                                            <button
+                                                key={authType.id}
+                                                onClick={() => setTokenConfig(prev => ({ ...prev, authType: authType.id as any }))}
+                                                className={`p-6 rounded-xl border transition-all duration-300 transform hover:scale-[1.02] text-left ${colorClasses[authType.color as keyof typeof colorClasses]}`}
+                                            >
+                                                <div className="flex items-start space-x-4">
+                                                    <div className="text-3xl">{authType.icon}</div>
+                                                    <div className="flex-1">
+                                                        <h4 className="mb-1 font-bold text-gray-900 dark:text-gray-100">
+                                                            {authType.label}
+                                                        </h4>
+                                                        <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+                                                            {authType.description}
+                                                        </p>
+                                                        <div className="space-y-1">
+                                                            {authType.features.map((feature, index) => (
+                                                                <div key={index} className="flex items-center space-x-2">
+                                                                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{feature}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    {isSelected && (
+                                                        <FiCheckCircle className="w-5 h-5 text-green-500" />
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
                             {/* Basic Configuration */}
                             <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl border border-blue-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
@@ -563,105 +678,6 @@ const TokenGenerator: React.FC = () => {
                                                 : "text-gray-900 bg-white border-gray-300 focus:bg-white"
                                                 }`}
                                         />
-                                    </div>
-
-                                    <div>
-                                        <label className={`block text-sm font-medium mb-3 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
-                                            Method
-                                        </label>
-
-                                        {/* Modern Dataset Tab Interface for Method */}
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {[
-                                                {
-                                                    id: 'POST',
-                                                    label: 'POST',
-                                                    description: 'Send data in request body',
-                                                    icon: '📤',
-                                                    color: 'blue'
-                                                },
-                                                {
-                                                    id: 'GET',
-                                                    label: 'GET',
-                                                    description: 'Send data as query parameters',
-                                                    icon: '📥',
-                                                    color: 'green'
-                                                }
-                                            ].map((option) => {
-                                                const isSelected = tokenConfig.method === option.id;
-                                                const colorClasses = {
-                                                    blue: {
-                                                        selected: isDarkMode
-                                                            ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/25"
-                                                            : "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/25",
-                                                        unselected: isDarkMode
-                                                            ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-blue-500"
-                                                            : "bg-white border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300"
-                                                    },
-                                                    green: {
-                                                        selected: isDarkMode
-                                                            ? "bg-green-600 border-green-500 text-white shadow-lg shadow-green-500/25"
-                                                            : "bg-green-600 border-green-500 text-white shadow-lg shadow-green-500/25",
-                                                        unselected: isDarkMode
-                                                            ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-green-500"
-                                                            : "bg-white border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-300"
-                                                    }
-                                                };
-
-                                                return (
-                                                    <button
-                                                        key={option.id}
-                                                        onClick={() => {
-                                                            setTokenConfig(prev => ({
-                                                                ...prev,
-                                                                method: option.id as 'POST' | 'GET'
-                                                            }));
-                                                        }}
-                                                        className={`relative p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02] group overflow-hidden ${isSelected
-                                                            ? colorClasses[option.color as keyof typeof colorClasses].selected
-                                                            : colorClasses[option.color as keyof typeof colorClasses].unselected
-                                                            }`}
-                                                    >
-                                                        {/* Background Pattern */}
-                                                        <div className={`absolute inset-0 opacity-5 transition-opacity duration-300 ${isSelected ? 'opacity-10' : 'opacity-0 group-hover:opacity-5'
-                                                            }`}>
-                                                            <div className={`absolute top-0 right-0 w-16 h-16 rounded-full translate-x-8 -translate-y-8 ${option.color === 'blue' ? 'bg-blue-500' : 'bg-green-500'
-                                                                }`}></div>
-                                                            <div className={`absolute bottom-0 left-0 w-12 h-12 rounded-full -translate-x-6 translate-y-6 ${option.color === 'blue' ? 'bg-blue-400' : 'bg-green-400'
-                                                                }`}></div>
-                                                        </div>
-
-                                                        <div className="flex relative z-10 flex-col items-center space-y-2 text-center">
-                                                            <div className={`text-2xl transition-transform duration-300 ${isSelected ? 'scale-110' : 'group-hover:scale-105'
-                                                                }`}>
-                                                                {option.icon}
-                                                            </div>
-                                                            <div>
-                                                                <h4 className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'
-                                                                    }`}>
-                                                                    {option.label}
-                                                                </h4>
-                                                                <p className={`text-xs mt-1 ${isSelected
-                                                                    ? 'text-blue-100 dark:text-blue-200'
-                                                                    : 'text-gray-500 dark:text-gray-400'
-                                                                    }`}>
-                                                                    {option.description}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Selection Indicator */}
-                                                        {isSelected && (
-                                                            <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${option.color === 'blue' ? 'bg-blue-200' : 'bg-green-200'
-                                                                } flex items-center justify-center`}>
-                                                                <div className={`w-1.5 h-1.5 rounded-full ${option.color === 'blue' ? 'bg-blue-600' : 'bg-green-600'
-                                                                    }`}></div>
-                                                            </div>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
                                     </div>
 
                                     <div>
@@ -697,19 +713,7 @@ const TokenGenerator: React.FC = () => {
                                                 }`}
                                         />
                                     </div>
-                                </div>
-                            </div>
 
-                            {/* Header Configuration */}
-                            <div className="p-6 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl border border-green-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
-                                <div className="flex items-center mb-4 space-x-3">
-                                    <div className="p-2 bg-green-100 rounded-lg dark:bg-green-900">
-                                        <FiShield className="w-5 h-5 text-green-600 dark:text-green-400" />
-                                    </div>
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Header Configuration</h3>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div>
                                         <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                                             Header Key
@@ -720,24 +724,7 @@ const TokenGenerator: React.FC = () => {
                                             value={tokenConfig.headerKey}
                                             onChange={handleInputChange}
                                             placeholder="Authorization"
-                                            className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 ${isDarkMode
-                                                ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
-                                                : "text-gray-900 bg-white border-gray-300 focus:bg-white"
-                                                }`}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
-                                            Header Value Format
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="headerValueFormat"
-                                            value={tokenConfig.headerValueFormat}
-                                            onChange={handleInputChange}
-                                            placeholder="Bearer {token}"
-                                            className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 ${isDarkMode
+                                            className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
                                                 ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
                                                 : "text-gray-900 bg-white border-gray-300 focus:bg-white"
                                                 }`}
@@ -746,56 +733,325 @@ const TokenGenerator: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Advanced Options */}
-                            <div className="p-6 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-xl border border-purple-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
-                                <div className="flex justify-between items-center mb-4">
-                                    <div className="flex items-center space-x-3">
+                            {/* OAuth2 Configuration */}
+                            {tokenConfig.authType === 'oauth2' && (
+                                <div className="p-6 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-xl border border-purple-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                    <div className="flex items-center mb-4 space-x-3">
                                         <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900">
-                                            <FiZap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                            <FiLock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                                         </div>
-                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Advanced Options</h3>
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">OAuth2 Configuration</h3>
                                     </div>
-                                    <button
-                                        onClick={() => setShowAdvanced(!showAdvanced)}
-                                        className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors ${isDarkMode
-                                            ? "text-purple-400 hover:text-purple-300 hover:bg-purple-900"
-                                            : "text-purple-600 hover:text-purple-700 hover:bg-purple-100"
-                                            }`}
-                                    >
-                                        {showAdvanced ? 'Hide' : 'Show'} Advanced
-                                    </button>
-                                </div>
 
-                                {showAdvanced && (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Grant Type
+                                            </label>
+                                            <select
+                                                name="oauth2.grantType"
+                                                value={tokenConfig.oauth2?.grantType}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    oauth2: { ...prev.oauth2!, grantType: e.target.value as any }
+                                                }))}
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            >
+                                                <option value="password">Password Grant</option>
+                                                <option value="client_credentials">Client Credentials</option>
+                                                <option value="authorization_code">Authorization Code</option>
+                                                <option value="implicit">Implicit</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Client ID
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="oauth2.clientId"
+                                                value={tokenConfig.oauth2?.clientId}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    oauth2: { ...prev.oauth2!, clientId: e.target.value }
+                                                }))}
+                                                placeholder="your_client_id"
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Client Secret
+                                            </label>
+                                            <input
+                                                type="password"
+                                                name="oauth2.clientSecret"
+                                                value={tokenConfig.oauth2?.clientSecret}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    oauth2: { ...prev.oauth2!, clientSecret: e.target.value }
+                                                }))}
+                                                placeholder="your_client_secret"
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Scope
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="oauth2.scope"
+                                                value={tokenConfig.oauth2?.scope}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    oauth2: { ...prev.oauth2!, scope: e.target.value }
+                                                }))}
+                                                placeholder="read write"
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Token URL
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="oauth2.tokenUrl"
+                                                value={tokenConfig.oauth2?.tokenUrl}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    oauth2: { ...prev.oauth2!, tokenUrl: e.target.value }
+                                                }))}
+                                                placeholder="https://api.example.com/oauth/token"
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Refresh URL (Optional)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="oauth2.refreshUrl"
+                                                value={tokenConfig.oauth2?.refreshUrl}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    oauth2: { ...prev.oauth2!, refreshUrl: e.target.value }
+                                                }))}
+                                                placeholder="https://api.example.com/oauth/refresh"
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* API Key Configuration */}
+                            {tokenConfig.authType === 'api_key' && (
+                                <div className="p-6 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-xl border border-orange-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                    <div className="flex items-center mb-4 space-x-3">
+                                        <div className="p-2 bg-orange-100 rounded-lg dark:bg-orange-900">
+                                            <FiKey className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">API Key Configuration</h3>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Key Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="apiKey.keyName"
+                                                value={tokenConfig.apiKey?.keyName}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    apiKey: { ...prev.apiKey!, keyName: e.target.value }
+                                                }))}
+                                                placeholder="X-API-Key"
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Key Value
+                                            </label>
+                                            <input
+                                                type="password"
+                                                name="apiKey.keyValue"
+                                                value={tokenConfig.apiKey?.keyValue}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    apiKey: { ...prev.apiKey!, keyValue: e.target.value }
+                                                }))}
+                                                placeholder="your_api_key_here"
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Location
+                                            </label>
+                                            <select
+                                                name="apiKey.location"
+                                                value={tokenConfig.apiKey?.location}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    apiKey: { ...prev.apiKey!, location: e.target.value as any }
+                                                }))}
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            >
+                                                <option value="header">Header</option>
+                                                <option value="query">Query Parameter</option>
+                                                <option value="cookie">Cookie</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Prefix (Optional)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="apiKey.prefix"
+                                                value={tokenConfig.apiKey?.prefix}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    apiKey: { ...prev.apiKey!, prefix: e.target.value }
+                                                }))}
+                                                placeholder="Bearer "
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Session Configuration */}
+                            {tokenConfig.authType === 'session' && (
+                                <div className="p-6 bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 rounded-xl border border-teal-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                    <div className="flex items-center mb-4 space-x-3">
+                                        <div className="p-2 bg-teal-100 rounded-lg dark:bg-teal-900">
+                                            <FiUsers className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Session Configuration</h3>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Session ID Field
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="session.sessionIdField"
+                                                value={tokenConfig.session?.sessionIdField}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    session: { ...prev.session!, sessionIdField: e.target.value }
+                                                }))}
+                                                placeholder="session_id"
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Session Token Field
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="session.sessionTokenField"
+                                                value={tokenConfig.session?.sessionTokenField}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    session: { ...prev.session!, sessionTokenField: e.target.value }
+                                                }))}
+                                                placeholder="session_token"
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center space-x-3">
                                             <input
                                                 type="checkbox"
-                                                name="refreshToken"
-                                                checked={tokenConfig.refreshToken}
-                                                onChange={handleInputChange}
-                                                className={`h-4 w-4 text-purple-600 focus:ring-purple-500 border rounded ${isDarkMode
+                                                name="session.keepAlive"
+                                                checked={tokenConfig.session?.keepAlive}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    session: { ...prev.session!, keepAlive: e.target.checked }
+                                                }))}
+                                                className={`h-4 w-4 text-teal-600 focus:ring-teal-500 border rounded ${isDarkMode
                                                     ? "bg-gray-800 border-gray-600"
                                                     : "bg-white border-gray-300"
                                                     }`}
                                             />
-                                            <label className={`ml-3 block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
-                                                Enable Refresh Token
+                                            <label className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Enable Keep-Alive
                                             </label>
                                         </div>
 
-                                        {tokenConfig.refreshToken && (
+                                        {tokenConfig.session?.keepAlive && (
                                             <div>
                                                 <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
-                                                    Refresh Token Name
+                                                    Keep-Alive Interval (seconds)
                                                 </label>
                                                 <input
-                                                    type="text"
-                                                    name="refreshTokenName"
-                                                    value={tokenConfig.refreshTokenName}
-                                                    onChange={handleInputChange}
-                                                    placeholder="refresh_token"
-                                                    className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode
+                                                    type="number"
+                                                    name="session.keepAliveInterval"
+                                                    value={tokenConfig.session?.keepAliveInterval}
+                                                    onChange={(e) => setTokenConfig(prev => ({
+                                                        ...prev,
+                                                        session: { ...prev.session!, keepAliveInterval: parseInt(e.target.value) }
+                                                    }))}
+                                                    min="30"
+                                                    max="3600"
+                                                    className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${isDarkMode
                                                         ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
                                                         : "text-gray-900 bg-white border-gray-300 focus:bg-white"
                                                         }`}
@@ -803,8 +1059,8 @@ const TokenGenerator: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -1367,6 +1623,38 @@ const TokenGenerator: React.FC = () => {
                                                 headerValueFormat: "{token}",
                                                 refreshToken: false,
                                                 refreshTokenName: "refresh_token",
+
+                                                // Enhanced authentication types
+                                                authType: "bearer",
+
+                                                // OAuth2 specific configuration
+                                                oauth2: {
+                                                    grantType: "password",
+                                                    clientId: "",
+                                                    clientSecret: "",
+                                                    redirectUri: "",
+                                                    scope: "",
+                                                    authorizationUrl: "",
+                                                    tokenUrl: "",
+                                                    refreshUrl: "",
+                                                },
+
+                                                // API Key configuration
+                                                apiKey: {
+                                                    keyName: "X-API-Key",
+                                                    keyValue: "",
+                                                    location: "header",
+                                                    prefix: "",
+                                                },
+
+                                                // Session-based authentication
+                                                session: {
+                                                    sessionIdField: "session_id",
+                                                    sessionTokenField: "session_token",
+                                                    keepAlive: false,
+                                                    keepAliveInterval: 300,
+                                                },
+
                                                 extractionMethods: {
                                                     json: true,
                                                     jsonPaths: [],
@@ -1374,11 +1662,43 @@ const TokenGenerator: React.FC = () => {
                                                     cookieNames: [],
                                                     headers: true,
                                                     headerNames: [],
+                                                    regex: false,
+                                                    regexPatterns: [],
+                                                    xpath: false,
+                                                    xpathExpressions: [],
+                                                    css: false,
+                                                    cssSelectors: [],
+                                                    nestedJson: false,
+                                                    nestedPaths: [],
                                                 },
                                                 requestMapping: {
                                                     usernameField: "username",
                                                     passwordField: "password",
                                                     contentType: "form",
+                                                    additionalFields: [],
+                                                    customHeaders: [],
+                                                },
+                                                validation: {
+                                                    validateOnExtract: false,
+                                                    validationEndpoint: "",
+                                                    validationMethod: "GET",
+                                                    validationHeaders: [],
+                                                    autoRefresh: false,
+                                                    refreshThreshold: 5,
+                                                    maxRefreshAttempts: 3,
+                                                },
+                                                security: {
+                                                    encryptToken: false,
+                                                    encryptionKey: "",
+                                                    hashToken: false,
+                                                    hashAlgorithm: "sha256",
+                                                    maskTokenInLogs: true,
+                                                },
+                                                errorHandling: {
+                                                    retryOnFailure: true,
+                                                    maxRetries: 3,
+                                                    retryDelay: 1000,
+                                                    customErrorMessages: {},
                                                 },
                                             });
                                         }}
@@ -1389,6 +1709,321 @@ const TokenGenerator: React.FC = () => {
                                     >
                                         Reset to Defaults
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Validation Tab */}
+                    {activeTab === 'validation' && (
+                        <div className="space-y-6">
+                            {/* Token Validation */}
+                            <div className="p-6 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl border border-emerald-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-4 space-x-3">
+                                    <div className="p-2 bg-emerald-100 rounded-lg dark:bg-emerald-900">
+                                        <FiUserCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Token Validation</h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-3">
+                                        <input
+                                            type="checkbox"
+                                            name="validation.validateOnExtract"
+                                            checked={tokenConfig.validation?.validateOnExtract}
+                                            onChange={(e) => setTokenConfig(prev => ({
+                                                ...prev,
+                                                validation: { ...prev.validation!, validateOnExtract: e.target.checked }
+                                            }))}
+                                            className={`h-4 w-4 text-emerald-600 focus:ring-emerald-500 border rounded ${isDarkMode
+                                                ? "bg-gray-800 border-gray-600"
+                                                : "bg-white border-gray-300"
+                                                }`}
+                                        />
+                                        <label className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                            Validate token immediately after extraction
+                                        </label>
+                                    </div>
+
+                                    {tokenConfig.validation?.validateOnExtract && (
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <div>
+                                                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                    Validation Endpoint
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="validation.validationEndpoint"
+                                                    value={tokenConfig.validation?.validationEndpoint}
+                                                    onChange={(e) => setTokenConfig(prev => ({
+                                                        ...prev,
+                                                        validation: { ...prev.validation!, validationEndpoint: e.target.value }
+                                                    }))}
+                                                    placeholder="https://api.example.com/validate"
+                                                    className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${isDarkMode
+                                                        ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                        : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                        }`}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                    Validation Method
+                                                </label>
+                                                <select
+                                                    name="validation.validationMethod"
+                                                    value={tokenConfig.validation?.validationMethod}
+                                                    onChange={(e) => setTokenConfig(prev => ({
+                                                        ...prev,
+                                                        validation: { ...prev.validation!, validationMethod: e.target.value as any }
+                                                    }))}
+                                                    className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${isDarkMode
+                                                        ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                        : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                        }`}
+                                                >
+                                                    <option value="GET">GET</option>
+                                                    <option value="POST">POST</option>
+                                                    <option value="HEAD">HEAD</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Auto Refresh Configuration */}
+                            <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl border border-blue-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-4 space-x-3">
+                                    <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900">
+                                        <FiRefreshCw className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Auto Refresh Configuration</h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-3">
+                                        <input
+                                            type="checkbox"
+                                            name="validation.autoRefresh"
+                                            checked={tokenConfig.validation?.autoRefresh}
+                                            onChange={(e) => setTokenConfig(prev => ({
+                                                ...prev,
+                                                validation: { ...prev.validation!, autoRefresh: e.target.checked }
+                                            }))}
+                                            className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border rounded ${isDarkMode
+                                                ? "bg-gray-800 border-gray-600"
+                                                : "bg-white border-gray-300"
+                                                }`}
+                                        />
+                                        <label className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                            Enable automatic token refresh
+                                        </label>
+                                    </div>
+
+                                    {tokenConfig.validation?.autoRefresh && (
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <div>
+                                                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                    Refresh Threshold (minutes)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="validation.refreshThreshold"
+                                                    value={tokenConfig.validation?.refreshThreshold}
+                                                    onChange={(e) => setTokenConfig(prev => ({
+                                                        ...prev,
+                                                        validation: { ...prev.validation!, refreshThreshold: parseInt(e.target.value) }
+                                                    }))}
+                                                    min="1"
+                                                    max="60"
+                                                    className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                                                        ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                        : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                        }`}
+                                                />
+                                                <p className={`mt-1 text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                                    Refresh token when it expires in X minutes
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                    Max Refresh Attempts
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="validation.maxRefreshAttempts"
+                                                    value={tokenConfig.validation?.maxRefreshAttempts}
+                                                    onChange={(e) => setTokenConfig(prev => ({
+                                                        ...prev,
+                                                        validation: { ...prev.validation!, maxRefreshAttempts: parseInt(e.target.value) }
+                                                    }))}
+                                                    min="1"
+                                                    max="10"
+                                                    className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isDarkMode
+                                                        ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                        : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                        }`}
+                                                />
+                                                <p className={`mt-1 text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                                    Maximum number of refresh attempts
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Security Tab */}
+                    {activeTab === 'security' && (
+                        <div className="space-y-6">
+                            {/* Token Encryption */}
+                            <div className="p-6 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-xl border border-purple-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-4 space-x-3">
+                                    <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900">
+                                        <FiLock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Token Encryption</h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-3">
+                                        <input
+                                            type="checkbox"
+                                            name="security.encryptToken"
+                                            checked={tokenConfig.security?.encryptToken}
+                                            onChange={(e) => setTokenConfig(prev => ({
+                                                ...prev,
+                                                security: { ...prev.security!, encryptToken: e.target.checked }
+                                            }))}
+                                            className={`h-4 w-4 text-purple-600 focus:ring-purple-500 border rounded ${isDarkMode
+                                                ? "bg-gray-800 border-gray-600"
+                                                : "bg-white border-gray-300"
+                                                }`}
+                                        />
+                                        <label className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                            Encrypt stored tokens
+                                        </label>
+                                    </div>
+
+                                    {tokenConfig.security?.encryptToken && (
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Encryption Key
+                                            </label>
+                                            <input
+                                                type="password"
+                                                name="security.encryptionKey"
+                                                value={tokenConfig.security?.encryptionKey}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    security: { ...prev.security!, encryptionKey: e.target.value }
+                                                }))}
+                                                placeholder="Enter encryption key"
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            />
+                                            <p className={`mt-1 text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                                Use a strong encryption key (32+ characters recommended)
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Token Hashing */}
+                            <div className="p-6 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-xl border border-orange-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-4 space-x-3">
+                                    <div className="p-2 bg-orange-100 rounded-lg dark:bg-orange-900">
+                                        <FiHash className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Token Hashing</h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-3">
+                                        <input
+                                            type="checkbox"
+                                            name="security.hashToken"
+                                            checked={tokenConfig.security?.hashToken}
+                                            onChange={(e) => setTokenConfig(prev => ({
+                                                ...prev,
+                                                security: { ...prev.security!, hashToken: e.target.checked }
+                                            }))}
+                                            className={`h-4 w-4 text-orange-600 focus:ring-orange-500 border rounded ${isDarkMode
+                                                ? "bg-gray-800 border-gray-600"
+                                                : "bg-white border-gray-300"
+                                                }`}
+                                        />
+                                        <label className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                            Hash tokens for storage
+                                        </label>
+                                    </div>
+
+                                    {tokenConfig.security?.hashToken && (
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                Hash Algorithm
+                                            </label>
+                                            <select
+                                                name="security.hashAlgorithm"
+                                                value={tokenConfig.security?.hashAlgorithm}
+                                                onChange={(e) => setTokenConfig(prev => ({
+                                                    ...prev,
+                                                    security: { ...prev.security!, hashAlgorithm: e.target.value as any }
+                                                }))}
+                                                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${isDarkMode
+                                                    ? "text-white bg-gray-700 border-gray-600 focus:bg-gray-600"
+                                                    : "text-gray-900 bg-white border-gray-300 focus:bg-white"
+                                                    }`}
+                                            >
+                                                <option value="sha256">SHA-256</option>
+                                                <option value="sha512">SHA-512</option>
+                                                <option value="md5">MD5</option>
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Logging Security */}
+                            <div className="p-6 bg-gradient-to-br from-red-50 via-pink-50 to-rose-50 rounded-xl border border-red-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-4 space-x-3">
+                                    <div className="p-2 bg-red-100 rounded-lg dark:bg-red-900">
+                                        <FiShield className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Logging Security</h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-3">
+                                        <input
+                                            type="checkbox"
+                                            name="security.maskTokenInLogs"
+                                            checked={tokenConfig.security?.maskTokenInLogs}
+                                            onChange={(e) => setTokenConfig(prev => ({
+                                                ...prev,
+                                                security: { ...prev.security!, maskTokenInLogs: e.target.checked }
+                                            }))}
+                                            className={`h-4 w-4 text-red-600 focus:ring-red-500 border rounded ${isDarkMode
+                                                ? "bg-gray-800 border-gray-600"
+                                                : "bg-white border-gray-300"
+                                                }`}
+                                        />
+                                        <label className={`block text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                            Mask tokens in logs and console output
+                                        </label>
+                                    </div>
+                                    <p className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                        When enabled, tokens will be displayed as "***" in logs to prevent exposure
+                                    </p>
                                 </div>
                             </div>
                         </div>
