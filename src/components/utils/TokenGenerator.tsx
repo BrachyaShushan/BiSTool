@@ -3,28 +3,26 @@ import { useAppContext } from "../../context/AppContext";
 import { useTheme } from "../../context/ThemeContext";
 import Modal from "../core/Modal";
 import {
-    FiSettings, FiClock, FiCheckCircle, FiAlertCircle, FiEye, FiCopy,
-    FiUpload, FiZap, FiShield, FiGlobe, FiDatabase, FiCode, FiLock, FiUnlock,
-    FiRefreshCw, FiHash, FiLayers, FiSearch, FiFilter, FiCpu, FiServer,
-    FiUsers, FiUserCheck, FiKey, FiAward, FiTool, FiWifi
-} from "react-icons/fi";
+    FiClock, FiCheckCircle, FiAlertCircle, FiEye, FiCopy,
+    FiUpload, FiShield, FiGlobe, FiDatabase, FiCode, FiLock,
+    FiRefreshCw, FiHash, FiUsers, FiUserCheck, FiKey
+} from 'react-icons/fi';
 
 const TokenGenerator: React.FC = () => {
     const { globalVariables, updateGlobalVariable, tokenConfig, setTokenConfig } = useAppContext();
     const { isDarkMode } = useTheme();
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [tokenDuration, setTokenDuration] = useState<number>(0);
     const [successMessage, setSuccessMessage] = useState<string>("");
     const [activeTab, setActiveTab] = useState<'auth' | 'extraction' | 'validation' | 'security' | 'preview' | 'debug'>('auth');
-    const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
     const [responseInfo, setResponseInfo] = useState<{
         cookies: Array<{ name: string; value: string }>;
         headers: Array<{ name: string; value: string }>;
         responseText: string;
         setCookieHeader: string | null;
     } | null>(null);
+    const [error, setError] = useState<string>('');
 
     const decodeString = useCallback((encodedString: string): string | null => {
         try {
@@ -201,7 +199,7 @@ const TokenGenerator: React.FC = () => {
 
     const generateToken = useCallback(async (): Promise<void> => {
         setIsGenerating(true);
-        setError(null);
+        setError('');
         setSuccessMessage("");
 
         try {
@@ -495,7 +493,7 @@ const TokenGenerator: React.FC = () => {
                 isOpen={isModalOpen}
                 onClose={() => {
                     setIsModalOpen(false);
-                    setError(null);
+                    setError('');
                     setSuccessMessage("");
                     setResponseInfo(null);
                     setActiveTab('auth');

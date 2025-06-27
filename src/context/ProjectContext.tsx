@@ -45,57 +45,46 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const initializeDefaultGlobalVariables = useCallback((projectId: string) => {
         try {
             const storageKey = `${projectId}_app_state`;
-            const savedState = localStorage.getItem(storageKey);
+            const existing = localStorage.getItem(storageKey);
+            const parsed = existing ? JSON.parse(existing) : null;
+            const globalVariables = parsed?.globalVariables || {};
 
-            if (savedState) {
-                const parsed = JSON.parse(savedState);
-                const globalVariables = parsed?.globalVariables || {};
+            // Define default variables with AI support
+            const defaultVariables = {
+                username: "",
+                password: "",
+                base_url: "",
+                // AI Provider API Keys
+                openai_api_key: "",
+                anthropic_api_key: "",
+                google_api_key: "",
+                ollama_api_key: "",
+                custom_api_key: "",
+                // AI Configuration
+                ai_provider: "anthropic",
+                ai_model: "claude-3-5-haiku-20241022",
+                ai_max_tokens: "4000",
+                ai_temperature: "0.7",
+                // Local AI Configuration
+                ollama_base_url: "http://localhost:11434",
+                custom_ai_base_url: "http://localhost:8000",
+            };
 
-                // Check if default variables exist, if not add them
-                const defaultVariables = {
-                    username: "",
-                    password: "",
-                    base_url: "",
-                };
+            const updatedGlobalVariables = { ...globalVariables };
 
-                let hasChanges = false;
-                const updatedGlobalVariables = { ...globalVariables };
-
-                Object.entries(defaultVariables).forEach(([key, defaultValue]) => {
-                    if (!(key in updatedGlobalVariables)) {
-                        updatedGlobalVariables[key] = defaultValue;
-                        hasChanges = true;
-                    }
-                });
-
-                // Save updated state if changes were made
-                if (hasChanges) {
-                    const updatedState = {
-                        ...parsed,
-                        globalVariables: updatedGlobalVariables,
-                    };
-                    localStorage.setItem(storageKey, JSON.stringify(updatedState));
-                    // Force AppContext to reload by incrementing the counter
-                    setForceReload(prev => prev + 1);
+            // Add missing default variables
+            Object.entries(defaultVariables).forEach(([key, defaultValue]) => {
+                if (!(key in updatedGlobalVariables)) {
+                    updatedGlobalVariables[key] = defaultValue;
                 }
-            } else {
-                // No existing state, create new with defaults
-                const initialState = {
-                    globalVariables: {
-                        username: "",
-                        password: "",
-                        base_url: "",
-                    },
-                    urlData: {},
-                    requestConfig: null,
-                    yamlOutput: "",
-                    activeSection: "url",
-                    segmentVariables: {},
-                };
-                localStorage.setItem(storageKey, JSON.stringify(initialState));
-                // Force AppContext to reload by incrementing the counter
-                setForceReload(prev => prev + 1);
-            }
+            });
+
+            // Save updated global variables
+            const updatedState = {
+                ...parsed,
+                globalVariables: updatedGlobalVariables,
+            };
+            localStorage.setItem(storageKey, JSON.stringify(updatedState));
         } catch (err) {
             console.error("Failed to initialize default global variables:", err);
         }
@@ -187,6 +176,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             username: "",
             password: "",
             base_url: "",
+            // AI Provider API Keys
+            openai_api_key: "",
+            anthropic_api_key: "",
+            google_api_key: "",
+            ollama_api_key: "",
+            custom_api_key: "",
+            // AI Configuration
+            ai_provider: "anthropic",
+            ai_model: "claude-3-5-haiku-20241022",
+            ai_max_tokens: "4000",
+            ai_temperature: "0.7",
+            // Local AI Configuration
+            ollama_base_url: "http://localhost:11434",
+            custom_ai_base_url: "http://localhost:8000",
         };
 
         // Save default global variables to localStorage for the new project

@@ -2,32 +2,40 @@ import React, { useState, useRef, useEffect } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppContext } from "../../context/AppContext";
 import Editor from "@monaco-editor/react";
-import Anthropic from "@anthropic-ai/sdk/index.mjs";
 import {
   AITestGeneratorProps,
   EditorRef,
   EditorMountParams,
-  AnthropicResponse,
+  AIResponse,
+  AIConfig,
 } from "../../types/components/components.types";
 import {
+  FiPlay,
   FiCopy,
-  FiCode,
+  FiDownload,
   FiSettings,
+  FiCpu,
+  FiZap,
   FiCheck,
   FiAlertCircle,
-  FiDownload,
-  FiStar,
-  FiCpu,
-  FiActivity,
-  FiFileText,
   FiRefreshCw,
+  FiSave,
+  FiEdit,
   FiEye,
-  FiTarget,
-} from "react-icons/fi";
+  FiCode,
+  FiDatabase,
+  FiServer,
+  FiGlobe,
+  FiHome,
+  FiActivity,
+  FiDollarSign,
+} from 'react-icons/fi';
+import { aiProviderRegistry, getDefaultAIConfig, validateAIConfig } from "../../utils/aiProviders";
+import AIConfigPanel from "./AIConfigPanel";
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
-  const { activeSession, handleSaveSession, tokenConfig, generateAuthHeaders, isAuthenticated } = useAppContext();
+  const { activeSession, handleSaveSession, tokenConfig, generateAuthHeaders, globalVariables } = useAppContext();
   const [requirements, setRequirements] = useState<string>("");
   const [useOOP, setUseOOP] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -36,8 +44,50 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const [copiedPrompt, setCopiedPrompt] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [showPreview, setShowPreview] = useState<boolean>(true);
+  const [showAIConfig, setShowAIConfig] = useState<boolean>(false);
+  const [aiConfig, setAiConfig] = useState<AIConfig>(getDefaultAIConfig());
+  const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [providerType, setProviderType] = useState<'cloud' | 'local' | 'custom'>('cloud');
   const editorRef = useRef<EditorRef["current"]>(null);
   const [lastYamlData, setLastYamlData] = useState<string>("");
+
+  // Load AI configuration from global variables
+  useEffect(() => {
+    const loadAIConfigFromGlobals = () => {
+      const provider = globalVariables['ai_provider'] || 'anthropic';
+      const model = globalVariables['ai_model'] || 'claude-3-5-haiku-20241022';
+      const apiKey = globalVariables[`${provider}_api_key`] || '';
+      const maxTokens = parseInt(globalVariables['ai_max_tokens'] || '4000');
+      const temperature = parseFloat(globalVariables['ai_temperature'] || '0.7');
+
+      const baseUrl = provider === 'ollama'
+        ? globalVariables['ollama_base_url']
+        : provider === 'openai-compatible'
+          ? globalVariables['custom_ai_base_url']
+          : undefined;
+
+      const newConfig: AIConfig = {
+        provider,
+        model,
+        apiKey,
+        maxTokens,
+        temperature,
+        topP: 1.0,
+        frequencyPenalty: 0.0,
+        presencePenalty: 0.0,
+        timeout: 30000,
+        retryAttempts: 3,
+        retryDelay: 1000,
+        ...(baseUrl && { baseUrl }),
+      };
+
+      setAiConfig(newConfig);
+    };
+
+    loadAIConfigFromGlobals();
+  }, [globalVariables]);
 
   // Load requirements from session on mount/session change
   useEffect(() => {
@@ -171,165 +221,276 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const generatePytestCode = async (): Promise<void> => {
     setIsLoading(true);
     setError("");
+    setAiResponse(null);
 
     try {
-      const anthropic = new Anthropic({
-        apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-        dangerouslyAllowBrowser: true,
-      });
+      // Validate AI configuration
+      const validation = validateAIConfig(aiConfig);
+      if (!validation.isValid) {
+        throw new Error(`AI Configuration Error: ${validation.errors.join(', ')}`);
+      }
+
+      const provider = aiProviderRegistry.getProvider(aiConfig.provider);
+      if (!provider) {
+        throw new Error(`Unknown AI provider: ${aiConfig.provider}`);
+      }
+
+      const model = provider.models.find(m => m.id === aiConfig.model);
+      if (!model) {
+        throw new Error(`Unknown model: ${aiConfig.model}`);
+      }
 
       const prompt = promptGenerator();
+      const startTime = Date.now();
 
-      const response: AnthropicResponse = await anthropic.messages.create({
-        model: "claude-3-5-haiku-20241022",
-        max_tokens: 4000,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      });
+      let response: AIResponse;
 
-      if (!response.content || !response.content[0]?.text) {
+      // Handle different AI providers
+      if (aiConfig.provider === 'openai') {
+        response = await callOpenAI(prompt, aiConfig);
+      } else if (aiConfig.provider === 'anthropic') {
+        response = await callAnthropic(prompt, aiConfig);
+      } else if (aiConfig.provider === 'google') {
+        response = await callGoogle(prompt, aiConfig);
+      } else if (aiConfig.provider === 'ollama') {
+        response = await callOllama(prompt, aiConfig);
+      } else if (aiConfig.provider === 'openai-compatible') {
+        response = await callOpenAICompatible(prompt, aiConfig);
+      } else {
+        throw new Error(`Unsupported AI provider: ${aiConfig.provider}`);
+      }
+
+      const endTime = Date.now();
+      const responseTime = endTime - startTime;
+
+      // Calculate cost if available
+      const cost = aiProviderRegistry.calculateCost(
+        aiConfig.provider,
+        aiConfig.model,
+        prompt.length / 4, // Rough token estimation
+        response.content.length / 4
+      );
+
+      // Update response metadata
+      response.metadata = {
+        ...response.metadata,
+        responseTime,
+        cost,
+      };
+
+      setAiResponse(response);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      if (!response.content) {
         throw new Error("No test code generated");
       }
 
-      const generatedCode = response.content[0].text;
+      const generatedCode = response.content;
 
       // Check if the response is complete
-      if (generatedCode.includes("...") || generatedCode.endsWith('"')) {
-        throw new Error("Generated test code appears to be incomplete");
+      if (generatedCode.includes("```python") && !generatedCode.includes("```")) {
+        throw new Error("Generated code appears to be incomplete. Please try again.");
       }
 
       setGeneratedTest(generatedCode);
+
+      // Save to session
+      if (activeSession) {
+        const updatedSession = {
+          ...activeSession,
+          generatedTest: generatedCode,
+          aiResponse: response,
+        };
+        handleSaveSession(activeSession.name, updatedSession);
+      }
+
     } catch (err) {
       console.error("Error generating test code:", err);
-      setError(
-        `Failed to generate test code: ${err instanceof Error ? err.message : "Unknown error"
-        }`
-      );
-      // Fallback to sample code if there's an error
-      setGeneratedTest(generateSampleTestCode());
+      setError(err instanceof Error ? err.message : "Failed to generate test code");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const generateSampleTestCode = (): string => {
-    let endpoint = "https://api.example.com/resource";
-    let method = "GET";
+  // AI Provider API calls
+  const callOpenAI = async (prompt: string, config: AIConfig): Promise<AIResponse> => {
+    const response = await fetch(`${config.baseUrl || 'https://api.openai.com/v1'}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+        ...config.customHeaders,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: config.maxTokens,
+        temperature: config.temperature,
+        top_p: config.topP,
+        frequency_penalty: config.frequencyPenalty,
+        presence_penalty: config.presencePenalty,
+      }),
+      signal: AbortSignal.timeout(config.timeout),
+    });
 
-    try {
-      const endpointMatch = yamlData.match(/url:\s*["']?(.*?)["']?$/m);
-      const methodMatch = yamlData.match(
-        /method:\s*["']?(GET|POST|PUT|DELETE|PATCH)["']?$/m
-      );
-
-      if (endpointMatch && endpointMatch[1]) {
-        endpoint = endpointMatch[1];
-      }
-
-      if (methodMatch && methodMatch[1]) {
-        method = methodMatch[1];
-      }
-    } catch (e) {
-      console.error("Error parsing YAML:", e);
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
     }
 
-    return `from typing import Dict, Optional
-from app.tests.messages import AssertionMessages
-from app.tests import get_user_test_headers, test_client
-import pytest
-
-
-def fetch_endpoint_data(role: str, param1: str, param2: str, filters: Optional[Dict] = None):
-    """Helper function to fetch data from the endpoint."""
-    headers = get_user_test_headers(role)
-    
-    query_string = filters or {}
-    url = f"${endpoint}/{param1}/{param2}"
-    
-    res = test_client.${method.toLowerCase()}(
-        url,
-        headers=headers,
-        query_string=query_string
-    )
-    return res
-
-
-@pytest.mark.parametrize(
-    "role, param1, param2, filters",
-    [
-        ("company", "valid_param1", "valid_param2", None),
-        ("division", "valid_param1", "valid_param2", {"filter": "value"}),
-        ("region", "valid_param1", "valid_param2", None),
-        ("facility", "valid_param1", "valid_param2", None),
-    ]
-)
-def test_endpoint_status_200(role: str, param1: str, param2: str, filters: Optional[Dict]):
-    """
-    Scenario: Retrieve data with valid parameters
-    
-    Given:
-        - Valid parameters ({param1}, {param2})
-        - The user has {role} role permissions
-        - Optional filters: {filters ? JSON.stringify(filters) : 'None'}
-    
-    When:
-        - Requesting data with these parameters
-    
-    Then:
-        - The API should return a status code of 200
-        - The response should have the expected structure
-    """
-    res = fetch_endpoint_data(role, param1, param2, filters)
-    
-    assert res.status_code == 200, AssertionMessages.status200
-    data = res.get_json()
-    assert isinstance(data, dict), AssertionMessages.res_data
-    assert "data" in data, "Response should contain 'data' field"
-
-
-@pytest.mark.parametrize(
-    "role, param1, param2, filters, expected_status",
-    [
-        ("company", "invalid_param", "valid_param2", None, 400),
-        ("division", "valid_param1", "", None, 400),
-        ("region", "valid_param1", "invalid_format", None, 400),
-    ]
-)
-def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optional[Dict], expected_status: int):
-    """
-    Scenario: Handle invalid parameters
-    
-    Given:
-        - Invalid parameters ({param1}, {param2})
-        - The user has {role} role permissions
-        - Optional filters: {filters ? JSON.stringify(filters) : 'None'}
-    
-    When:
-        - Requesting data with these invalid parameters
-    
-    Then:
-        - The API should return a status code of {expected_status}
-        - The response should contain an error message
-    """
-    res = fetch_endpoint_data(role, param1, param2, filters)
-    
-    assert res.status_code == expected_status, AssertionMessages.status400
-    data = res.get_json()
-    assert "error" in data, "Response should contain 'error' field"
-    assert "message" in data["error"], "Error should contain a message"`;
+    const data = await response.json();
+    return {
+      content: data.choices[0]?.message?.content || '',
+      metadata: {
+        provider: 'openai',
+        model: config.model,
+        tokensUsed: data.usage?.total_tokens || 0,
+        responseTime: 0,
+      },
+    };
   };
 
-  const handleGenerateCode = async (): Promise<void> => {
-    try {
-      await generatePytestCode();
-    } catch (err) {
-      console.error("Using fallback code generation Error: " + err);
-      setGeneratedTest(generateSampleTestCode());
+  const callAnthropic = async (prompt: string, config: AIConfig): Promise<AIResponse> => {
+    const response = await fetch(`${config.baseUrl || 'https://api.anthropic.com'}/v1/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': config.apiKey,
+        'anthropic-version': '2023-06-01',
+        ...config.customHeaders,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        max_tokens: config.maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: config.temperature,
+        top_p: config.topP,
+      }),
+      signal: AbortSignal.timeout(config.timeout),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Anthropic API error: ${response.status} ${response.statusText}`);
     }
+
+    const data = await response.json();
+    return {
+      content: data.content[0]?.text || '',
+      metadata: {
+        provider: 'anthropic',
+        model: config.model,
+        tokensUsed: data.usage?.input_tokens + data.usage?.output_tokens || 0,
+        responseTime: 0,
+      },
+    };
+  };
+
+  const callGoogle = async (prompt: string, config: AIConfig): Promise<AIResponse> => {
+    const response = await fetch(`${config.baseUrl || 'https://generativelanguage.googleapis.com'}/v1beta/models/${config.model}:generateContent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...config.customHeaders,
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: config.maxTokens,
+          temperature: config.temperature,
+          topP: config.topP,
+        },
+      }),
+      signal: AbortSignal.timeout(config.timeout),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Google API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return {
+      content: data.candidates[0]?.content?.parts[0]?.text || '',
+      metadata: {
+        provider: 'google',
+        model: config.model,
+        tokensUsed: data.usageMetadata?.totalTokenCount || 0,
+        responseTime: 0,
+      },
+    };
+  };
+
+  const callOllama = async (prompt: string, config: AIConfig): Promise<AIResponse> => {
+    const response = await fetch(`${config.baseUrl || 'http://localhost:11434'}/api/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...config.customHeaders,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        prompt,
+        options: {
+          temperature: config.temperature,
+          top_p: config.topP,
+          num_predict: config.maxTokens,
+        },
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(config.timeout),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return {
+      content: data.response || '',
+      metadata: {
+        provider: 'ollama',
+        model: config.model,
+        tokensUsed: data.eval_count || 0,
+        responseTime: 0,
+      },
+    };
+  };
+
+  const callOpenAICompatible = async (prompt: string, config: AIConfig): Promise<AIResponse> => {
+    const response = await fetch(`${config.baseUrl || 'http://localhost:8000'}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` }),
+        ...config.customHeaders,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: config.maxTokens,
+        temperature: config.temperature,
+        top_p: config.topP,
+        frequency_penalty: config.frequencyPenalty,
+        presence_penalty: config.presencePenalty,
+      }),
+      signal: AbortSignal.timeout(config.timeout),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI-Compatible API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return {
+      content: data.choices[0]?.message?.content || '',
+      metadata: {
+        provider: 'openai-compatible',
+        model: config.model,
+        tokensUsed: data.usage?.total_tokens || 0,
+        responseTime: 0,
+      },
+    };
   };
 
   const handleEditorDidMount = (
@@ -453,6 +614,47 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
     URL.revokeObjectURL(url);
   };
 
+  const handleSaveGeneratedTest = async () => {
+    if (!generatedTest || !activeSession) return;
+
+    setIsSaving(true);
+    try {
+      const updatedSession = {
+        ...activeSession,
+        generatedTest,
+        lastGenerated: new Date().toISOString(),
+      };
+      await handleSaveSession(activeSession.name, updatedSession);
+      // Show success feedback
+      setTimeout(() => setIsSaving(false), 2000);
+    } catch (error) {
+      setError('Failed to save generated test');
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditRequirements = () => {
+    setIsEditing(!isEditing);
+  };
+
+  const updateProviderType = (providerId: string) => {
+    const provider = aiProviderRegistry.getProvider(providerId);
+    if (provider) {
+      if (provider.isCustom) {
+        setProviderType('custom');
+      } else if (provider.isLocal) {
+        setProviderType('local');
+      } else {
+        setProviderType('cloud');
+      }
+    }
+  };
+
+  // Update provider type when AI config changes
+  useEffect(() => {
+    updateProviderType(aiConfig.provider);
+  }, [aiConfig.provider]);
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -466,7 +668,7 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
         <div className="flex relative justify-between items-center">
           <div className="flex items-center space-x-4">
             <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
-              <FiStar className="w-6 h-6 text-white" />
+              <FiPlay className="w-6 h-6 text-white" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
@@ -479,155 +681,116 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
           </div>
 
           <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowAIConfig(true)}
+              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+            >
+              <FiSettings className="w-4 h-4" />
+              <span>AI Config</span>
+            </button>
             <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-green-100 to-green-200 rounded-xl dark:from-green-900 dark:to-green-800">
               <FiCpu className="w-4 h-4 text-green-600 dark:text-green-400" />
-              <span className="text-sm font-semibold text-green-700 dark:text-green-300">AI-Powered</span>
+              <span className="text-sm font-semibold text-green-700 dark:text-green-300">AI Powered</span>
             </div>
-            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl dark:from-blue-900 dark:to-blue-800">
-              <FiTarget className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">BDD Style</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Configuration Section */}
-      <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
-        <div className="flex items-center mb-6 space-x-3">
-          <div className="p-2 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg">
-            <FiSettings className="w-5 h-5 text-white" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Test Configuration</h3>
-        </div>
-
-        <div className="space-y-6">
-          {/* Requirements Input */}
-          <div>
-            <label className="block mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Additional Test Requirements
-            </label>
-            <textarea
-              value={requirements}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                setRequirements(e.target.value)
-              }
-              placeholder="Specify any additional test requirements, edge cases, or specific scenarios you want to test..."
-              className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 resize-none dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              rows={4}
-            />
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Describe specific test scenarios, edge cases, or validation requirements for your API endpoint
-            </p>
-          </div>
-
-          {/* Options Row */}
-          <div className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="use-oop"
-                  checked={useOOP}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setUseOOP(e.target.checked)
-                  }
-                  className="w-4 h-4 text-indigo-600 bg-white rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
-                />
-                <label
-                  htmlFor="use-oop"
-                  className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Use Object-Oriented Programming style
-                </label>
+            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-xl dark:from-yellow-900 dark:to-yellow-800">
+              <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl dark:from-purple-900 dark:to-purple-800">
+                <FiDatabase className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Smart Generation</span>
               </div>
             </div>
 
-            <button
-              onClick={handleCopyPrompt}
-              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
-            >
-              {copiedPrompt ? (
-                <>
-                  <FiCheck className="w-4 h-4" />
-                  <span>Copied!</span>
-                </>
+            {/* Provider Type Indicator */}
+            <div className={`flex items-center px-4 py-2 space-x-2 rounded-xl ${providerType === 'cloud'
+              ? 'bg-gradient-to-r from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800'
+              : providerType === 'local'
+                ? 'bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900 dark:to-green-800'
+                : 'bg-gradient-to-r from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800'
+              }`}>
+              {providerType === 'cloud' ? (
+                <FiGlobe className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              ) : providerType === 'local' ? (
+                <FiHome className="w-4 h-4 text-green-600 dark:text-green-400" />
               ) : (
-                <>
-                  <FiCopy className="w-4 h-4" />
-                  <span>Copy Prompt</span>
-                </>
+                <FiServer className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Generate Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={handleGenerateCode}
-          disabled={isLoading || !yamlData}
-          className={`group px-8 py-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-3 ${isLoading || !yamlData
-            ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-            : "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:scale-105"
-            }`}
-        >
-          {isLoading ? (
-            <>
-              <FiRefreshCw className="w-5 h-5 animate-spin" />
-              <span>Generating Tests...</span>
-            </>
-          ) : (
-            <>
-              <FiStar className="w-5 h-5" />
-              <span>Generate Pytest Code</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200 dark:from-red-900 dark:to-red-800 dark:border-red-700">
-          <div className="flex items-center space-x-3">
-            <FiAlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-            <div>
-              <h4 className="text-sm font-semibold text-red-800 dark:text-red-200">Generation Error</h4>
-              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+              <span className={`text-sm font-semibold ${providerType === 'cloud'
+                ? 'text-blue-700 dark:text-blue-300'
+                : providerType === 'local'
+                  ? 'text-green-700 dark:text-green-300'
+                  : 'text-purple-700 dark:text-purple-300'
+                }`}>
+                {providerType.charAt(0).toUpperCase() + providerType.slice(1)} Provider
+              </span>
             </div>
           </div>
         </div>
-      )}
 
-      {/* Generated Code Section */}
-      {generatedTest && (
+        {/* Configuration Section */}
         <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
-                <FiCode className="w-5 h-5 text-white" />
+          <div className="flex items-center mb-6 space-x-3">
+            <div className="p-2 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg">
+              <FiSettings className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Test Configuration</h3>
+          </div>
+
+          <div className="space-y-6">
+            {/* Requirements Input */}
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Additional Test Requirements
+                </label>
+                <button
+                  onClick={handleEditRequirements}
+                  className="flex items-center px-3 py-1 space-x-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg transition-colors hover:bg-gray-200 dark:text-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600"
+                >
+                  <FiEdit className="w-3 h-3" />
+                  <span>{isEditing ? 'Done' : 'Edit'}</span>
+                </button>
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Generated Pytest Code</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  AI-generated test code ready for your API endpoint
-                </p>
-              </div>
+              <textarea
+                value={requirements}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setRequirements(e.target.value)
+                }
+                placeholder="Specify any additional test requirements, edge cases, or specific scenarios you want to test..."
+                className={`px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 resize-none dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${isEditing ? 'border-blue-500 ring-2 ring-blue-500' : ''}`}
+                rows={4}
+                readOnly={!isEditing}
+              />
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                Describe specific test scenarios, edge cases, or validation requirements for your API endpoint
+              </p>
             </div>
 
-            <div className="flex items-center space-x-2">
+            {/* Options Row */}
+            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="use-oop"
+                    checked={useOOP}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setUseOOP(e.target.checked)
+                    }
+                    className="w-4 h-4 text-indigo-600 bg-white rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
+                  />
+                  <label
+                    htmlFor="use-oop"
+                    className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    Use Object-Oriented Programming style
+                  </label>
+                </div>
+              </div>
+
               <button
-                onClick={() => setShowPreview(!showPreview)}
-                className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                title={showPreview ? "Hide preview" : "Show preview"}
+                onClick={handleCopyPrompt}
+                className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
               >
-                {showPreview ? <FiEye className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
-              </button>
-              <button
-                onClick={handleCopyCode}
-                className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
-              >
-                {copiedCode ? (
+                {copiedPrompt ? (
                   <>
                     <FiCheck className="w-4 h-4" />
                     <span>Copied!</span>
@@ -635,75 +798,171 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
                 ) : (
                   <>
                     <FiCopy className="w-4 h-4" />
-                    <span>Copy Code</span>
+                    <span>Copy Prompt</span>
                   </>
                 )}
               </button>
-              <button
-                onClick={downloadTestFile}
-                className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-green-600 to-green-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
-              >
-                <FiDownload className="w-4 h-4" />
-                <span>Download</span>
-              </button>
             </div>
           </div>
+        </div>
 
-          {showPreview && (
-            <div className="space-y-4">
-              {/* Code Statistics */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
-                  <div className="flex items-center space-x-2">
-                    <FiFileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Lines of Code</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-                    {generatedTest.split('\n').length}
-                  </p>
+        {/* Generate Button */}
+        <div className="flex justify-center">
+          <button
+            onClick={generatePytestCode}
+            disabled={isLoading || !yamlData}
+            className={`group px-8 py-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-3 ${isLoading || !yamlData
+              ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+              : "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:scale-105"
+              }`}
+          >
+            {isLoading ? (
+              <>
+                <FiRefreshCw className="w-5 h-5 animate-spin" />
+                <span>Generating Tests...</span>
+              </>
+            ) : (
+              <>
+                <FiPlay className="w-5 h-5" />
+                <span>Generate Pytest Code</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200 dark:from-red-900 dark:to-red-800 dark:border-red-700">
+            <div className="flex items-center space-x-3">
+              <FiAlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <div>
+                <h4 className="text-sm font-semibold text-red-800 dark:text-red-200">Generation Error</h4>
+                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Generated Code Section */}
+        {generatedTest && (
+          <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
+                  <FiCode className="w-5 h-5 text-white" />
                 </div>
-                <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200 dark:from-green-900 dark:to-green-800 dark:border-green-700">
-                  <div className="flex items-center space-x-2">
-                    <FiCpu className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className="text-sm font-semibold text-green-700 dark:text-green-300">Test Functions</span>
-                  </div>
-                  <p className="text-2xl font-bold text-green-800 dark:text-green-200">
-                    {(generatedTest.match(/def test_/g) || []).length}
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Generated Pytest Code</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    AI-generated test code ready for your API endpoint
                   </p>
-                </div>
-                <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl border border-purple-200 dark:from-purple-900 dark:to-purple-800 dark:border-purple-700">
-                  <div className="flex items-center space-x-2">
-                    <FiTarget className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                    <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Test Cases</span>
-                  </div>
-                  <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">
-                    {(generatedTest.match(/@pytest\.mark\.parametrize/g) || []).length}
-                  </p>
-                </div>
-                <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl border border-orange-200 dark:from-orange-900 dark:to-orange-800 dark:border-orange-700">
-                  <div className="flex items-center space-x-2">
-                    <FiActivity className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                    <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">Coverage</span>
-                  </div>
-                  <p className="text-2xl font-bold text-orange-800 dark:text-orange-200">High</p>
                 </div>
               </div>
 
-              {/* Code Editor */}
-              <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-600">
-                <div className="flex justify-between items-center px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                  title={showPreview ? "Hide preview" : "Show preview"}
+                >
+                  {showPreview ? <FiEye className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={handleSaveGeneratedTest}
+                  disabled={isSaving || !activeSession}
+                  className={`flex items-center px-4 py-2 space-x-2 font-semibold text-white rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl ${isSaving || !activeSession
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-orange-600 to-orange-700'
+                    }`}
+                >
+                  {isSaving ? (
+                    <>
+                      <FiRefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiSave className="w-4 h-4" />
+                      <span>Save to Session</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleCopyCode}
+                  className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+                >
+                  {copiedCode ? (
+                    <>
+                      <FiCheck className="w-4 h-4" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiCopy className="w-4 h-4" />
+                      <span>Copy Code</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={downloadTestFile}
+                  className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-green-600 to-green-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+                >
+                  <FiDownload className="w-4 h-4" />
+                  <span>Download</span>
+                </button>
+              </div>
+            </div>
+
+            {/* AI Response Metadata */}
+            {aiResponse && (
+              <div className="p-4 mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <FiZap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <span className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                        {aiResponse.metadata.provider.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <FiCpu className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {aiResponse.metadata.model}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <FiActivity className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <span className="text-sm text-green-700 dark:text-green-300">
+                        {aiResponse.metadata.tokensUsed} tokens
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <FiRefreshCw className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      <span className="text-sm text-purple-700 dark:text-purple-300">
+                        {aiResponse.metadata.responseTime}ms
+                      </span>
+                    </div>
+                    {aiResponse.metadata.cost !== undefined && aiResponse.metadata.cost > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <FiDollarSign className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                        <span className="text-sm text-yellow-700 dark:text-yellow-300">
+                          ${aiResponse.metadata.cost.toFixed(4)}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">generated_test.py</span>
                 </div>
+              </div>
+            )}
+
+            {/* Code Preview */}
+            {showPreview && (
+              <div className="relative">
                 <Editor
                   height={getEditorHeight()}
                   defaultLanguage="python"
                   value={generatedTest}
-                  theme={isDarkMode ? "vs-dark" : "vs-light"}
+                  theme={isDarkMode ? "vs-dark" : "light"}
                   options={{
                     readOnly: true,
                     minimap: { enabled: false },
@@ -714,20 +973,23 @@ def test_endpoint_status_400(role: str, param1: str, param2: str, filters: Optio
                     scrollbar: {
                       vertical: "visible",
                       horizontal: "visible",
-                      useShadows: false,
-                      verticalScrollbarSize: 10,
-                      horizontalScrollbarSize: 10,
                     },
-                    automaticLayout: true,
-                    wordWrap: "on",
                   }}
                   onMount={handleEditorDidMount}
                 />
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+
+        {/* AI Configuration Panel */}
+        <AIConfigPanel
+          isOpen={showAIConfig}
+          onClose={() => setShowAIConfig(false)}
+          onConfigChange={setAiConfig}
+          currentConfig={aiConfig}
+        />
+      </div>
     </div>
   );
 };

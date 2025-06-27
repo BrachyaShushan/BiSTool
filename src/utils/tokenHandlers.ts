@@ -570,10 +570,17 @@ export class OAuth2Strategy extends AuthStrategy {
         break;
 
       case "password":
+        const username = this.globalVariables["username"];
+        const password = this.globalVariables["password"];
+        if (!username || !password) {
+          throw new Error(
+            "Username and password are required for password grant type"
+          );
+        }
         body = new URLSearchParams({
           grant_type: "password",
-          username: this.globalVariables["username"],
-          password: this.globalVariables["password"],
+          username,
+          password,
           client_id: oauth2.clientId,
           client_secret: oauth2.clientSecret,
           scope: oauth2.scope,
@@ -821,7 +828,13 @@ export class TokenValidator {
     if (!this.config.validation.autoRefresh) return false;
 
     try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
+      const parts = token.split(".");
+      if (parts.length < 2) return false;
+
+      const part = parts[1];
+      if (!part) return false;
+
+      const payload = JSON.parse(atob(part));
       const now = Math.floor(Date.now() / 1000);
       const exp = payload.exp;
       const timeUntilExpiry = (exp - now) / 60; // minutes
@@ -884,7 +897,7 @@ export class TokenManager {
         const response = await fetch(request.url, {
           method: request.method,
           headers: request.headers,
-          body: request.body,
+          body: request.body || null,
         });
 
         // Validate response
@@ -916,7 +929,9 @@ export class TokenManager {
 
         return {
           token: extraction.token,
-          refreshToken: extraction.refreshToken || undefined,
+          ...(extraction.refreshToken && {
+            refreshToken: extraction.refreshToken,
+          }),
           source: extraction.source,
           metadata: extraction.metadata,
         };
@@ -1034,7 +1049,7 @@ export class TokenManager {
 
   // Get the current token value
   getCurrentToken(): string | null {
-    return this.globalVariables[this.config.tokenName] || null;
+    return this.globalVariables[this.config.tokenName] ?? null;
   }
 
   // Check if authentication is configured
