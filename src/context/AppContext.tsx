@@ -1073,108 +1073,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     });
   };
 
-  const getCookieValue = (cookieName: string): string | null => {
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === cookieName && value) {
-        return decodeURIComponent(value);
-      }
-    }
-    return null;
-  };
-
-  const extractTokenFromJson = (jsonData: any, paths: string[]): string | null => {
-    const defaultPaths = ['token', 'access_token', 'accessToken', 'jwt', 'auth_token'];
-    const searchPaths = paths.length > 0 ? paths : defaultPaths;
-    for (const path of searchPaths) {
-      const value = jsonData[path];
-      if (value && typeof value === 'string') {
-        return value;
-      }
-    }
-    return null;
-  };
-
-  const extractTokenFromCookies = (cookieNames: string[]): string | null => {
-    const defaultNames = ['token', 'access_token', 'auth_token', 'jwt'];
-    const searchNames = cookieNames.length > 0 ? cookieNames : defaultNames;
-    for (const cookieName of searchNames) {
-      const value = getCookieValue(cookieName);
-      if (value) {
-        return value;
-      }
-    }
-    const allCookies = document.cookie.split(';').map(cookie => {
-      const [name, value] = cookie.trim().split('=');
-      return { name: name?.trim(), value: value?.trim() };
-    }).filter(cookie => cookie.name);
-    const tokenCookie = allCookies.find(cookie =>
-      cookie.name?.toLowerCase().includes('token') ||
-      cookie.name?.toLowerCase().includes('auth') ||
-      cookie.name?.toLowerCase().includes('jwt')
-    );
-    if (tokenCookie) {
-      return tokenCookie.value || null;
-    }
-    return null;
-  };
-
-  const extractTokenFromSetCookieHeader = (response: Response, cookieNames: string[]): string | null => {
-    const setCookieHeader = response.headers.get('set-cookie');
-    if (!setCookieHeader) {
-      return null;
-    }
-    const cookies = setCookieHeader.split(',').map(cookie => {
-      const [nameValue] = cookie.split(';');
-      const [name, value] = nameValue?.trim().split('=') ?? [];
-      return { name: name?.trim(), value: value?.trim() };
-    });
-    const defaultNames = ['token', 'access_token', 'auth_token', 'jwt'];
-    const searchNames = cookieNames.length > 0 ? cookieNames : defaultNames;
-    for (const cookieName of searchNames) {
-      const cookie = cookies.find(c => c.name === cookieName);
-      if (cookie?.value) {
-        return cookie.value;
-      }
-    }
-    const tokenCookie = cookies.find(cookie =>
-      cookie.name?.toLowerCase().includes('token') ||
-      cookie.name?.toLowerCase().includes('auth') ||
-      cookie.name?.toLowerCase().includes('jwt')
-    );
-    if (tokenCookie?.value) {
-      return tokenCookie.value;
-    }
-    return null;
-  };
-
-  const extractTokenFromHeaders = (response: Response, headerNames: string[]): string | null => {
-    const defaultNames = ['authorization', 'x-access-token', 'x-auth-token', 'token'];
-    const searchNames = headerNames.length > 0 ? headerNames : defaultNames;
-    for (const headerName of searchNames) {
-      const value = response.headers.get(headerName);
-      if (value) {
-        return value.replace(/^Bearer\s+/i, '');
-      }
-    }
-    return null;
-  };
-
-  const extractTokenFromResponseText = (responseText: string): string | null => {
-    const jwtPattern = /jwt[=:]\s*([a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/i;
-    const match = responseText.match(jwtPattern);
-    if (match) {
-      return match[1] ?? null;
-    }
-    const tokenPattern = /(?:token|access_token|auth_token)[=:]\s*([a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/i;
-    const tokenMatch = responseText.match(tokenPattern);
-    if (tokenMatch) {
-      return tokenMatch[1] ?? null;
-    }
-    return null;
-  };
-
   const regenerateToken = async (): Promise<void> => {
     try {
       if (!globalVariables['username'] || !globalVariables['password']) {
@@ -1187,10 +1085,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
       }
 
       // Create TokenManager instance
-      const tokenManager = new TokenManager(tokenConfig, globalVariables);
+      const tokenManager = new TokenManager(tokenConfig);
 
       // Generate token using the manager
-      const result = await tokenManager.generateToken();
+      const result = await tokenManager.generateToken(globalVariables);
 
       // Update global variables with the extracted token
       updateGlobalVariable(tokenConfig.tokenName, result.token);

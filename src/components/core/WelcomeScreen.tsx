@@ -8,7 +8,7 @@ interface WelcomeScreenProps {
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onCreateProject }) => {
     const { projects } = useProjectContext();
-    const { switchToProject, currentProject } = useProjectSwitch();
+    const { switchToProject } = useProjectSwitch();
 
     const handleCreateProjectClick = () => {
         onCreateProject();

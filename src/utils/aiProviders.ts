@@ -3,7 +3,6 @@ import {
   AIConfig,
   LocalAIConfig,
   CustomProviderConfig,
-  CustomModelConfig,
   CustomProviderTemplate,
   CustomProviderManager,
 } from "../types/components/components.types";

@@ -3,11 +3,9 @@ import { TokenConfig } from "../types/core/app.types";
 // Token extraction patterns and utilities
 export class TokenExtractor {
   private config: TokenConfig;
-  private globalVariables: Record<string, string>;
 
-  constructor(config: TokenConfig, globalVariables: Record<string, string>) {
+  constructor(config: TokenConfig) {
     this.config = config;
-    this.globalVariables = globalVariables;
   }
 
   // Extract token using all configured methods in priority order
@@ -400,14 +398,12 @@ export class TokenExtractor {
 // Authentication strategy classes
 export abstract class AuthStrategy {
   protected config: TokenConfig;
-  protected globalVariables: Record<string, string>;
 
-  constructor(config: TokenConfig, globalVariables: Record<string, string>) {
+  constructor(config: TokenConfig) {
     this.config = config;
-    this.globalVariables = globalVariables;
   }
 
-  abstract buildRequest(): Promise<{
+  abstract buildRequest(globalVariables: Record<string, string>): Promise<{
     url: string;
     method: string;
     headers: Record<string, string>;
@@ -418,10 +414,10 @@ export abstract class AuthStrategy {
 }
 
 export class BasicAuthStrategy extends AuthStrategy {
-  async buildRequest() {
+  async buildRequest(globalVariables: Record<string, string>) {
     const url = `${this.config.domain}${this.config.path}`;
-    const username = this.globalVariables["username"];
-    const password = this.globalVariables["password"];
+    const username = globalVariables["username"];
+    const password = globalVariables["password"];
 
     if (!username || !password) {
       throw new Error(
@@ -439,7 +435,7 @@ export class BasicAuthStrategy extends AuthStrategy {
     this.config.requestMapping.customHeaders.forEach((header) => {
       const value =
         header.type === "variable"
-          ? this.globalVariables[header.value] || header.value
+          ? globalVariables[header.value] || header.value
           : header.value;
       headers[header.name] = value;
     });
@@ -453,7 +449,7 @@ export class BasicAuthStrategy extends AuthStrategy {
 }
 
 export class BearerAuthStrategy extends AuthStrategy {
-  async buildRequest() {
+  async buildRequest(globalVariables: Record<string, string>) {
     const url = `${this.config.domain}${this.config.path}`;
     const headers: Record<string, string> = {
       Accept: "*/*",
@@ -464,12 +460,12 @@ export class BearerAuthStrategy extends AuthStrategy {
     this.config.requestMapping.customHeaders.forEach((header) => {
       const value =
         header.type === "variable"
-          ? this.globalVariables[header.value] || header.value
+          ? globalVariables[header.value] || header.value
           : header.value;
       headers[header.name] = value;
     });
 
-    const body = this.buildRequestBody();
+    const body = this.buildRequestBody(globalVariables);
 
     return { url, method: this.config.method, headers, body };
   }
@@ -487,11 +483,11 @@ export class BearerAuthStrategy extends AuthStrategy {
     }
   }
 
-  private buildRequestBody(): string {
+  private buildRequestBody(globalVariables: Record<string, string>): string {
     const { usernameField, passwordField, contentType } =
       this.config.requestMapping;
-    const username = this.globalVariables[usernameField];
-    const password = this.globalVariables[passwordField];
+    const username = globalVariables[usernameField];
+    const password = globalVariables[passwordField];
 
     if (!username || !password) {
       throw new Error(
@@ -545,7 +541,7 @@ export class BearerAuthStrategy extends AuthStrategy {
 }
 
 export class OAuth2Strategy extends AuthStrategy {
-  async buildRequest() {
+  async buildRequest(globalVariables: Record<string, string>) {
     if (!this.config.oauth2) {
       throw new Error("OAuth2 configuration is required");
     }
@@ -570,8 +566,8 @@ export class OAuth2Strategy extends AuthStrategy {
         break;
 
       case "password":
-        const username = this.globalVariables["username"];
-        const password = this.globalVariables["password"];
+        const username = globalVariables["username"];
+        const password = globalVariables["password"];
         if (!username || !password) {
           throw new Error(
             "Username and password are required for password grant type"
@@ -615,7 +611,7 @@ export class OAuth2Strategy extends AuthStrategy {
 }
 
 export class ApiKeyStrategy extends AuthStrategy {
-  async buildRequest() {
+  async buildRequest(_: Record<string, string>) {
     if (!this.config.apiKey) {
       throw new Error("API Key configuration is required");
     }
@@ -658,7 +654,7 @@ export class ApiKeyStrategy extends AuthStrategy {
 }
 
 export class SessionAuthStrategy extends AuthStrategy {
-  async buildRequest() {
+  async buildRequest(globalVariables: Record<string, string>) {
     if (!this.config.session) {
       throw new Error("Session configuration is required");
     }
@@ -670,12 +666,12 @@ export class SessionAuthStrategy extends AuthStrategy {
     };
 
     // Add session ID if available
-    const sessionId = this.globalVariables[this.config.session.sessionIdField];
+    const sessionId = globalVariables[this.config.session.sessionIdField];
     if (sessionId) {
       headers["X-Session-ID"] = sessionId;
     }
 
-    const body = this.buildRequestBody();
+    const body = this.buildRequestBody(globalVariables);
 
     return { url, method: this.config.method, headers, body };
   }
@@ -693,11 +689,11 @@ export class SessionAuthStrategy extends AuthStrategy {
     }
   }
 
-  private buildRequestBody(): string {
+  private buildRequestBody(globalVariables: Record<string, string>): string {
     const { usernameField, passwordField, contentType } =
       this.config.requestMapping;
-    const username = this.globalVariables[usernameField];
-    const password = this.globalVariables[passwordField];
+    const username = globalVariables[usernameField];
+    const password = globalVariables[passwordField];
 
     if (!username || !password) {
       throw new Error(
@@ -753,11 +749,9 @@ export class SessionAuthStrategy extends AuthStrategy {
 // Token validation and refresh utilities
 export class TokenValidator {
   private config: TokenConfig;
-  private globalVariables: Record<string, string>;
 
-  constructor(config: TokenConfig, globalVariables: Record<string, string>) {
+  constructor(config: TokenConfig) {
     this.config = config;
-    this.globalVariables = globalVariables;
   }
 
   async validateToken(token: string): Promise<boolean> {
@@ -849,37 +843,35 @@ export class TokenValidator {
 // Main token manager class
 export class TokenManager {
   private config: TokenConfig;
-  private globalVariables: Record<string, string>;
   private extractor: TokenExtractor;
   private validator: TokenValidator;
   private strategy: AuthStrategy;
 
-  constructor(config: TokenConfig, globalVariables: Record<string, string>) {
+  constructor(config: TokenConfig) {
     this.config = config;
-    this.globalVariables = globalVariables;
-    this.extractor = new TokenExtractor(config, globalVariables);
-    this.validator = new TokenValidator(config, globalVariables);
+    this.extractor = new TokenExtractor(config);
+    this.validator = new TokenValidator(config);
     this.strategy = this.createAuthStrategy();
   }
 
   private createAuthStrategy(): AuthStrategy {
     switch (this.config.authType) {
       case "basic":
-        return new BasicAuthStrategy(this.config, this.globalVariables);
+        return new BasicAuthStrategy(this.config);
       case "bearer":
-        return new BearerAuthStrategy(this.config, this.globalVariables);
+        return new BearerAuthStrategy(this.config);
       case "oauth2":
-        return new OAuth2Strategy(this.config, this.globalVariables);
+        return new OAuth2Strategy(this.config);
       case "api_key":
-        return new ApiKeyStrategy(this.config, this.globalVariables);
+        return new ApiKeyStrategy(this.config);
       case "session":
-        return new SessionAuthStrategy(this.config, this.globalVariables);
+        return new SessionAuthStrategy(this.config);
       default:
-        return new BearerAuthStrategy(this.config, this.globalVariables);
+        return new BearerAuthStrategy(this.config);
     }
   }
 
-  async generateToken(): Promise<{
+  async generateToken(globalVariables: Record<string, string>): Promise<{
     token: string;
     refreshToken?: string;
     source: string;
@@ -891,7 +883,7 @@ export class TokenManager {
     while (attempts < maxAttempts) {
       try {
         // Build request
-        const request = await this.strategy.buildRequest();
+        const request = await this.strategy.buildRequest(globalVariables);
 
         // Make request
         const response = await fetch(request.url, {
@@ -953,13 +945,13 @@ export class TokenManager {
     throw new Error("Token generation failed after all attempts");
   }
 
-  async refreshTokenIfNeeded(token: string): Promise<string> {
+  async refreshTokenIfNeeded(token: string, globalVariables: Record<string, string>): Promise<string> {
     if (this.validator.shouldRefreshToken(token)) {
-      const refreshToken = this.globalVariables[this.config.refreshTokenName];
+      const refreshToken = globalVariables[this.config.refreshTokenName];
       if (refreshToken) {
         const newToken = await this.validator.refreshToken(refreshToken);
         if (newToken) {
-          this.globalVariables[this.config.tokenName] = newToken;
+          globalVariables[this.config.tokenName] = newToken;
           return newToken;
         }
       }
@@ -968,12 +960,12 @@ export class TokenManager {
   }
 
   // Generate authentication headers for API requests
-  generateAuthHeaders(): Record<string, string> {
+  generateAuthHeaders(globalVariables: Record<string, string>): Record<string, string> {
     const headers: Record<string, string> = {};
 
     switch (this.config.authType) {
       case "bearer":
-        const token = this.globalVariables[this.config.tokenName];
+        const token = globalVariables[this.config.tokenName];
         if (token) {
           const headerKey = this.config.headerKey || "Authorization";
           const headerValue = this.config.headerValueFormat.replace(
@@ -985,8 +977,8 @@ export class TokenManager {
         break;
 
       case "basic":
-        const username = this.globalVariables["username"];
-        const password = this.globalVariables["password"];
+        const username = globalVariables["username"];
+        const password = globalVariables["password"];
         if (username && password) {
           const credentials = btoa(`${username}:${password}`);
           headers["Authorization"] = `Basic ${credentials}`;
@@ -994,7 +986,7 @@ export class TokenManager {
         break;
 
       case "oauth2":
-        const oauthToken = this.globalVariables[this.config.tokenName];
+        const oauthToken = globalVariables[this.config.tokenName];
         if (oauthToken) {
           headers["Authorization"] = `Bearer ${oauthToken}`;
         }
@@ -1003,7 +995,7 @@ export class TokenManager {
       case "api_key":
         const apiKey =
           this.config.apiKey?.keyValue ||
-          this.globalVariables[this.config.apiKey?.keyName || "api_key"];
+          globalVariables[this.config.apiKey?.keyName || "api_key"];
         if (apiKey) {
           const keyName = this.config.apiKey?.keyName || "X-API-Key";
           const prefix = this.config.apiKey?.prefix || "";
@@ -1013,11 +1005,11 @@ export class TokenManager {
 
       case "session":
         const sessionId =
-          this.globalVariables[
+          globalVariables[
             this.config.session?.sessionIdField || "session_id"
           ];
         const sessionToken =
-          this.globalVariables[
+          globalVariables[
             this.config.session?.sessionTokenField || "session_token"
           ];
         if (sessionId) {
@@ -1032,7 +1024,7 @@ export class TokenManager {
 
       case "custom":
         // For custom auth, use the configured header key and value format
-        const customToken = this.globalVariables[this.config.tokenName];
+        const customToken = globalVariables[this.config.tokenName];
         if (customToken) {
           const headerKey = this.config.headerKey || "Authorization";
           const headerValue = this.config.headerValueFormat.replace(
@@ -1048,13 +1040,13 @@ export class TokenManager {
   }
 
   // Get the current token value
-  getCurrentToken(): string | null {
-    return this.globalVariables[this.config.tokenName] ?? null;
+  getCurrentToken(globalVariables: Record<string, string>): string | null {
+    return globalVariables[this.config.tokenName] ?? null;
   }
 
   // Check if authentication is configured
-  isAuthenticated(): boolean {
-    const token = this.getCurrentToken();
+  isAuthenticated(globalVariables: Record<string, string>): boolean {
+    const token = this.getCurrentToken(globalVariables);
     return !!token;
   }
 }

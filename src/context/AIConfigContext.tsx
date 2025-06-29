@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { AIConfig, AIProvider } from '../types/components/components.types';
-import { aiProviderRegistry } from '../utils/aiProviders';
+import { AIConfig } from '../types/components/components.types';
 
 interface AIConfigContextType {
     aiConfig: AIConfig;

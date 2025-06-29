@@ -9,7 +9,6 @@ import {
 } from '../../types/components/components.types';
 import {
     aiProviderRegistry,
-    getDefaultAIConfig,
     validateAIConfig,
     customProviderManager
 } from '../../utils/aiProviders';
@@ -382,7 +381,7 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
     currentConfig,
 }) => {
     const { isDarkMode } = useTheme();
-    const { aiConfig, setAIConfig, updateAIConfig } = useAIConfigContext();
+    const { aiConfig, setAIConfig } = useAIConfigContext();
 
     const [config, setConfig] = useState<AIConfig>(currentConfig || aiConfig);
     const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);

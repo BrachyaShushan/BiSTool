@@ -305,7 +305,7 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
     try {
         console.log('Registering JSONata completion provider...');
 
-        const provider = monacoInstance.languages.registerCompletionItemProvider('jsonata', {
+        monacoInstance.languages.registerCompletionItemProvider('jsonata', {
             provideCompletionItems: (model, position) => {
                 console.log('=== COMPLETION PROVIDER CALLED ===');
                 console.log('Model language:', model.getLanguageId());
@@ -368,7 +368,7 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
         monacoInstance.languages.registerHoverProvider('jsonata', {
             provideHover: (model, position) => {
                 const word = model.getWordAtPosition(position);
-                if (!word) return;
+                if (!word) return null;
 
                 const doc = getFunctionDoc(word.word);
                 if (doc) {
@@ -381,6 +381,7 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
                         ]
                     };
                 }
+                return null;
             }
         });
         console.log('JSONata hover provider registered');
@@ -425,7 +426,7 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
             try {
                 const expression = jsonata(jsonataExpression);
                 // Test the expression with a small sample
-                const testResult = await expression.evaluate(importedFile.data);
+                await expression.evaluate(importedFile.data);
                 setValidationStatus('valid');
                 setError(null);
             } catch (err) {

@@ -32,7 +32,7 @@ import {
   EditorOptions,
   ResponseData,
 } from "../../types/components/yamlGenerator.types";
-import { Header, RequestConfigData, ResponseCondition } from "../../types/core/app.types";
+import { RequestConfigData, ResponseCondition } from "../../types/core/app.types";
 import { ExtendedSession } from "../../types/features/SavedManager";
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';

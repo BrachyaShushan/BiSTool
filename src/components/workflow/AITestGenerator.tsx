@@ -31,12 +31,12 @@ import {
   FiActivity,
   FiDollarSign,
 } from 'react-icons/fi';
-import { aiProviderRegistry, getDefaultAIConfig, validateAIConfig } from "../../utils/aiProviders";
+import { aiProviderRegistry, validateAIConfig } from "../../utils/aiProviders";
 import AIConfigPanel from "./AIConfigPanel";
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
-  const { activeSession, handleSaveSession, tokenConfig, generateAuthHeaders, globalVariables } = useAppContext();
+  const { activeSession, handleSaveSession, tokenConfig, generateAuthHeaders } = useAppContext();
   const { aiConfig, setAIConfig } = useAIConfigContext();
   const [requirements, setRequirements] = useState<string>("");
   const [useOOP, setUseOOP] = useState<boolean>(true);
