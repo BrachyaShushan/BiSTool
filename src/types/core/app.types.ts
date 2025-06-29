@@ -1,6 +1,6 @@
 import { ExtendedSession } from "../features/SavedManager";
 
-export type SectionId = "url" | "request" | "tests" | "yaml" | "ai";
+export type SectionId = "url" | "request" | "tests" | "yaml" | "ai" | "import";
 
 export interface Section {
   id: SectionId;
@@ -241,6 +241,7 @@ export interface AppContextType {
   handleLoadSession: (session: ExtendedSession) => void;
   handleSaveSession: (name: string, sessionData?: ExtendedSession) => void;
   handleDeleteSession: (id: string) => void;
+  handleImportSessions: (sessions: any[]) => void;
   handleURLBuilderSubmit: (data: URLData) => void;
   handleRequestConfigSubmit: (data: RequestConfigData) => void;
   handleYAMLGenerated: (yaml: string) => void;

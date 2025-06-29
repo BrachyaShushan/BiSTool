@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppContext } from "../../context/AppContext";
+import { useAIConfigContext } from "../../context/AIConfigContext";
 import Editor from "@monaco-editor/react";
 import {
   AITestGeneratorProps,
@@ -36,6 +37,7 @@ import AIConfigPanel from "./AIConfigPanel";
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
   const { activeSession, handleSaveSession, tokenConfig, generateAuthHeaders, globalVariables } = useAppContext();
+  const { aiConfig, setAIConfig } = useAIConfigContext();
   const [requirements, setRequirements] = useState<string>("");
   const [useOOP, setUseOOP] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -45,49 +47,13 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [showPreview, setShowPreview] = useState<boolean>(true);
   const [showAIConfig, setShowAIConfig] = useState<boolean>(false);
-  const [aiConfig, setAiConfig] = useState<AIConfig>(getDefaultAIConfig());
   const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [providerType, setProviderType] = useState<'cloud' | 'local' | 'custom'>('cloud');
   const editorRef = useRef<EditorRef["current"]>(null);
   const [lastYamlData, setLastYamlData] = useState<string>("");
-
-  // Load AI configuration from global variables
-  useEffect(() => {
-    const loadAIConfigFromGlobals = () => {
-      const provider = globalVariables['ai_provider'] || 'anthropic';
-      const model = globalVariables['ai_model'] || 'claude-3-5-haiku-20241022';
-      const apiKey = globalVariables[`${provider}_api_key`] || '';
-      const maxTokens = parseInt(globalVariables['ai_max_tokens'] || '4000');
-      const temperature = parseFloat(globalVariables['ai_temperature'] || '0.7');
-
-      const baseUrl = provider === 'ollama'
-        ? globalVariables['ollama_base_url']
-        : provider === 'openai-compatible'
-          ? globalVariables['custom_ai_base_url']
-          : undefined;
-
-      const newConfig: AIConfig = {
-        provider,
-        model,
-        apiKey,
-        maxTokens,
-        temperature,
-        topP: 1.0,
-        frequencyPenalty: 0.0,
-        presencePenalty: 0.0,
-        timeout: 30000,
-        retryAttempts: 3,
-        retryDelay: 1000,
-        ...(baseUrl && { baseUrl }),
-      };
-
-      setAiConfig(newConfig);
-    };
-
-    loadAIConfigFromGlobals();
-  }, [globalVariables]);
+  const [selectedModel, setSelectedModel] = useState<{ id: string; name: string } | null>(null);
 
   // Load requirements from session on mount/session change
   useEffect(() => {
@@ -317,180 +283,241 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
 
   // AI Provider API calls
   const callOpenAI = async (prompt: string, config: AIConfig): Promise<AIResponse> => {
-    const response = await fetch(`${config.baseUrl || 'https://api.openai.com/v1'}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-        ...config.customHeaders,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: config.maxTokens,
-        temperature: config.temperature,
-        top_p: config.topP,
-        frequency_penalty: config.frequencyPenalty,
-        presence_penalty: config.presencePenalty,
-      }),
-      signal: AbortSignal.timeout(config.timeout),
-    });
+    const startTime = Date.now();
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.apiKeys['openai'] || ''}`,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: config.maxTokens,
+          temperature: config.temperature,
+          top_p: config.topP,
+          frequency_penalty: config.frequencyPenalty,
+          presence_penalty: config.presencePenalty,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const endTime = Date.now();
+      const responseTime = endTime - startTime;
+
+      return {
+        content: data.choices[0]?.message?.content || '',
+        metadata: {
+          provider: 'openai',
+          model: config.model,
+          tokensUsed: data.usage?.total_tokens || 0,
+          responseTime,
+          ...(data.usage && { cost: (data.usage.total_tokens / 1000) * 0.002 }),
+        },
+      };
+    } catch (error) {
+      throw new Error(`OpenAI API call failed: ${error}`);
     }
-
-    const data = await response.json();
-    return {
-      content: data.choices[0]?.message?.content || '',
-      metadata: {
-        provider: 'openai',
-        model: config.model,
-        tokensUsed: data.usage?.total_tokens || 0,
-        responseTime: 0,
-      },
-    };
   };
 
   const callAnthropic = async (prompt: string, config: AIConfig): Promise<AIResponse> => {
-    const response = await fetch(`${config.baseUrl || 'https://api.anthropic.com'}/v1/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': config.apiKey,
-        'anthropic-version': '2023-06-01',
-        ...config.customHeaders,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        max_tokens: config.maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: config.temperature,
-        top_p: config.topP,
-      }),
-      signal: AbortSignal.timeout(config.timeout),
-    });
+    const startTime = Date.now();
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': config.apiKeys['anthropic'] || '',
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: config.model,
+          max_tokens: config.maxTokens,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: config.temperature,
+          top_p: config.topP,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Anthropic API error: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Anthropic API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const endTime = Date.now();
+      const responseTime = endTime - startTime;
+
+      return {
+        content: data.content[0]?.text || '',
+        metadata: {
+          provider: 'anthropic',
+          model: config.model,
+          tokensUsed: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0),
+          responseTime,
+          ...(data.usage && { cost: ((data.usage.input_tokens + data.usage.output_tokens) / 1000) * 0.015 }),
+        },
+      };
+    } catch (error) {
+      throw new Error(`Anthropic API call failed: ${error}`);
     }
-
-    const data = await response.json();
-    return {
-      content: data.content[0]?.text || '',
-      metadata: {
-        provider: 'anthropic',
-        model: config.model,
-        tokensUsed: data.usage?.input_tokens + data.usage?.output_tokens || 0,
-        responseTime: 0,
-      },
-    };
   };
 
   const callGoogle = async (prompt: string, config: AIConfig): Promise<AIResponse> => {
-    const response = await fetch(`${config.baseUrl || 'https://generativelanguage.googleapis.com'}/v1beta/models/${config.model}:generateContent`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...config.customHeaders,
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          maxOutputTokens: config.maxTokens,
-          temperature: config.temperature,
-          topP: config.topP,
+    const startTime = Date.now();
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKeys['google'] || ''}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      }),
-      signal: AbortSignal.timeout(config.timeout),
-    });
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            maxOutputTokens: config.maxTokens,
+            temperature: config.temperature,
+            topP: config.topP,
+          },
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Google API error: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Google API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const endTime = Date.now();
+      const responseTime = endTime - startTime;
+
+      return {
+        content: data.candidates[0]?.content?.parts[0]?.text || '',
+        metadata: {
+          provider: 'google',
+          model: config.model,
+          tokensUsed: data.usageMetadata?.totalTokenCount || 0,
+          responseTime,
+        },
+      };
+    } catch (error) {
+      throw new Error(`Google API call failed: ${error}`);
     }
-
-    const data = await response.json();
-    return {
-      content: data.candidates[0]?.content?.parts[0]?.text || '',
-      metadata: {
-        provider: 'google',
-        model: config.model,
-        tokensUsed: data.usageMetadata?.totalTokenCount || 0,
-        responseTime: 0,
-      },
-    };
   };
 
   const callOllama = async (prompt: string, config: AIConfig): Promise<AIResponse> => {
-    const response = await fetch(`${config.baseUrl || 'http://localhost:11434'}/api/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...config.customHeaders,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        prompt,
-        options: {
-          temperature: config.temperature,
-          top_p: config.topP,
-          num_predict: config.maxTokens,
+    const startTime = Date.now();
+    try {
+      const response = await fetch(`${config.baseUrl || 'http://localhost:11434'}/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        stream: false,
-      }),
-      signal: AbortSignal.timeout(config.timeout),
-    });
+        body: JSON.stringify({
+          model: config.model,
+          prompt,
+          options: {
+            num_predict: config.maxTokens,
+            temperature: config.temperature,
+            top_p: config.topP,
+            repeat_penalty: 1.0 + config.frequencyPenalty * 0.1, // Convert frequency penalty to repeat penalty
+          },
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Failed to get response reader');
+      }
+
+      let content = '';
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(line => line.trim());
+
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+            if (data.response) {
+              content += data.response;
+            }
+            if (data.done) {
+              break;
+            }
+          } catch (e) {
+            // Skip invalid JSON lines
+          }
+        }
+      }
+
+      const endTime = Date.now();
+      const responseTime = endTime - startTime;
+
+      return {
+        content,
+        metadata: {
+          provider: 'ollama',
+          model: config.model,
+          tokensUsed: 0, // Ollama doesn't provide token usage
+          responseTime,
+        },
+      };
+    } catch (error) {
+      throw new Error(`Ollama API call failed: ${error}`);
     }
-
-    const data = await response.json();
-    return {
-      content: data.response || '',
-      metadata: {
-        provider: 'ollama',
-        model: config.model,
-        tokensUsed: data.eval_count || 0,
-        responseTime: 0,
-      },
-    };
   };
 
   const callOpenAICompatible = async (prompt: string, config: AIConfig): Promise<AIResponse> => {
-    const response = await fetch(`${config.baseUrl || 'http://localhost:8000'}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` }),
-        ...config.customHeaders,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: config.maxTokens,
-        temperature: config.temperature,
-        top_p: config.topP,
-        frequency_penalty: config.frequencyPenalty,
-        presence_penalty: config.presencePenalty,
-      }),
-      signal: AbortSignal.timeout(config.timeout),
-    });
+    const startTime = Date.now();
+    try {
+      const response = await fetch(`${config.baseUrl || 'http://localhost:8000'}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(config.apiKeys['openai-compatible'] && { 'Authorization': `Bearer ${config.apiKeys['openai-compatible']}` }),
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: config.maxTokens,
+          temperature: config.temperature,
+          top_p: config.topP,
+          frequency_penalty: config.frequencyPenalty,
+          presence_penalty: config.presencePenalty,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI-Compatible API error: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`OpenAI-compatible API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const endTime = Date.now();
+      const responseTime = endTime - startTime;
+
+      return {
+        content: data.choices[0]?.message?.content || '',
+        metadata: {
+          provider: 'openai-compatible',
+          model: config.model,
+          tokensUsed: data.usage?.total_tokens || 0,
+          responseTime,
+        },
+      };
+    } catch (error) {
+      throw new Error(`OpenAI-compatible API call failed: ${error}`);
     }
-
-    const data = await response.json();
-    return {
-      content: data.choices[0]?.message?.content || '',
-      metadata: {
-        provider: 'openai-compatible',
-        model: config.model,
-        tokensUsed: data.usage?.total_tokens || 0,
-        responseTime: 0,
-      },
-    };
   };
 
   const handleEditorDidMount = (
@@ -655,6 +682,77 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
     updateProviderType(aiConfig.provider);
   }, [aiConfig.provider]);
 
+  // Update selected model when AI config changes
+  useEffect(() => {
+    const provider = aiProviderRegistry.getProvider(aiConfig.provider);
+    if (provider) {
+      const model = provider.models.find(m => m.id === aiConfig.model);
+      if (model) {
+        setSelectedModel({ id: model.id, name: model.name });
+      }
+    }
+  }, [aiConfig.provider, aiConfig.model]);
+
+  const getModelIcon = (modelId: string): string => {
+    const modelIcons: Record<string, string> = {
+      // OpenAI Models
+      'gpt-4o': '🤖',
+      'gpt-4o-mini': '⚡',
+      'gpt-3.5-turbo': '🚀',
+      'gpt-4': '🧠',
+
+      // Anthropic Models
+      'claude-3-5-sonnet-20241022': '🧠',
+      'claude-3-5-haiku-20241022': '🌸',
+      'claude-3': '🧠',
+
+      // Google Models
+      'gemini-1.5-pro': '🔮',
+      'gemini-1.5-flash': '⚡',
+      'gemini-pro': '🔮',
+
+      // Ollama Models
+      'llama3.2:3b': '🦙',
+      'llama3.2:7b': '🦙',
+      'codellama:7b': '💻',
+
+      // Custom Models
+      'custom-model': '🔧',
+    };
+
+    return modelIcons[modelId] || '🤖';
+  };
+
+  const getModelColor = (modelId: string): string => {
+    const modelColors: Record<string, string> = {
+      // OpenAI Models
+      'gpt-4o': '#10a37f',
+      'gpt-4o-mini': '#10a37f',
+      'gpt-3.5-turbo': '#10a37f',
+      'gpt-4': '#10a37f',
+
+      // Anthropic Models
+      'claude-3-5-sonnet-20241022': '#d97706',
+      'claude-3-5-haiku-20241022': '#d97706',
+      'claude-3': '#d97706',
+
+      // Google Models
+      'gemini-1.5-pro': '#4285f4',
+      'gemini-1.5-flash': '#4285f4',
+      'gemini-pro': '#4285f4',
+
+      // Ollama Models
+      'llama3.2:3b': '#059669',
+      'llama3.2:7b': '#059669',
+      'codellama:7b': '#059669',
+
+      // Custom Models
+      'custom-model': '#7c3aed',
+    };
+
+    return modelColors[modelId] || '#6b7280';
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -692,7 +790,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
               <FiCpu className="w-4 h-4 text-green-600 dark:text-green-400" />
               <span className="text-sm font-semibold text-green-700 dark:text-green-300">AI Powered</span>
             </div>
-            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-xl dark:from-yellow-900 dark:to-yellow-800">
+            <div className="flex items-center px-4 py-2 space-x-2 rounded-xl">
               <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl dark:from-purple-900 dark:to-purple-800">
                 <FiDatabase className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Smart Generation</span>
@@ -722,6 +820,20 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
                 {providerType.charAt(0).toUpperCase() + providerType.slice(1)} Provider
               </span>
             </div>
+            {/* Current Model Indicator */}
+            {selectedModel && (
+              <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-indigo-100 to-indigo-200 rounded-xl dark:from-indigo-900 dark:to-indigo-800">
+                <div
+                  className="flex justify-center items-center w-6 h-6 text-sm text-white rounded-md shadow-sm"
+                  style={{ backgroundColor: getModelColor(selectedModel.id) }}
+                >
+                  {getModelIcon(selectedModel.id)}
+                </div>
+                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+                  {selectedModel.name}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -986,7 +1098,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
         <AIConfigPanel
           isOpen={showAIConfig}
           onClose={() => setShowAIConfig(false)}
-          onConfigChange={setAiConfig}
+          onConfigChange={setAIConfig}
           currentConfig={aiConfig}
         />
       </div>

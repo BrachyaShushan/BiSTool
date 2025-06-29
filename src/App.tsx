@@ -4,11 +4,13 @@ import RequestConfig from "./components/workflow/RequestConfig";
 import TestManager from "./components/workflow/TestManager";
 import YAMLGenerator from "./components/workflow/YAMLGenerator";
 import AITestGenerator from "./components/workflow/AITestGenerator";
+import SessionImporter from "./components/workflow/SessionImporter";
 import UnifiedManager from "./components/navigation/UnifiedManager";
 import WelcomeScreen from "./components/core/WelcomeScreen";
 import { AppProvider, useAppContext } from "./context/AppContext";
 import { ProjectProvider, useProjectContext } from "./context/ProjectContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
+import { AIConfigProvider } from "./context/AIConfigContext";
 import { Section } from "./types/core";
 import { FiFolder, FiSettings, FiKey, FiMenu, FiX } from "react-icons/fi";
 
@@ -26,6 +28,7 @@ const AppContent: React.FC = () => {
         handleLoadSession,
         handleSaveSession,
         handleDeleteSession,
+        handleImportSessions,
         updateGlobalVariable,
         updateSessionVariable,
         deleteGlobalVariable,
@@ -112,6 +115,8 @@ const AppContent: React.FC = () => {
                 return <YAMLGenerator onGenerate={handleYAMLGenerated} />;
             case "ai":
                 return <AITestGenerator yamlData={yamlOutput} />;
+            case "import":
+                return <SessionImporter onImportSessions={handleImportSessions} />;
             case "url":
             default:
                 return <URLBuilder onSubmit={handleURLBuilderSubmit} />;
@@ -124,6 +129,7 @@ const AppContent: React.FC = () => {
         { id: "tests", label: "Tests" },
         { id: "yaml", label: "YAML Generator" },
         { id: "ai", label: "AI Test Generator" },
+        { id: "import", label: "Session Importer" },
     ];
 
 
@@ -343,14 +349,25 @@ const App: React.FC = () => {
 const AppContentWrapper: React.FC = () => {
     const { getProjectStorageKey, currentProject, forceReload } = useProjectContext();
 
+    // Debug effect to track project changes
+    React.useEffect(() => {
+        console.log(`AppContentWrapper: currentProject changed to:`, currentProject?.id || 'null');
+        console.log(`AppContentWrapper: forceReload:`, forceReload);
+    }, [currentProject, forceReload]);
+
     return (
-        <AppProvider
+        <AIConfigProvider
             getProjectStorageKey={getProjectStorageKey}
             currentProjectId={currentProject?.id || null}
-            forceReload={forceReload}
         >
-            <AppContent />
-        </AppProvider>
+            <AppProvider
+                getProjectStorageKey={getProjectStorageKey}
+                currentProjectId={currentProject?.id || null}
+                forceReload={forceReload}
+            >
+                <AppContent />
+            </AppProvider>
+        </AIConfigProvider>
     );
 };
 

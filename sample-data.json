@@ -1,0 +1,95 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Get Users",
+      "method": "GET",
+      "url": "https://api.example.com/users",
+      "category": "User Management",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "queryParams": [
+        {
+          "key": "page",
+          "value": "1"
+        },
+        {
+          "key": "limit",
+          "value": "10"
+        }
+      ],
+      "body": {}
+    },
+    {
+      "id": 2,
+      "name": "Create User",
+      "method": "POST",
+      "url": "https://api.example.com/users",
+      "category": "User Management",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "queryParams": [],
+      "body": {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "role": "user"
+      }
+    },
+    {
+      "id": 3,
+      "name": "Update User",
+      "method": "PUT",
+      "url": "https://api.example.com/users/{id}",
+      "category": "User Management",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "queryParams": [],
+      "body": {
+        "name": "Jane Doe",
+        "email": "jane@example.com"
+      }
+    },
+    {
+      "id": 4,
+      "name": "Delete User",
+      "method": "DELETE",
+      "url": "https://api.example.com/users/{id}",
+      "category": "User Management",
+      "headers": [],
+      "queryParams": [],
+      "body": {}
+    },
+    {
+      "id": 5,
+      "name": "Get Products",
+      "method": "GET",
+      "url": "https://api.example.com/products",
+      "category": "Product Management",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "queryParams": [
+        {
+          "key": "category",
+          "value": "electronics"
+        }
+      ],
+      "body": {}
+    }
+  ]
+}

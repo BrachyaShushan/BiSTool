@@ -1,5 +1,5 @@
 import React from "react";
-import { useProjectContext } from "../../context/ProjectContext";
+import { useProjectContext, useProjectSwitch } from "../../context/ProjectContext";
 import { FiFolder, FiPlus, FiGlobe, FiCode, FiZap, FiDatabase, FiUsers, FiArrowRight, FiCheckCircle, FiPlay, FiBookOpen, FiShield, FiTrendingUp } from "react-icons/fi";
 
 interface WelcomeScreenProps {
@@ -7,10 +7,21 @@ interface WelcomeScreenProps {
 }
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onCreateProject }) => {
-    const { projects, switchProject } = useProjectContext();
+    const { projects } = useProjectContext();
+    const { switchToProject, currentProject } = useProjectSwitch();
 
     const handleCreateProjectClick = () => {
         onCreateProject();
+    };
+
+    const handleProjectSwitch = async (projectId: string) => {
+        console.log(`WelcomeScreen: Switching to project ${projectId}`);
+        const success = await switchToProject(projectId);
+        if (success) {
+            console.log(`WelcomeScreen: Project switch completed successfully`);
+        } else {
+            console.error(`WelcomeScreen: Project switch failed`);
+        }
     };
 
     const features = [
@@ -158,7 +169,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onCreateProject }) => {
                                         <button
                                             key={project.id}
                                             className="p-4 w-full bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer group dark:bg-gray-700 dark:border-gray-600 hover:scale-105 hover:shadow-md"
-                                            onClick={() => switchProject(project.id)}
+                                            onClick={() => handleProjectSwitch(project.id)}
                                         >
                                             <div className="flex justify-between items-center">
                                                 <div className="flex items-center space-x-3">

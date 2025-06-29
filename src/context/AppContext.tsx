@@ -28,6 +28,7 @@ interface AppProviderProps {
 export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectStorageKey, currentProjectId, forceReload }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Initialize with default values instead of trying to load from localStorage
   const [activeSession, setActiveSession] = useState<ExtendedSession | null>(null);
@@ -96,11 +97,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
 
     // Enhanced extraction methods with priority and patterns
     extractionMethods: {
-      json: true,
+      json: false,
       jsonPaths: [],
-      cookies: true,
+      cookies: false,
       cookieNames: [],
-      headers: true,
+      headers: false,
       headerNames: [],
       // New extraction methods
       regex: false,
@@ -164,6 +165,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
   }
   // Effect to reload data when project changes
   useEffect(() => {
+    console.log(`AppContext: Reloading data for project ${currentProjectId}, forceReload: ${forceReload}, isInitialLoad: ${isInitialLoad}`);
+
     // Only load data if we have a current project
     if (!currentProjectId) {
       console.log("No current project ID, skipping data load");
@@ -171,70 +174,25 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
       return;
     }
 
-    console.log("Loading data for project:", currentProjectId);
+    // Prevent multiple simultaneous loads
+    if (isLoading && !isInitialLoad) {
+      console.log("Already loading, skipping duplicate load");
+      return;
+    }
 
-    // Reload active session
-    try {
-      const storageKey = getProjectStorageKey("active_session");
-      console.log("Loading active session from:", storageKey);
-      const savedSession = localStorage.getItem(storageKey);
-      if (savedSession) {
-        const parsed = safeParseJSON(savedSession);
-        setActiveSession(parsed ?? null);
-        console.log("Loaded active session:", parsed);
-      } else {
+    // Set loading to true
+    setIsLoading(true);
+
+    // Only clear state if this is not the initial load (i.e., we're switching projects)
+    if (!isInitialLoad) {
+      console.log("Clearing state for project switch");
+
+      // Clear all state synchronously with proper error handling
+      try {
         setActiveSession(null);
-        console.log("No active session found");
-      }
-    } catch (err) {
-      setError("Failed to load active session Error: " + err);
-      setActiveSession(null);
-    }
-
-    // Reload saved sessions
-    try {
-      const storageKey = getProjectStorageKey("saved_sessions");
-      console.log("Loading saved sessions from:", storageKey);
-      const savedSessions = localStorage.getItem(storageKey);
-      if (savedSessions) {
-        const parsed = safeParseJSON(savedSessions);
-        const sessions = Array.isArray(parsed) ? parsed : [];
-        setSavedSessions(sessions);
-        console.log("Loaded saved sessions:", sessions.length);
-      } else {
         setSavedSessions([]);
-        console.log("No saved sessions found");
-      }
-    } catch (err) {
-      setError("Failed to load saved sessions Error: " + err);
-      setSavedSessions([]);
-    }
-
-    // Reload global variables
-    try {
-      const storageKey = getProjectStorageKey("app_state");
-      console.log("Loading app state from:", storageKey);
-      const savedState = localStorage.getItem(storageKey);
-      if (savedState) {
-        const parsed = safeParseJSON(savedState);
-        setGlobalVariables(parsed?.globalVariables ?? {});
-        console.log("Loaded global variables:", Object.keys(parsed?.globalVariables ?? {}));
-      } else {
         setGlobalVariables({});
-        console.log("No app state found");
-      }
-    } catch (err) {
-      setError("Failed to load global variables Error: " + err);
-      setGlobalVariables({});
-    }
-
-    // Reload URL data
-    try {
-      const storageKey = getProjectStorageKey("app_state");
-      const savedState = localStorage.getItem(storageKey);
-      if (savedState) {
-        const parsed = safeParseJSON(savedState);
-        setUrlData(parsed?.urlData ?? {
+        setUrlData({
           baseURL: "",
           segments: "",
           parsedSegments: [],
@@ -246,7 +204,158 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
           builtUrl: "",
           environment: "development",
         });
-      } else {
+        setRequestConfig(null);
+        setYamlOutput("");
+        setActiveSection("url");
+        setSegmentVariables({});
+        setSharedVariables([]);
+        console.log("State cleared successfully");
+      } catch (error) {
+        console.error("Error clearing state:", error);
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      console.log("Initial load - not clearing state");
+      setIsInitialLoad(false);
+    }
+
+    // Use a small delay to ensure state clearing is processed before loading new data
+    const loadData = () => {
+      console.log("Loading data for project:", currentProjectId);
+
+      // Verify we're still loading for the same project
+      if (!currentProjectId) {
+        console.log("Project changed during loading, aborting");
+        setIsLoading(false);
+        return;
+      }
+
+      // Verify the getProjectStorageKey function is working correctly
+      const testKey = getProjectStorageKey("test");
+      console.log(`Test storage key: ${testKey}, expected prefix: ${currentProjectId}`);
+
+      if (!testKey.startsWith(currentProjectId)) {
+        console.error("getProjectStorageKey is not working correctly!");
+        console.error(`Expected: ${currentProjectId}_test, Got: ${testKey}`);
+        setIsLoading(false);
+        return;
+      }
+
+      // Reload active session
+      try {
+        const storageKey = getProjectStorageKey("active_session");
+        console.log("Loading active session from:", storageKey);
+
+        // Verify the storage key is for the current project
+        if (!storageKey.startsWith(currentProjectId)) {
+          console.log("Storage key mismatch, skipping session load");
+          setActiveSession(null);
+        } else {
+          const savedSession = localStorage.getItem(storageKey);
+          if (savedSession) {
+            const parsed = safeParseJSON(savedSession);
+            setActiveSession(parsed ?? null);
+            console.log("Loaded active session:", parsed);
+          } else {
+            setActiveSession(null);
+            console.log("No active session found");
+          }
+        }
+      } catch (err) {
+        setError("Failed to load active session Error: " + err);
+        setActiveSession(null);
+      }
+
+      // Reload saved sessions
+      try {
+        const storageKey = getProjectStorageKey("saved_sessions");
+        console.log("Loading saved sessions from:", storageKey);
+        console.log("Current project ID:", currentProjectId);
+
+        // Verify the storage key is for the current project
+        if (!storageKey.startsWith(currentProjectId)) {
+          console.log("Storage key mismatch, skipping sessions load");
+          console.log("Expected prefix:", currentProjectId);
+          console.log("Actual key:", storageKey);
+          setSavedSessions([]);
+        } else {
+          const savedSessions = localStorage.getItem(storageKey);
+          if (savedSessions) {
+            const parsed = safeParseJSON(savedSessions);
+            const sessions = Array.isArray(parsed) ? parsed : [];
+            setSavedSessions(sessions);
+            console.log("Loaded saved sessions:", sessions.length);
+            console.log("Session names:", sessions.map(s => s.name));
+          } else {
+            setSavedSessions([]);
+            console.log("No saved sessions found");
+          }
+        }
+      } catch (err) {
+        setError("Failed to load saved sessions Error: " + err);
+        setSavedSessions([]);
+      }
+
+      // Reload global variables
+      try {
+        const storageKey = getProjectStorageKey("app_state");
+        console.log("Loading app state from:", storageKey);
+
+        // Verify the storage key is for the current project
+        if (!storageKey.startsWith(currentProjectId)) {
+          console.log("Storage key mismatch, skipping app state load");
+          setGlobalVariables({});
+        } else {
+          const savedState = localStorage.getItem(storageKey);
+          if (savedState) {
+            const parsed = safeParseJSON(savedState);
+            setGlobalVariables(parsed?.globalVariables ?? {});
+            console.log("Loaded global variables:", Object.keys(parsed?.globalVariables ?? {}));
+          } else {
+            setGlobalVariables({});
+            console.log("No app state found");
+          }
+        }
+      } catch (err) {
+        setError("Failed to load global variables Error: " + err);
+        setGlobalVariables({});
+      }
+
+      // Reload URL data
+      try {
+        const storageKey = getProjectStorageKey("app_state");
+        const savedState = localStorage.getItem(storageKey);
+        if (savedState) {
+          const parsed = safeParseJSON(savedState);
+          setUrlData(parsed?.urlData ?? {
+            baseURL: "",
+            segments: "",
+            parsedSegments: [],
+            queryParams: [],
+            segmentVariables: [],
+            processedURL: "",
+            domain: "",
+            protocol: "https",
+            builtUrl: "",
+            environment: "development",
+          });
+        } else {
+          setUrlData({
+            baseURL: "",
+            segments: "",
+            parsedSegments: [],
+            queryParams: [],
+            segmentVariables: [],
+            processedURL: "",
+            domain: "",
+            protocol: "https",
+            builtUrl: "",
+            environment: "development",
+          });
+        }
+      } catch (err) {
+        setError("Failed to load URL data Error: " + err);
         setUrlData({
           baseURL: "",
           segments: "",
@@ -260,221 +369,309 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
           environment: "development",
         });
       }
-    } catch (err) {
-      setError("Failed to load URL data Error: " + err);
-      setUrlData({
-        baseURL: "",
-        segments: "",
-        parsedSegments: [],
-        queryParams: [],
-        segmentVariables: [],
-        processedURL: "",
-        domain: "",
-        protocol: "https",
-        builtUrl: "",
-        environment: "development",
-      });
-    }
 
-    // Reload request config
-    try {
-      const storageKey = getProjectStorageKey("app_state");
-      const savedState = localStorage.getItem(storageKey);
-      if (savedState) {
-        const parsed = safeParseJSON(savedState);
-        setRequestConfig(parsed?.requestConfig ?? null);
-      } else {
-        setRequestConfig(null);
-      }
-    } catch (err) {
-      setError("Failed to load request config Error: " + err);
-      setRequestConfig(null);
-    }
-
-    // Reload YAML output
-    try {
-      const storageKey = getProjectStorageKey("app_state");
-      const savedState = localStorage.getItem(storageKey);
-      if (savedState) {
-        const parsed = safeParseJSON(savedState);
-        setYamlOutput(parsed?.yamlOutput ?? "");
-      } else {
-        setYamlOutput("");
-      }
-    } catch (err) {
-      setError("Failed to load YAML output Error: " + err);
-      setYamlOutput("");
-    }
-
-    // Reload active section
-    try {
-      const activeSessionStorageKey = getProjectStorageKey("active_session");
-      const activeSessionStr = localStorage.getItem(activeSessionStorageKey);
-      if (activeSessionStr) {
-        const activeSession = safeParseJSON(activeSessionStr);
-        if (activeSession?.activeSection) {
-          setActiveSection(activeSession.activeSection as SectionId);
-        }
-      } else {
-        const appStateStorageKey = getProjectStorageKey("app_state");
-        const savedState = localStorage.getItem(appStateStorageKey);
+      // Reload request config
+      try {
+        const storageKey = getProjectStorageKey("app_state");
+        const savedState = localStorage.getItem(storageKey);
         if (savedState) {
           const parsed = safeParseJSON(savedState);
-          setActiveSection(parsed?.activeSection ?? "url");
+          setRequestConfig(parsed?.requestConfig ?? null);
         } else {
-          setActiveSection("url");
+          setRequestConfig(null);
         }
+      } catch (err) {
+        setError("Failed to load request config Error: " + err);
+        setRequestConfig(null);
       }
-    } catch (err) {
-      setError("Failed to load active section ERROR: " + err);
-      setActiveSection("url");
-    }
 
-    // Reload segment variables
-    try {
-      const storageKey = getProjectStorageKey("app_state");
-      const savedState = localStorage.getItem(storageKey);
-      if (savedState) {
-        const parsed = safeParseJSON(savedState);
-        setSegmentVariables(parsed?.segmentVariables ?? {});
-      } else {
+      // Reload YAML output
+      try {
+        const storageKey = getProjectStorageKey("app_state");
+        const savedState = localStorage.getItem(storageKey);
+        if (savedState) {
+          const parsed = safeParseJSON(savedState);
+          setYamlOutput(parsed?.yamlOutput ?? "");
+        } else {
+          setYamlOutput("");
+        }
+      } catch (err) {
+        setError("Failed to load YAML output Error: " + err);
+        setYamlOutput("");
+      }
+
+      // Reload active section
+      try {
+        const activeSessionStorageKey = getProjectStorageKey("active_session");
+        const activeSessionStr = localStorage.getItem(activeSessionStorageKey);
+        if (activeSessionStr) {
+          const activeSession = safeParseJSON(activeSessionStr);
+          if (activeSession?.activeSection) {
+            setActiveSection(activeSession.activeSection as SectionId);
+          }
+        } else {
+          const appStateStorageKey = getProjectStorageKey("app_state");
+          const savedState = localStorage.getItem(appStateStorageKey);
+          if (savedState) {
+            const parsed = safeParseJSON(savedState);
+            setActiveSection(parsed?.activeSection ?? "url");
+          } else {
+            setActiveSection("url");
+          }
+        }
+      } catch (err) {
+        setError("Failed to load active section ERROR: " + err);
+        setActiveSection("url");
+      }
+
+      // Reload segment variables
+      try {
+        const storageKey = getProjectStorageKey("app_state");
+        const savedState = localStorage.getItem(storageKey);
+        if (savedState) {
+          const parsed = safeParseJSON(savedState);
+          setSegmentVariables(parsed?.segmentVariables ?? {});
+        } else {
+          setSegmentVariables({});
+        }
+      } catch (err) {
+        setError("Failed to load segment variables ERROR: " + err);
         setSegmentVariables({});
       }
-    } catch (err) {
-      setError("Failed to load segment variables ERROR: " + err);
-      setSegmentVariables({});
-    }
 
-    // Reload shared variables
-    try {
-      const storageKey = getProjectStorageKey("shared_variables");
-      const savedState = localStorage.getItem(storageKey);
-      if (savedState) {
-        const parsed = safeParseJSON(savedState);
-        setSharedVariables(parsed ?? []);
-      } else {
+      // Reload shared variables
+      try {
+        const storageKey = getProjectStorageKey("shared_variables");
+        const savedState = localStorage.getItem(storageKey);
+        if (savedState) {
+          const parsed = safeParseJSON(savedState);
+          setSharedVariables(parsed ?? []);
+        } else {
+          setSharedVariables([]);
+        }
+      } catch (err) {
+        setError("Failed to load shared variables ERROR: " + err);
         setSharedVariables([]);
       }
-    } catch (err) {
-      setError("Failed to load shared variables ERROR: " + err);
-      setSharedVariables([]);
-    }
 
-    // Reload token config
-    try {
-      const storageKey = getProjectStorageKey("token_config");
-      const savedState = localStorage.getItem(storageKey);
-      if (savedState) {
-        const parsed = safeParseJSON(savedState);
-        setTokenConfig(parsed ?? {
-          domain: "http://{base_url}",
-          method: "POST",
-          path: "/auth/login",
-          tokenName: "x-access-token",
-          headerKey: "x-access-token",
-          headerValueFormat: "{token}",
-          refreshToken: false,
-          refreshTokenName: "refresh_token",
+      // Reload token config
+      try {
+        const storageKey = getProjectStorageKey("token_config");
+        const savedState = localStorage.getItem(storageKey);
+        if (savedState) {
+          const parsed = safeParseJSON(savedState);
+          setTokenConfig(parsed ?? {
+            domain: "http://{base_url}",
+            method: "POST",
+            path: "/auth/login",
+            tokenName: "x-access-token",
+            headerKey: "x-access-token",
+            headerValueFormat: "{token}",
+            refreshToken: false,
+            refreshTokenName: "refresh_token",
 
-          // Enhanced authentication types
-          authType: "bearer",
+            // Enhanced authentication types
+            authType: "bearer",
 
-          // OAuth2 specific configuration
-          oauth2: {
-            grantType: "password",
-            clientId: "",
-            clientSecret: "",
-            redirectUri: "",
-            scope: "",
-            authorizationUrl: "",
-            tokenUrl: "",
-            refreshUrl: "",
-          },
+            // OAuth2 specific configuration
+            oauth2: {
+              grantType: "password",
+              clientId: "",
+              clientSecret: "",
+              redirectUri: "",
+              scope: "",
+              authorizationUrl: "",
+              tokenUrl: "",
+              refreshUrl: "",
+            },
 
-          // API Key configuration
-          apiKey: {
-            keyName: "X-API-Key",
-            keyValue: "",
-            location: "header",
-            prefix: "",
-          },
+            // API Key configuration
+            apiKey: {
+              keyName: "X-API-Key",
+              keyValue: "",
+              location: "header",
+              prefix: "",
+            },
 
-          // Session-based authentication
-          session: {
-            sessionIdField: "session_id",
-            sessionTokenField: "session_token",
-            keepAlive: false,
-            keepAliveInterval: 300,
-          },
+            // Session-based authentication
+            session: {
+              sessionIdField: "session_id",
+              sessionTokenField: "session_token",
+              keepAlive: false,
+              keepAliveInterval: 300,
+            },
 
-          // Enhanced extraction methods with priority and patterns
-          extractionMethods: {
-            json: false,
-            jsonPaths: [],
-            cookies: false,
-            cookieNames: [],
-            headers: false,
-            headerNames: [],
-            // New extraction methods
-            regex: false,
-            regexPatterns: [],
-            xpath: false,
-            xpathExpressions: [],
-            css: false,
-            cssSelectors: [],
-            // Advanced JSON extraction with nested paths
-            nestedJson: false,
-            nestedPaths: [],
-          },
+            // Enhanced extraction methods with priority and patterns
+            extractionMethods: {
+              json: false,
+              jsonPaths: [],
+              cookies: false,
+              cookieNames: [],
+              headers: false,
+              headerNames: [],
+              // New extraction methods
+              regex: false,
+              regexPatterns: [],
+              xpath: false,
+              xpathExpressions: [],
+              css: false,
+              cssSelectors: [],
+              // Advanced JSON extraction with nested paths
+              nestedJson: false,
+              nestedPaths: [],
+            },
 
-          // Enhanced request mapping for different auth types
-          requestMapping: {
-            usernameField: "username",
-            passwordField: "password",
-            contentType: "form",
-            // Additional fields for different auth types
-            additionalFields: [],
-            // Custom headers for the request
-            customHeaders: [],
-          },
+            // Enhanced request mapping for different auth types
+            requestMapping: {
+              usernameField: "username",
+              passwordField: "password",
+              contentType: "form",
+              // Additional fields for different auth types
+              additionalFields: [],
+              // Custom headers for the request
+              customHeaders: [],
+            },
 
-          // Token validation and refresh configuration
-          validation: {
-            validateOnExtract: false,
-            validationEndpoint: "",
-            validationMethod: "GET",
-            validationHeaders: [],
-            autoRefresh: false,
-            refreshThreshold: 5, // minutes before expiry
-            maxRefreshAttempts: 3,
-          },
+            // Token validation and refresh configuration
+            validation: {
+              validateOnExtract: false,
+              validationEndpoint: "",
+              validationMethod: "GET",
+              validationHeaders: [],
+              autoRefresh: false,
+              refreshThreshold: 5, // minutes before expiry
+              maxRefreshAttempts: 3,
+            },
 
-          // Security and encryption
-          security: {
-            encryptToken: false,
-            encryptionKey: "",
-            hashToken: false,
-            hashAlgorithm: "sha256",
-            maskTokenInLogs: true,
-          },
+            // Security and encryption
+            security: {
+              encryptToken: false,
+              encryptionKey: "",
+              hashToken: false,
+              hashAlgorithm: "sha256",
+              maskTokenInLogs: true,
+            },
 
-          // Error handling and fallback
-          errorHandling: {
-            retryOnFailure: true,
-            maxRetries: 3,
-            retryDelay: 1000,
-            customErrorMessages: {},
-          },
-        });
+            // Error handling and fallback
+            errorHandling: {
+              retryOnFailure: true,
+              maxRetries: 3,
+              retryDelay: 1000,
+              customErrorMessages: {},
+            }
+          });
+        } else {
+          setTokenConfig({
+            domain: "http://{base_url}",
+            method: "POST",
+            path: "/auth/login",
+            tokenName: "x-access-token",
+            headerKey: "x-access-token",
+            headerValueFormat: "{token}",
+            refreshToken: false,
+            refreshTokenName: "refresh_token",
+
+            // Enhanced authentication types
+            authType: "bearer",
+
+            // OAuth2 specific configuration
+            oauth2: {
+              grantType: "password",
+              clientId: "",
+              clientSecret: "",
+              redirectUri: "",
+              scope: "",
+              authorizationUrl: "",
+              tokenUrl: "",
+              refreshUrl: "",
+            },
+
+            // API Key configuration
+            apiKey: {
+              keyName: "X-API-Key",
+              keyValue: "",
+              location: "header",
+              prefix: "",
+            },
+
+            // Session-based authentication
+            session: {
+              sessionIdField: "session_id",
+              sessionTokenField: "session_token",
+              keepAlive: false,
+              keepAliveInterval: 300,
+            },
+
+            // Enhanced extraction methods with priority and patterns
+            extractionMethods: {
+              json: false,
+              jsonPaths: [],
+              cookies: false,
+              cookieNames: [],
+              headers: false,
+              headerNames: [],
+              // New extraction methods
+              regex: false,
+              regexPatterns: [],
+              xpath: false,
+              xpathExpressions: [],
+              css: false,
+              cssSelectors: [],
+              // Advanced JSON extraction with nested paths
+              nestedJson: false,
+              nestedPaths: [],
+            },
+
+            // Enhanced request mapping for different auth types
+            requestMapping: {
+              usernameField: "username",
+              passwordField: "password",
+              contentType: "form",
+              // Additional fields for different auth types
+              additionalFields: [],
+              // Custom headers for the request
+              customHeaders: [],
+            },
+
+            // Token validation and refresh configuration
+            validation: {
+              validateOnExtract: false,
+              validationEndpoint: "",
+              validationMethod: "GET",
+              validationHeaders: [],
+              autoRefresh: false,
+              refreshThreshold: 5, // minutes before expiry
+              maxRefreshAttempts: 3,
+            },
+
+            // Security and encryption
+            security: {
+              encryptToken: false,
+              encryptionKey: "",
+              hashToken: false,
+              hashAlgorithm: "sha256",
+              maskTokenInLogs: true,
+            },
+
+            // Error handling and fallback
+            errorHandling: {
+              retryOnFailure: true,
+              maxRetries: 3,
+              retryDelay: 1000,
+              customErrorMessages: {},
+            }
+          });
+        }
+      } catch (err) {
+        setError("Failed to load token config ERROR: " + err);
       }
-    } catch (err) {
-      setError("Failed to load token config ERROR: " + err);
+
+      // Set loading to false after all data is loaded
+      setIsLoading(false);
     }
 
-    // Set loading to false after all data is loaded
-    setIsLoading(false);
-
-  }, [currentProjectId, forceReload, getProjectStorageKey]);
+    loadData();
+  }, [currentProjectId, forceReload, isInitialLoad]);
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
@@ -519,15 +716,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
       setError("Failed to save active session ERROR: " + err);
     }
   }, [activeSession, getProjectStorageKey]);
-
-  useEffect(() => {
-    try {
-      const storageKey = getProjectStorageKey("saved_sessions");
-      localStorage.setItem(storageKey, JSON.stringify(savedSessions));
-    } catch (err) {
-      setError("Failed to save sessions ERROR: " + err);
-    }
-  }, [savedSessions, getProjectStorageKey]);
 
   useEffect(() => {
     try {
@@ -735,25 +923,33 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
 
       setSavedSessions((prev) => {
         const existingIndex = prev.findIndex((s) => s.id === newSession.id);
+        let updatedSessions;
         if (existingIndex >= 0) {
-          const updated = [...prev];
-          updated[existingIndex] = newSession;
+          updatedSessions = [...prev];
+          updatedSessions[existingIndex] = newSession;
           console.log('Updated existing session at index:', existingIndex);
-          return updated;
+        } else {
+          updatedSessions = [...prev, newSession];
+          console.log('Adding new session to saved sessions');
         }
-        console.log('Adding new session to saved sessions');
-        return [...prev, newSession];
+
+        // Save to localStorage immediately with the updated sessions
+        const savedSessionsStorageKey = getProjectStorageKey("saved_sessions");
+        console.log('Saving sessions to storage key:', savedSessionsStorageKey);
+        console.log('Current project ID:', currentProjectId);
+        localStorage.setItem(savedSessionsStorageKey, JSON.stringify(updatedSessions));
+        console.log('Saved updated sessions to localStorage:', updatedSessions.length);
+
+        return updatedSessions;
       });
 
       setActiveSession(newSession);
       console.log('Set active session:', newSession);
 
-      // Save to localStorage immediately
+      // Save active session to localStorage immediately
       const activeSessionStorageKey = getProjectStorageKey("active_session");
-      const savedSessionsStorageKey = getProjectStorageKey("saved_sessions");
       localStorage.setItem(activeSessionStorageKey, JSON.stringify(newSession));
-      localStorage.setItem(savedSessionsStorageKey, JSON.stringify(savedSessions));
-      console.log('Saved to localStorage');
+      console.log('Saved active session to localStorage');
     },
     [
       urlData,
@@ -762,15 +958,84 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
       activeSection,
       segmentVariables,
       sharedVariables,
-      savedSessions,
       getProjectStorageKey,
     ]
   );
 
   const handleDeleteSession = (id: string) => {
-    setSavedSessions((prev) => prev.filter((session) => session.id !== id));
+    setSavedSessions((prev) => {
+      const updatedSessions = prev.filter((session) => session.id !== id);
+
+      // Save to localStorage immediately with the updated sessions
+      const savedSessionsStorageKey = getProjectStorageKey("saved_sessions");
+      localStorage.setItem(savedSessionsStorageKey, JSON.stringify(updatedSessions));
+      console.log('Saved updated sessions to localStorage after deletion:', updatedSessions.length);
+
+      return updatedSessions;
+    });
+
     if (activeSession?.id === id) {
       handleNewSession();
+    }
+  };
+
+  const handleImportSessions = (sessions: any[]) => {
+    const importedSessions: ExtendedSession[] = sessions.map((session, index) => {
+      // Generate a unique ID if not provided
+      const sessionId = session.id || `imported-${Date.now()}-${index}`;
+
+      // Create a properly formatted session
+      const importedSession: ExtendedSession = {
+        id: sessionId,
+        name: session.name || `Imported Session ${index + 1}`,
+        timestamp: new Date().toISOString(),
+        category: session.category || 'Imported',
+        urlData: session.urlData || {
+          baseURL: "",
+          segments: "",
+          parsedSegments: [],
+          queryParams: [],
+          segmentVariables: [],
+          processedURL: "",
+          domain: "",
+          protocol: "https",
+          builtUrl: "",
+          environment: "development",
+        },
+        requestConfig: session.requestConfig || {
+          method: "GET",
+          queryParams: [],
+          headers: [],
+          bodyType: "none",
+          jsonBody: "",
+          formData: [],
+        },
+        yamlOutput: session.yamlOutput || "",
+        segmentVariables: session.segmentVariables || {},
+        sharedVariables: session.sharedVariables || {},
+        activeSection: session.activeSection || "url",
+      };
+
+      return importedSession;
+    });
+
+    // Add imported sessions to saved sessions
+    setSavedSessions((prev) => {
+      const updatedSessions = [...prev, ...importedSessions];
+
+      // Save to localStorage immediately
+      const savedSessionsStorageKey = getProjectStorageKey("saved_sessions");
+      localStorage.setItem(savedSessionsStorageKey, JSON.stringify(updatedSessions));
+      console.log('Saved imported sessions to localStorage:', importedSessions.length);
+
+      return updatedSessions;
+    });
+
+    // Set the first imported session as active if no active session
+    if (!activeSession && importedSessions.length > 0 && importedSessions[0]) {
+      setActiveSession(importedSessions[0]);
+      const activeSessionStorageKey = getProjectStorageKey("active_session");
+      localStorage.setItem(activeSessionStorageKey, JSON.stringify(importedSessions[0]));
     }
   };
 
@@ -1047,6 +1312,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     handleLoadSession,
     handleSaveSession,
     handleDeleteSession,
+    handleImportSessions,
     handleURLBuilderSubmit,
     handleRequestConfigSubmit,
     handleYAMLGenerated,

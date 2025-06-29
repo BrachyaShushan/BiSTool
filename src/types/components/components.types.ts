@@ -121,7 +121,7 @@ export interface AIPricing {
 export interface AIConfig {
   provider: string;
   model: string;
-  apiKey: string;
+  apiKeys: Record<string, string>; // Store API keys for each provider separately
   baseUrl?: string;
   customHeaders?: Record<string, string>;
   maxTokens: number;

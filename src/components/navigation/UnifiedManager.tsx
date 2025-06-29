@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTheme } from "../../context/ThemeContext";
-import { useProjectContext } from "../../context/ProjectContext";
+import { useProjectContext, useProjectSwitch } from "../../context/ProjectContext";
 import Modal from "../core/Modal";
 import {
     ExtendedSession,
@@ -46,14 +46,14 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
         currentProject,
         projects,
         createProject,
-        switchProject,
         deleteProject,
         updateProject,
         clearCurrentProject,
         error: projectError,
     } = useProjectContext();
+    const { switchToProject } = useProjectSwitch();
 
-    const [activeTab, setActiveTab] = useState<TabType>('sessions');
+    const [activeTab, setActiveTab] = useState<TabType>('projects');
     const [sessionName, setSessionName] = useState<string>("");
     const [showSessionModal, setShowSessionModal] = useState<boolean>(false);
     const [showVariableModal, setShowVariableModal] = useState<boolean>(false);
@@ -553,26 +553,30 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
             >
                 {/* Tabs */}
                 <div className="flex mb-4 border-b border-gray-200 dark:border-gray-700">
-                    <button
-                        onClick={() => setActiveTab('sessions')}
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'sessions'
-                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                            }`}
-                    >
-                        <FiFolder className="inline mr-2" />
-                        Sessions
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('variables')}
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'variables'
-                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                            }`}
-                    >
-                        <FiKey className="inline mr-2" />
-                        Variables
-                    </button>
+                    {currentProject && (
+                        <>
+                            <button
+                                onClick={() => setActiveTab('sessions')}
+                                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'sessions'
+                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                                    }`}
+                            >
+                                <FiFolder className="inline mr-2" />
+                                Sessions
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('variables')}
+                                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'variables'
+                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                                    }`}
+                            >
+                                <FiKey className="inline mr-2" />
+                                Variables
+                            </button>
+                        </>
+                    )}
                     <button
                         onClick={() => setActiveTab('projects')}
                         className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'projects'
@@ -1201,7 +1205,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                                     <div className="flex items-center ml-4 space-x-2">
                                                         {currentProject?.id !== project.id && (
                                                             <button
-                                                                onClick={() => switchProject(project.id)}
+                                                                onClick={() => switchToProject(project.id)}
                                                                 className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${isDarkMode
                                                                     ? "text-gray-300 bg-gray-600 hover:bg-gray-500 hover:text-green-400"
                                                                     : "text-gray-700 bg-gray-200 hover:bg-gray-300 hover:text-green-600"

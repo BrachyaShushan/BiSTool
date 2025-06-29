@@ -409,7 +409,12 @@ export class AIProviderRegistry {
     const model = provider.models.find((m) => m.id === config.model);
     if (!model) return false;
 
-    if (!config.apiKey && !provider.isLocal) return false;
+    // Check if API key is required and provided for the current provider
+    if (!provider.isLocal) {
+      const apiKey = config.apiKeys[config.provider];
+      if (!apiKey) return false;
+    }
+
     if (config.maxTokens > model.maxTokens) return false;
 
     return true;
@@ -425,7 +430,7 @@ export class AIProviderRegistry {
     return {
       provider: providerId,
       model: defaultModel.id,
-      apiKey: "",
+      apiKeys: {}, // Empty object to store API keys for each provider
       baseUrl: provider.baseUrl || "",
       customHeaders: provider.headers || {},
       maxTokens: Math.min(4000, defaultModel.maxTokens),
@@ -520,7 +525,7 @@ export const getDefaultAIConfig = (): AIConfig => {
     aiProviderRegistry.getDefaultConfig("anthropic") || {
       provider: "anthropic",
       model: "claude-3-5-haiku-20241022",
-      apiKey: "",
+      apiKeys: {}, // Empty object to store API keys for each provider
       baseUrl: "https://api.anthropic.com",
       customHeaders: {
         "Content-Type": "application/json",
@@ -546,12 +551,16 @@ export const validateAIConfig = (
 
   if (!config.provider) errors.push("Provider is required");
   if (!config.model) errors.push("Model is required");
-  if (
-    !config.apiKey &&
-    !aiProviderRegistry.getProvider(config.provider)?.isLocal
-  ) {
-    errors.push("API key is required for cloud providers");
+
+  // Check if API key is required and provided for the current provider
+  const provider = aiProviderRegistry.getProvider(config.provider);
+  if (provider && !provider.isLocal) {
+    const apiKey = config.apiKeys[config.provider];
+    if (!apiKey) {
+      errors.push(`API key is required for ${provider.name}`);
+    }
   }
+
   if (config.maxTokens <= 0) errors.push("Max tokens must be greater than 0");
   if (config.temperature < 0 || config.temperature > 2)
     errors.push("Temperature must be between 0 and 2");
@@ -826,10 +835,14 @@ export class CustomProviderManagerImpl implements CustomProviderManager {
       };
 
       // Add authentication
-      if (provider.customConfig.authMethod === "api_key" && config.apiKey) {
-        const headerName = provider.customConfig.authHeader || "Authorization";
-        const prefix = provider.customConfig.authPrefix || "";
-        headers[headerName] = `${prefix}${config.apiKey}`;
+      if (provider.customConfig.authMethod === "api_key") {
+        const apiKey = config.apiKeys[provider.id];
+        if (apiKey) {
+          const headerName =
+            provider.customConfig.authHeader || "Authorization";
+          const prefix = provider.customConfig.authPrefix || "";
+          headers[headerName] = `${prefix}${apiKey}`;
+        }
       }
 
       const response = await fetch(testUrl, {

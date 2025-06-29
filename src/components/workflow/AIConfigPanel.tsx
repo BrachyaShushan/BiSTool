@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { useAppContext } from '../../context/AppContext';
+import { useAIConfigContext } from '../../context/AIConfigContext';
 import {
     AIProvider,
     AIConfig,
@@ -382,41 +382,24 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
     currentConfig,
 }) => {
     const { isDarkMode } = useTheme();
-    const { globalVariables, updateGlobalVariable } = useAppContext();
+    const { aiConfig, setAIConfig, updateAIConfig } = useAIConfigContext();
 
-    const [config, setConfig] = useState<AIConfig>(currentConfig || getDefaultAIConfig());
-    const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(
-        aiProviderRegistry.getProvider(config.provider) || null
-    );
-    const [selectedModel, setSelectedModel] = useState<AIModel | null>(
-        selectedProvider?.models.find(m => m.id === config.model) || null
-    );
-    const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-    const [isLocalConfigOpen, setIsLocalConfigOpen] = useState(false);
+    const [config, setConfig] = useState<AIConfig>(currentConfig || aiConfig);
+    const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
+    const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
+    const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [healthStatus, setHealthStatus] = useState<Record<string, boolean>>({});
     const [isCheckingHealth, setIsCheckingHealth] = useState(false);
-    const [validationErrors, setValidationErrors] = useState<string[]>([]);
-    const [isCustomProviderOpen, setIsCustomProviderOpen] = useState(false);
+    const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
     const [isAddingCustomProvider, setIsAddingCustomProvider] = useState(false);
     const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null);
 
-    // Load configuration from global variables
+    // Load configuration from AI context
     useEffect(() => {
-        const loadConfigFromGlobals = () => {
-            const baseUrl = globalVariables['ai_provider'] === 'ollama'
-                ? globalVariables['ollama_base_url']
-                : globalVariables['ai_provider'] === 'openai-compatible'
-                    ? globalVariables['custom_ai_base_url']
-                    : undefined;
-
+        const loadConfigFromContext = () => {
             const newConfig: AIConfig = {
-                ...config,
-                provider: globalVariables['ai_provider'] || 'anthropic',
-                model: globalVariables['ai_model'] || 'claude-3-5-haiku-20241022',
-                apiKey: globalVariables[`${globalVariables['ai_provider'] || 'anthropic'}_api_key`] || '',
-                maxTokens: parseInt(globalVariables['ai_max_tokens'] || '4000'),
-                temperature: parseFloat(globalVariables['ai_temperature'] || '0.7'),
-                baseUrl: baseUrl || '',
+                ...aiConfig,
+                ...currentConfig, // Allow override from props
             };
 
             setConfig(newConfig);
@@ -424,26 +407,13 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
             setSelectedModel(aiProviderRegistry.getProvider(newConfig.provider)?.models.find(m => m.id === newConfig.model) || null);
         };
 
-        loadConfigFromGlobals();
-    }, [globalVariables]);
+        loadConfigFromContext();
+    }, [aiConfig, currentConfig]);
 
-    // Save configuration to global variables
-    const saveConfigToGlobals = (newConfig: AIConfig) => {
-        updateGlobalVariable('ai_provider', newConfig.provider);
-        updateGlobalVariable('ai_model', newConfig.model);
-        updateGlobalVariable('ai_max_tokens', newConfig.maxTokens.toString());
-        updateGlobalVariable('ai_temperature', newConfig.temperature.toString());
-
-        // Save API key to appropriate field
-        const apiKeyField = selectedProvider?.apiKeyField || `${newConfig.provider}_api_key`;
-        updateGlobalVariable(apiKeyField, newConfig.apiKey);
-
-        // Save local AI URLs
-        if (newConfig.provider === 'ollama') {
-            updateGlobalVariable('ollama_base_url', newConfig.baseUrl || 'http://localhost:11434');
-        } else if (newConfig.provider === 'openai-compatible') {
-            updateGlobalVariable('custom_ai_base_url', newConfig.baseUrl || 'http://localhost:8000');
-        }
+    // Save configuration to AI context
+    const saveConfigToContext = (newConfig: AIConfig) => {
+        setAIConfig(newConfig);
+        onConfigChange(newConfig);
     };
 
     const handleProviderChange = (providerId: string) => {
@@ -453,21 +423,23 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
         const defaultConfig = aiProviderRegistry.getDefaultConfig(providerId);
         if (!defaultConfig) return;
 
-        // Load API key from global variables
-        const apiKey = globalVariables[provider.apiKeyField] || '';
+        // Load API key from AI config for the specific provider
+        const apiKey = aiConfig.apiKeys[providerId] || '';
         const newConfig = {
             ...defaultConfig,
-            apiKey,
+            apiKeys: {
+                ...aiConfig.apiKeys,
+                [providerId]: apiKey
+            },
             baseUrl: provider.isLocal
-                ? (providerId === 'ollama' ? globalVariables['ollama_base_url'] : globalVariables['custom_ai_base_url']) || ''
+                ? (providerId === 'ollama' ? aiConfig.baseUrl || 'http://localhost:11434' : aiConfig.baseUrl || 'http://localhost:8000') || ''
                 : provider.baseUrl || '',
         };
 
         setConfig(newConfig);
         setSelectedProvider(provider);
         setSelectedModel(provider.models[0] ?? null);
-        saveConfigToGlobals(newConfig);
-        onConfigChange(newConfig);
+        saveConfigToContext(newConfig);
     };
 
     const handleModelChange = (modelId: string) => {
@@ -482,15 +454,26 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
 
         setConfig(newConfig);
         setSelectedModel(model);
-        saveConfigToGlobals(newConfig);
-        onConfigChange(newConfig);
+        saveConfigToContext(newConfig);
     };
 
     const handleConfigChange = (field: keyof AIConfig, value: any) => {
         const newConfig = { ...config, [field]: value };
         setConfig(newConfig);
-        saveConfigToGlobals(newConfig);
-        onConfigChange(newConfig);
+        saveConfigToContext(newConfig);
+    };
+
+    // Handle API key changes for specific providers
+    const handleApiKeyChange = (providerId: string, apiKey: string) => {
+        const newConfig = {
+            ...config,
+            apiKeys: {
+                ...config.apiKeys,
+                [providerId]: apiKey
+            }
+        };
+        setConfig(newConfig);
+        saveConfigToContext(newConfig);
     };
 
     const validateCurrentConfig = () => {
@@ -539,6 +522,66 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
                 ${model.pricing.input}/1K input, ${model.pricing.output}/1K output
             </span>
         );
+    };
+
+    const getModelIcon = (modelId: string): string => {
+        const modelIcons: Record<string, string> = {
+            // OpenAI Models
+            'gpt-4o': '🤖',
+            'gpt-4o-mini': '⚡',
+            'gpt-3.5-turbo': '🚀',
+            'gpt-4': '🧠',
+
+            // Anthropic Models
+            'claude-3-5-sonnet-20241022': '🧠',
+            'claude-3-5-haiku-20241022': '🌸',
+            'claude-3': '🧠',
+
+            // Google Models
+            'gemini-1.5-pro': '🔮',
+            'gemini-1.5-flash': '⚡',
+            'gemini-pro': '🔮',
+
+            // Ollama Models
+            'llama3.2:3b': '🦙',
+            'llama3.2:7b': '🦙',
+            'codellama:7b': '💻',
+
+            // Custom Models
+            'custom-model': '🔧',
+        };
+
+        return modelIcons[modelId] || '🤖';
+    };
+
+    const getModelColor = (modelId: string): string => {
+        const modelColors: Record<string, string> = {
+            // OpenAI Models
+            'gpt-4o': '#10a37f',
+            'gpt-4o-mini': '#10a37f',
+            'gpt-3.5-turbo': '#10a37f',
+            'gpt-4': '#10a37f',
+
+            // Anthropic Models
+            'claude-3-5-sonnet-20241022': '#d97706',
+            'claude-3-5-haiku-20241022': '#d97706',
+            'claude-3': '#d97706',
+
+            // Google Models
+            'gemini-1.5-pro': '#4285f4',
+            'gemini-1.5-flash': '#4285f4',
+            'gemini-pro': '#4285f4',
+
+            // Ollama Models
+            'llama3.2:3b': '#059669',
+            'llama3.2:7b': '#059669',
+            'codellama:7b': '#059669',
+
+            // Custom Models
+            'custom-model': '#7c3aed',
+        };
+
+        return modelColors[modelId] || '#6b7280';
     };
 
     if (!isOpen) return null;
@@ -691,7 +734,7 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
                                         <span>Add</span>
                                     </button>
                                     <button
-                                        onClick={() => setIsCustomProviderOpen(!isCustomProviderOpen)}
+                                        onClick={() => setIsAddingCustomProvider(!isAddingCustomProvider)}
                                         className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                                     >
                                         <FiSettings className="w-3 h-3" />
@@ -700,7 +743,7 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
                                 </div>
                             </div>
 
-                            {isCustomProviderOpen && (
+                            {isAddingCustomProvider && (
                                 <div className="p-4 space-y-4 rounded-xl border border-gray-200 dark:border-gray-600">
                                     <div className="flex items-center justify-between">
                                         <h5 className="font-semibold">Custom Provider Management</h5>
@@ -848,9 +891,22 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
                                             }`}
                                         onClick={() => handleModelChange(model.id)}
                                     >
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <h5 className="font-semibold">{model.name}</h5>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex items-center space-x-3">
+                                                    <div
+                                                        className="flex justify-center items-center w-10 h-10 text-lg text-white rounded-lg shadow-sm"
+                                                        style={{ backgroundColor: getModelColor(model.id) }}
+                                                    >
+                                                        {getModelIcon(model.id)}
+                                                    </div>
+                                                    <div>
+                                                        <h5 className="font-semibold">{model.name}</h5>
+                                                        <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                            v{model.version}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                                 <span className={`text-xs px-2 py-1 rounded-full ${model.status === 'active'
                                                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                                     : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
@@ -867,6 +923,23 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
                                                 </span>
                                                 {getModelPricing(model)}
                                             </div>
+                                            {model.capabilities && model.capabilities.length > 0 && (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {model.capabilities.slice(0, 3).map((capability) => (
+                                                        <span
+                                                            key={capability}
+                                                            className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full dark:bg-gray-600 dark:text-gray-300"
+                                                        >
+                                                            {capability}
+                                                        </span>
+                                                    ))}
+                                                    {model.capabilities.length > 3 && (
+                                                        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full dark:bg-gray-600 dark:text-gray-300">
+                                                            +{model.capabilities.length - 3} more
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -887,8 +960,8 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
                                 </label>
                                 <input
                                     type="password"
-                                    value={config.apiKey}
-                                    onChange={(e) => handleConfigChange('apiKey', e.target.value)}
+                                    value={config.apiKeys[selectedProvider.id] || ''}
+                                    onChange={(e) => handleApiKeyChange(selectedProvider.id, e.target.value)}
                                     placeholder={`Enter your ${selectedProvider.name} API key`}
                                     className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDarkMode
                                         ? 'placeholder-gray-400 text-white bg-gray-700 border-gray-600 focus:border-blue-500'
@@ -902,156 +975,186 @@ const AIConfigPanel: React.FC<AIConfigPanelProps> = ({
                         </div>
                     )}
 
-                    {/* Local AI Configuration */}
-                    {selectedProvider && selectedProvider.isLocal && (
+                    {/* Advanced Settings */}
+                    {selectedProvider && (
                         <div className="space-y-4">
                             <button
-                                onClick={() => setIsLocalConfigOpen(!isLocalConfigOpen)}
+                                onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
                                 className="flex justify-between items-center p-4 w-full rounded-xl border transition-colors"
                             >
                                 <h3 className="flex items-center space-x-2 text-lg font-semibold">
-                                    <FiHome className="w-5 h-5" />
-                                    <span>Local Configuration</span>
+                                    <FiSettings className="w-5 h-5" />
+                                    <span>Advanced Settings</span>
                                 </h3>
-                                {isLocalConfigOpen ? <FiChevronDown className="w-5 h-5" /> : <FiChevronRight className="w-5 h-5" />}
+                                {isAdvancedOpen ? <FiChevronDown className="w-5 h-5" /> : <FiChevronRight className="w-5 h-5" />}
                             </button>
 
-                            {isLocalConfigOpen && (
+                            {isAdvancedOpen && (
                                 <div className="p-4 space-y-4 rounded-xl border">
-                                    <div className="space-y-2">
-                                        <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                            Base URL
-                                        </label>
-                                        <input
-                                            type="url"
-                                            value={config.baseUrl || ''}
-                                            onChange={(e) => handleConfigChange('baseUrl', e.target.value)}
-                                            placeholder="http://localhost:11434"
-                                            className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDarkMode
-                                                ? 'placeholder-gray-400 text-white bg-gray-700 border-gray-600 focus:border-blue-500'
-                                                : 'placeholder-gray-500 text-gray-900 bg-white border-gray-300 focus:border-blue-500'
-                                                }`}
-                                        />
-                                    </div>
-
-                                    {selectedProvider.id === 'openai-compatible' && (
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <div className="space-y-2">
                                             <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                                API Key (Optional)
+                                                Max Tokens
                                             </label>
                                             <input
-                                                type="password"
-                                                value={config.apiKey}
-                                                onChange={(e) => handleConfigChange('apiKey', e.target.value)}
-                                                placeholder="Enter API key if required"
+                                                type="number"
+                                                value={config.maxTokens}
+                                                onChange={(e) => handleConfigChange('maxTokens', parseInt(e.target.value))}
+                                                min="1"
+                                                max={selectedModel?.maxTokens || 4000}
                                                 className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDarkMode
-                                                    ? 'placeholder-gray-400 text-white bg-gray-700 border-gray-600 focus:border-blue-500'
-                                                    : 'placeholder-gray-500 text-gray-900 bg-white border-gray-300 focus:border-blue-500'
+                                                    ? 'text-white bg-gray-700 border-gray-600 focus:border-blue-500'
+                                                    : 'text-gray-900 bg-white border-gray-300 focus:border-blue-500'
+                                                    }`}
+                                            />
+                                            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                Max: {selectedModel?.maxTokens.toLocaleString() || 4000} tokens
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                Temperature
+                                            </label>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="2"
+                                                step="0.1"
+                                                value={config.temperature}
+                                                onChange={(e) => handleConfigChange('temperature', parseFloat(e.target.value))}
+                                                className="w-full"
+                                            />
+                                            <div className="flex justify-between text-xs text-gray-500">
+                                                <span>Focused (0)</span>
+                                                <span>{config.temperature}</span>
+                                                <span>Creative (2)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                Top P
+                                            </label>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="1"
+                                                step="0.1"
+                                                value={config.topP}
+                                                onChange={(e) => handleConfigChange('topP', parseFloat(e.target.value))}
+                                                className="w-full"
+                                            />
+                                            <div className="flex justify-between text-xs text-gray-500">
+                                                <span>Focused (0)</span>
+                                                <span>{config.topP}</span>
+                                                <span>Diverse (1)</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                Frequency Penalty
+                                            </label>
+                                            <input
+                                                type="range"
+                                                min="-2"
+                                                max="2"
+                                                step="0.1"
+                                                value={config.frequencyPenalty}
+                                                onChange={(e) => handleConfigChange('frequencyPenalty', parseFloat(e.target.value))}
+                                                className="w-full"
+                                            />
+                                            <div className="flex justify-between text-xs text-gray-500">
+                                                <span>Repeat (-2)</span>
+                                                <span>{config.frequencyPenalty}</span>
+                                                <span>Unique (2)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                Presence Penalty
+                                            </label>
+                                            <input
+                                                type="range"
+                                                min="-2"
+                                                max="2"
+                                                step="0.1"
+                                                value={config.presencePenalty}
+                                                onChange={(e) => handleConfigChange('presencePenalty', parseFloat(e.target.value))}
+                                                className="w-full"
+                                            />
+                                            <div className="flex justify-between text-xs text-gray-500">
+                                                <span>Stay on topic (-2)</span>
+                                                <span>{config.presencePenalty}</span>
+                                                <span>New topics (2)</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                Timeout (ms)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={config.timeout}
+                                                onChange={(e) => handleConfigChange('timeout', parseInt(e.target.value))}
+                                                min="1000"
+                                                max="300000"
+                                                step="1000"
+                                                className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDarkMode
+                                                    ? 'text-white bg-gray-700 border-gray-600 focus:border-blue-500'
+                                                    : 'text-gray-900 bg-white border-gray-300 focus:border-blue-500'
                                                     }`}
                                             />
                                         </div>
-                                    )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                Retry Attempts
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={config.retryAttempts}
+                                                onChange={(e) => handleConfigChange('retryAttempts', parseInt(e.target.value))}
+                                                min="0"
+                                                max="10"
+                                                className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDarkMode
+                                                    ? 'text-white bg-gray-700 border-gray-600 focus:border-blue-500'
+                                                    : 'text-gray-900 bg-white border-gray-300 focus:border-blue-500'
+                                                    }`}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                Retry Delay (ms)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={config.retryDelay}
+                                                onChange={(e) => handleConfigChange('retryDelay', parseInt(e.target.value))}
+                                                min="100"
+                                                max="10000"
+                                                step="100"
+                                                className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDarkMode
+                                                    ? 'text-white bg-gray-700 border-gray-600 focus:border-blue-500'
+                                                    : 'text-gray-900 bg-white border-gray-300 focus:border-blue-500'
+                                                    }`}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
                     )}
-
-                    {/* Advanced Settings */}
-                    <div className="space-y-4">
-                        <button
-                            onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                            className="flex justify-between items-center p-4 w-full rounded-xl border transition-colors"
-                        >
-                            <h3 className="flex items-center space-x-2 text-lg font-semibold">
-                                <FiSettings className="w-5 h-5" />
-                                <span>Advanced Settings</span>
-                            </h3>
-                            {isAdvancedOpen ? <FiChevronDown className="w-5 h-5" /> : <FiChevronRight className="w-5 h-5" />}
-                        </button>
-
-                        {isAdvancedOpen && (
-                            <div className="p-4 space-y-4 rounded-xl border">
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                            Max Tokens
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={config.maxTokens}
-                                            onChange={(e) => handleConfigChange('maxTokens', parseInt(e.target.value))}
-                                            min="1"
-                                            max={selectedModel?.maxTokens || 4000}
-                                            className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDarkMode
-                                                ? 'text-white bg-gray-700 border-gray-600 focus:border-blue-500'
-                                                : 'text-gray-900 bg-white border-gray-300 focus:border-blue-500'
-                                                }`}
-                                        />
-                                        <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                            Max: {selectedModel?.maxTokens.toLocaleString() || 4000} tokens
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                            Temperature
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="2"
-                                            step="0.1"
-                                            value={config.temperature}
-                                            onChange={(e) => handleConfigChange('temperature', parseFloat(e.target.value))}
-                                            className="w-full"
-                                        />
-                                        <div className="flex justify-between text-xs text-gray-500">
-                                            <span>Focused (0)</span>
-                                            <span>{config.temperature}</span>
-                                            <span>Creative (2)</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                            Timeout (ms)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={config.timeout}
-                                            onChange={(e) => handleConfigChange('timeout', parseInt(e.target.value))}
-                                            min="1000"
-                                            max="300000"
-                                            step="1000"
-                                            className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDarkMode
-                                                ? 'text-white bg-gray-700 border-gray-600 focus:border-blue-500'
-                                                : 'text-gray-900 bg-white border-gray-300 focus:border-blue-500'
-                                                }`}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                            Retry Attempts
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={config.retryAttempts}
-                                            onChange={(e) => handleConfigChange('retryAttempts', parseInt(e.target.value))}
-                                            min="0"
-                                            max="10"
-                                            className={`w-full px-4 py-2 rounded-lg border transition-colors ${isDarkMode
-                                                ? 'text-white bg-gray-700 border-gray-600 focus:border-blue-500'
-                                                : 'text-gray-900 bg-white border-gray-300 focus:border-blue-500'
-                                                }`}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
 
                     {/* Validation Errors */}
                     {validationErrors.length > 0 && (
