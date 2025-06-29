@@ -14,7 +14,6 @@ import {
   TokenConfig,
 } from "../types";
 import { ExtendedSession } from "../types/features/SavedManager";
-import { TokenManager } from "../utils/tokenHandlers";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -29,6 +28,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   // Initialize with default values instead of trying to load from localStorage
   const [activeSession, setActiveSession] = useState<ExtendedSession | null>(null);
@@ -668,6 +668,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
 
       // Set loading to false after all data is loaded
       setIsLoading(false);
+      setHasLoaded(true);
     }
 
     loadData();
@@ -675,6 +676,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
+    if (!hasLoaded) return;
     try {
       const state = {
         urlData,
@@ -697,6 +699,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     segmentVariables,
     globalVariables,
     getProjectStorageKey,
+    hasLoaded,
   ]);
 
   useEffect(() => {
@@ -718,13 +721,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
   }, [activeSession, getProjectStorageKey]);
 
   useEffect(() => {
-    try {
-      const storageKey = getProjectStorageKey("token_config");
-      localStorage.setItem(storageKey, JSON.stringify(tokenConfig));
-    } catch (err) {
-      setError("Failed to save token config ERROR: " + err);
-    }
-  }, [tokenConfig, getProjectStorageKey]);
+    if (!currentProjectId) return;
+    const storageKey = getProjectStorageKey("token_config");
+    localStorage.setItem(storageKey, JSON.stringify(tokenConfig));
+  }, [tokenConfig, getProjectStorageKey, currentProjectId]);
 
   // Effect to handle session changes and load configurations
   useEffect(() => {
@@ -820,16 +820,28 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
   };
 
   const updateGlobalVariable = (key: string, value: string) => {
-    setGlobalVariables((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setGlobalVariables((prev) => {
+      const updated = { ...prev, [key]: value };
+      // Immediately persist to localStorage
+      const storageKey = getProjectStorageKey("app_state");
+      const savedState = localStorage.getItem(storageKey);
+      const parsed = savedState ? safeParseJSON(savedState) ?? {} : {};
+      parsed.globalVariables = updated;
+      localStorage.setItem(storageKey, JSON.stringify(parsed));
+      return updated;
+    });
   };
 
   const deleteGlobalVariable = (key: string) => {
     setGlobalVariables((prev) => {
       const updated = { ...prev };
       delete updated[key];
+      // Immediately persist to localStorage
+      const storageKey = getProjectStorageKey("app_state");
+      const savedState = localStorage.getItem(storageKey);
+      const parsed = savedState ? safeParseJSON(savedState) ?? {} : {};
+      parsed.globalVariables = updated;
+      localStorage.setItem(storageKey, JSON.stringify(parsed));
       return updated;
     });
   };
@@ -1079,27 +1091,210 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
         throw new Error("Please set username and password in global variables");
       }
 
-      const domain = replaceVariables(tokenConfig.domain);
+      // Evaluate all string fields in tokenConfig using replaceVariables
+      const evaluatedTokenConfig = {
+        ...tokenConfig,
+        domain: replaceVariables(tokenConfig.domain || ""),
+        path: replaceVariables(tokenConfig.path || ""),
+        headerKey: replaceVariables(tokenConfig.headerKey || ""),
+        headerValueFormat: replaceVariables(tokenConfig.headerValueFormat || ""),
+        ...(tokenConfig.oauth2
+          ? {
+            oauth2: {
+              ...tokenConfig.oauth2,
+              clientId: replaceVariables(tokenConfig.oauth2.clientId || ""),
+              clientSecret: replaceVariables(tokenConfig.oauth2.clientSecret || ""),
+              redirectUri: replaceVariables(tokenConfig.oauth2.redirectUri || ""),
+              scope: replaceVariables(tokenConfig.oauth2.scope || ""),
+              authorizationUrl: replaceVariables(tokenConfig.oauth2.authorizationUrl || ""),
+              tokenUrl: replaceVariables(tokenConfig.oauth2.tokenUrl || ""),
+              ...(tokenConfig.oauth2.refreshUrl !== undefined && replaceVariables(tokenConfig.oauth2.refreshUrl || "")
+                ? { refreshUrl: replaceVariables(tokenConfig.oauth2.refreshUrl || "") }
+                : {}),
+            },
+          }
+          : {}),
+        ...(tokenConfig.apiKey
+          ? {
+            apiKey: {
+              ...tokenConfig.apiKey,
+              keyName: replaceVariables(tokenConfig.apiKey.keyName || ""),
+              keyValue: replaceVariables(tokenConfig.apiKey.keyValue || ""),
+              prefix: replaceVariables(tokenConfig.apiKey.prefix || ""),
+            },
+          }
+          : {}),
+        ...(tokenConfig.session
+          ? {
+            session: {
+              ...tokenConfig.session,
+              sessionIdField: replaceVariables(tokenConfig.session.sessionIdField || ""),
+              sessionTokenField: replaceVariables(tokenConfig.session.sessionTokenField || ""),
+            },
+          }
+          : {}),
+      };
+
+      // --- Use the same fetch logic as TokenGenerator ---
+      const domain = evaluatedTokenConfig.domain;
       if (!domain) {
         throw new Error("Please set a valid domain");
       }
-
-      // Create TokenManager instance
-      const tokenManager = new TokenManager(tokenConfig);
-
-      // Generate token using the manager
-      const result = await tokenManager.generateToken(globalVariables);
-
-      // Update global variables with the extracted token
-      updateGlobalVariable(tokenConfig.tokenName, result.token);
-      updateGlobalVariable("tokenName", tokenConfig.tokenName);
-
-      // Handle refresh token if available
-      if (result.refreshToken) {
-        updateGlobalVariable(tokenConfig.refreshTokenName, result.refreshToken);
+      const requestUrl = `${domain}${evaluatedTokenConfig.path}`;
+      let requestBody: string;
+      let contentType: string;
+      if (evaluatedTokenConfig.requestMapping.contentType === "json") {
+        const bodyData = {
+          [evaluatedTokenConfig.requestMapping.usernameField]: globalVariables['username'],
+          [evaluatedTokenConfig.requestMapping.passwordField]: globalVariables['password']
+        };
+        requestBody = JSON.stringify(bodyData);
+        contentType = 'application/json';
+      } else {
+        requestBody = `${evaluatedTokenConfig.requestMapping.usernameField}=${encodeURIComponent(globalVariables['username'])}` +
+          `&${evaluatedTokenConfig.requestMapping.passwordField}=${encodeURIComponent(globalVariables['password'])}`;
+        contentType = 'application/x-www-form-urlencoded';
       }
-
-      console.log(`Token extracted from ${result.source} successfully!`);
+      const response = await fetch(requestUrl, {
+        method: evaluatedTokenConfig.method,
+        headers: {
+          'Accept': '*/*',
+          'Content-Type': contentType,
+        },
+        body: requestBody,
+      });
+      let responseText = await response.text();
+      let token: string | null = null;
+      // Try to extract from JSON response first
+      if (evaluatedTokenConfig.extractionMethods.json) {
+        try {
+          let jsonData: any;
+          try {
+            jsonData = JSON.parse(responseText);
+          } catch (e) { }
+          if (jsonData) {
+            const defaultPaths = ['token', 'access_token', 'accessToken', 'jwt', 'auth_token'];
+            const searchPaths = evaluatedTokenConfig.extractionMethods.jsonPaths.length > 0 ? evaluatedTokenConfig.extractionMethods.jsonPaths : defaultPaths;
+            for (const path of searchPaths) {
+              const value = jsonData[path];
+              if (value && typeof value === 'string') {
+                token = value;
+                break;
+              }
+            }
+          }
+        } catch (e) { }
+      }
+      // Try to extract from cookies if JSON extraction failed
+      if (!token && evaluatedTokenConfig.extractionMethods.cookies) {
+        // Try to extract from Set-Cookie header directly
+        const setCookieHeader = response.headers.get('set-cookie');
+        if (setCookieHeader) {
+          const cookies = setCookieHeader.split(',').map(cookie => {
+            const [nameValue] = cookie.split(';');
+            const [name, value] = nameValue?.trim().split('=') ?? [];
+            return { name: name?.trim(), value: value?.trim() };
+          });
+          const defaultNames = ['token', 'access_token', 'auth_token', 'jwt'];
+          const searchNames = evaluatedTokenConfig.extractionMethods.cookieNames.length > 0 ? evaluatedTokenConfig.extractionMethods.cookieNames : defaultNames;
+          for (const cookieName of searchNames) {
+            const cookie = cookies.find(c => c.name === cookieName);
+            if (cookie?.value) {
+              token = cookie.value;
+              break;
+            }
+          }
+          if (!token) {
+            const tokenCookie = cookies.find(cookie =>
+              cookie.name?.toLowerCase().includes('token') ||
+              cookie.name?.toLowerCase().includes('auth') ||
+              cookie.name?.toLowerCase().includes('jwt')
+            );
+            if (tokenCookie?.value) {
+              token = tokenCookie.value;
+            }
+          }
+        }
+        // Try browser cookies if still not found
+        if (!token) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const allCookies = document.cookie.split(';').map(cookie => {
+            const [name, value] = cookie.trim().split('=');
+            return { name: name?.trim(), value: value?.trim() };
+          }).filter(cookie => cookie.name);
+          const defaultNames = ['token', 'access_token', 'auth_token', 'jwt'];
+          const searchNames = evaluatedTokenConfig.extractionMethods.cookieNames.length > 0 ? evaluatedTokenConfig.extractionMethods.cookieNames : defaultNames;
+          for (const cookieName of searchNames) {
+            const value = allCookies.find(c => c.name === cookieName)?.value;
+            if (value) {
+              token = value;
+              break;
+            }
+          }
+          if (!token) {
+            const tokenCookie = allCookies.find(cookie =>
+              cookie.name?.toLowerCase().includes('token') ||
+              cookie.name?.toLowerCase().includes('auth') ||
+              cookie.name?.toLowerCase().includes('jwt')
+            );
+            if (tokenCookie?.value) {
+              token = tokenCookie.value;
+            }
+          }
+        }
+      }
+      // Try to extract from response headers if previous methods failed
+      if (!token && evaluatedTokenConfig.extractionMethods.headers) {
+        const defaultNames = ['authorization', 'x-access-token', 'x-auth-token', 'token'];
+        const searchNames = evaluatedTokenConfig.extractionMethods.headerNames.length > 0 ? evaluatedTokenConfig.extractionMethods.headerNames : defaultNames;
+        for (const headerName of searchNames) {
+          const value = response.headers.get(headerName);
+          if (value) {
+            token = value.replace(/^Bearer\s+/i, '');
+            break;
+          }
+        }
+      }
+      // Try to extract from response text if previous methods failed
+      if (!token && evaluatedTokenConfig.extractionMethods.cookies) {
+        const jwtPattern = /jwt[=:]\s*([a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/i;
+        const match = responseText.match(jwtPattern);
+        if (match) {
+          token = match[1] ?? null;
+        }
+        if (!token) {
+          const tokenPattern = /(?:token|access_token|auth_token)[=:]\s*([a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/i;
+          const tokenMatch = responseText.match(tokenPattern);
+          if (tokenMatch) {
+            token = tokenMatch[1] ?? null;
+          }
+        }
+      }
+      if (!token) {
+        throw new Error("Token not found in response. Check your extraction configuration.");
+      }
+      updateGlobalVariable(evaluatedTokenConfig.tokenName, token);
+      updateGlobalVariable("tokenName", evaluatedTokenConfig.tokenName);
+      // Handle refresh token extraction
+      if (evaluatedTokenConfig.refreshToken) {
+        let refreshToken: string | null = null;
+        if (evaluatedTokenConfig.extractionMethods.json && responseText) {
+          try {
+            const jsonData = JSON.parse(responseText);
+            refreshToken = jsonData.refresh_token || jsonData.refreshToken;
+          } catch (e) { }
+        }
+        if (!refreshToken && evaluatedTokenConfig.extractionMethods.cookies) {
+          const allCookies = document.cookie.split(';').map(cookie => {
+            const [name, value] = cookie.trim().split('=');
+            return { name: name?.trim(), value: value?.trim() };
+          }).filter(cookie => cookie.name);
+          refreshToken = allCookies.find(c => c.name === evaluatedTokenConfig.refreshTokenName)?.value || null;
+        }
+        if (refreshToken) {
+          updateGlobalVariable(evaluatedTokenConfig.refreshTokenName, refreshToken);
+        }
+      }
     } catch (error) {
       console.error("Token regeneration error:", error);
       throw error;

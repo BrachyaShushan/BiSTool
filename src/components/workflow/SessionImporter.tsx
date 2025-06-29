@@ -853,7 +853,7 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
                                             roundedSelection: false,
                                             scrollBeyondLastLine: false,
                                             automaticLayout: true,
-                                            theme: 'vs-dark'
+                                            theme: isDarkMode ? 'vs-dark' : 'vs-light'
                                         }}
                                     />
                                 </div>
@@ -1067,7 +1067,7 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
                                                 roundedSelection: false,
                                                 scrollBeyondLastLine: false,
                                                 automaticLayout: true,
-                                                theme: 'vs-dark'
+                                                theme: isDarkMode ? 'vs-dark' : 'vs-light'
                                             }}
                                         />
                                     ) : (

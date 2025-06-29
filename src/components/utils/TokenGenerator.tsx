@@ -23,6 +23,8 @@ const TokenGenerator: React.FC = () => {
         setCookieHeader: string | null;
     } | null>(null);
     const [error, setError] = useState<string>('');
+    // State for auto-detect
+    const [isAutoDetecting, setIsAutoDetecting] = useState(false);
 
     const decodeString = useCallback((encodedString: string): string | null => {
         try {
@@ -429,31 +431,191 @@ const TokenGenerator: React.FC = () => {
             const method = parts[1] as keyof typeof tokenConfig.extractionMethods;
             const field = parts[2];
             const checkedCondition = (type === "checkbox" ? checked : value)
-            setTokenConfig((prev) => ({
-                ...prev,
-                extractionMethods: {
-                    ...prev.extractionMethods,
-                    [method]: field ? checkedCondition : checked,
-                },
-            }));
+            setTokenConfig((prev) => {
+                const updated = {
+                    ...prev,
+                    extractionMethods: {
+                        ...prev.extractionMethods,
+                        [method]: field ? checkedCondition : checked,
+                    },
+                };
+                return updated;
+            });
         } else if (name.startsWith('requestMapping.')) {
             const parts = name.split('.');
             const field = parts[1] as keyof typeof tokenConfig.requestMapping;
 
-            setTokenConfig((prev) => ({
-                ...prev,
-                requestMapping: {
-                    ...prev.requestMapping,
-                    [field]: value,
-                },
-            }));
+            setTokenConfig((prev) => {
+                const updated = {
+                    ...prev,
+                    requestMapping: {
+                        ...prev.requestMapping,
+                        [field]: value,
+                    },
+                };
+                return updated;
+            });
         } else {
-            setTokenConfig((prev) => ({
-                ...prev,
-                [name]: type === "checkbox" ? checked : value,
-            }));
+            setTokenConfig((prev) => {
+                const updated = {
+                    ...prev,
+                    [name]: type === "checkbox" ? checked : value,
+                };
+                return updated;
+            });
         }
     };
+
+    // Auto-detect extraction method
+    const autoDetectExtractionMethod = useCallback(async () => {
+        setIsAutoDetecting(true);
+        setError("");
+        setSuccessMessage("");
+        try {
+            if (!globalVariables['username'] || !globalVariables['password']) {
+                throw new Error("Please set username and password in global variables");
+            }
+            const domain = replaceVariables(tokenConfig.domain);
+            if (!domain) {
+                throw new Error("Please set a valid domain");
+            }
+            const requestUrl = `${domain}${tokenConfig.path}`;
+            let requestBody: string;
+            let contentType: string;
+            if (tokenConfig.requestMapping.contentType === "json") {
+                const bodyData = {
+                    [tokenConfig.requestMapping.usernameField]: globalVariables['username'],
+                    [tokenConfig.requestMapping.passwordField]: globalVariables['password']
+                };
+                requestBody = JSON.stringify(bodyData);
+                contentType = 'application/json';
+            } else {
+                requestBody = `${tokenConfig.requestMapping.usernameField}=${encodeURIComponent(globalVariables['username'])}` +
+                    `&${tokenConfig.requestMapping.passwordField}=${encodeURIComponent(globalVariables['password'])}`;
+                contentType = 'application/x-www-form-urlencoded';
+            }
+            const response = await fetch(requestUrl, {
+                method: tokenConfig.method,
+                headers: {
+                    'Accept': '*/*',
+                    'Content-Type': contentType,
+                },
+                body: requestBody,
+            });
+            await new Promise(resolve => setTimeout(resolve, 100));
+            let responseText = await response.text();
+            let jsonData: any = null;
+            try { jsonData = JSON.parse(responseText); } catch { }
+            // Try JSON
+            let token = null;
+            if (jsonData) {
+                token = extractTokenFromJson(jsonData, tokenConfig.extractionMethods.jsonPaths);
+                if (token) {
+                    setTokenConfig(prev => {
+                        const updated = {
+                            ...prev,
+                            extractionMethods: {
+                                ...prev.extractionMethods,
+                                json: true,
+                                cookies: false,
+                                headers: false,
+                            }
+                        };
+                        return updated;
+                    });
+                    setSuccessMessage('Auto-detected: JSON extraction');
+                    updateGlobalVariable(tokenConfig.tokenName, token);
+                    setIsAutoDetecting(false);
+                    return;
+                }
+            }
+            // Try Set-Cookie header
+            token = extractTokenFromSetCookieHeader(response, tokenConfig.extractionMethods.cookieNames);
+            if (token) {
+                setTokenConfig(prev => {
+                    const updated = {
+                        ...prev,
+                        extractionMethods: {
+                            ...prev.extractionMethods,
+                            json: false,
+                            cookies: true,
+                            headers: false,
+                        }
+                    };
+                    return updated;
+                });
+                setSuccessMessage('Auto-detected: Cookie extraction');
+                updateGlobalVariable(tokenConfig.tokenName, token);
+                setIsAutoDetecting(false);
+                return;
+            }
+            // Try browser cookies
+            token = extractTokenFromCookies(tokenConfig.extractionMethods.cookieNames);
+            if (token) {
+                setTokenConfig(prev => {
+                    const updated = {
+                        ...prev,
+                        extractionMethods: {
+                            ...prev.extractionMethods,
+                            json: false,
+                            cookies: true,
+                            headers: false,
+                        }
+                    };
+                    return updated;
+                });
+                setSuccessMessage('Auto-detected: Cookie extraction');
+                updateGlobalVariable(tokenConfig.tokenName, token);
+                setIsAutoDetecting(false);
+                return;
+            }
+            // Try headers
+            token = extractTokenFromHeaders(response, tokenConfig.extractionMethods.headerNames);
+            if (token) {
+                setTokenConfig(prev => {
+                    const updated = {
+                        ...prev,
+                        extractionMethods: {
+                            ...prev.extractionMethods,
+                            json: false,
+                            cookies: false,
+                            headers: true,
+                        }
+                    };
+                    return updated;
+                });
+                setSuccessMessage('Auto-detected: Header extraction');
+                updateGlobalVariable(tokenConfig.tokenName, token);
+                setIsAutoDetecting(false);
+                return;
+            }
+            // Try response text
+            token = extractTokenFromResponseText(responseText);
+            if (token) {
+                setTokenConfig(prev => {
+                    const updated = {
+                        ...prev,
+                        extractionMethods: {
+                            ...prev.extractionMethods,
+                            json: false,
+                            cookies: false,
+                            headers: false,
+                        }
+                    };
+                    return updated;
+                });
+                setSuccessMessage('Auto-detected: Regex/Text extraction');
+                updateGlobalVariable(tokenConfig.tokenName, token);
+                setIsAutoDetecting(false);
+                return;
+            }
+            setError('Auto-detect failed: No token found.');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Auto-detect failed.');
+        } finally {
+            setIsAutoDetecting(false);
+        }
+    }, [globalVariables, tokenConfig, replaceVariables, extractTokenFromJson, extractTokenFromSetCookieHeader, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromResponseText, updateGlobalVariable, setTokenConfig]);
 
     return (
         <>
@@ -1406,6 +1568,16 @@ const TokenGenerator: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
+                            </div>
+                            <div className="flex justify-end mt-4">
+                                <button
+                                    type="button"
+                                    onClick={autoDetectExtractionMethod}
+                                    disabled={isAutoDetecting}
+                                    className={`px-4 py-2 rounded-lg font-semibold shadow transition-colors duration-200 ${isAutoDetecting ? 'bg-gray-400 text-gray-200' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                >
+                                    {isAutoDetecting ? 'Detecting...' : 'Auto Detect Extraction Method'}
+                                </button>
                             </div>
                         </div>
                     )}
