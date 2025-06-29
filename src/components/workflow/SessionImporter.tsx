@@ -69,36 +69,55 @@ let currentImportedData: ImportedData | null = {
     timestamp: new Date().toISOString()
 };
 
+// Global flag to track if JSONata language is registered
+let jsonataLanguageRegistered = false;
+
 // Custom JSONata language definition
 const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
     console.log('Starting language registration...');
 
     // Check if language is already registered to prevent duplicates
-    const existingLanguages = monacoInstance.languages.getLanguages();
-    const jsonataExists = existingLanguages.some(lang => lang.id === 'jsonata');
-
-    if (jsonataExists) {
-        console.log('JSONata language already registered, skipping...');
+    if (jsonataLanguageRegistered) {
+        console.log('JSONata language already registered globally, skipping...');
         return;
+    }
+
+    try {
+        const existingLanguages = monacoInstance.languages.getLanguages();
+        const jsonataExists = existingLanguages.some(lang => lang.id === 'jsonata');
+
+        if (jsonataExists) {
+            console.log('JSONata language already registered in Monaco, skipping...');
+            jsonataLanguageRegistered = true;
+            return;
+        }
+    } catch (error) {
+        console.warn('Could not check existing languages:', error);
     }
 
     // Define JSONata language
     try {
         monacoInstance.languages.register({ id: 'jsonata' });
         console.log('JSONata language registered successfully');
+        jsonataLanguageRegistered = true;
     } catch (error) {
         console.error('Failed to register jsonata language:', error);
         return; // Exit if registration fails
     }
 
     // Verify registration
-    const languagesAfterRegistration = monacoInstance.languages.getLanguages();
-    const jsonataRegistered = languagesAfterRegistration.some(lang => lang.id === 'jsonata');
-    if (!jsonataRegistered) {
-        console.error('JSONata language registration failed - not found in languages list');
-        return;
+    try {
+        const languagesAfterRegistration = monacoInstance.languages.getLanguages();
+        const jsonataRegistered = languagesAfterRegistration.some(lang => lang.id === 'jsonata');
+        if (!jsonataRegistered) {
+            console.error('JSONata language registration failed - not found in languages list');
+            jsonataLanguageRegistered = false;
+            return;
+        }
+        console.log('JSONata language verified in languages list');
+    } catch (error) {
+        console.warn('Could not verify language registration:', error);
     }
-    console.log('JSONata language verified in languages list');
 
     // Function to generate suggestions from data structure
     const generateDataStructureSuggestions = (data: any, range: monaco.IRange): JsonataSuggestion[] => {
@@ -305,6 +324,15 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
     try {
         console.log('Registering JSONata completion provider...');
 
+        // Dispose any existing provider first
+        try {
+            monacoInstance.languages.registerCompletionItemProvider('jsonata', {
+                provideCompletionItems: () => ({ suggestions: [] })
+            });
+        } catch (error) {
+            // Provider might not exist, that's okay
+        }
+
         monacoInstance.languages.registerCompletionItemProvider('jsonata', {
             provideCompletionItems: (model, position) => {
                 console.log('=== COMPLETION PROVIDER CALLED ===');
@@ -327,7 +355,7 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
                 console.log('Before cursor:', beforeCursor);
 
                 // Generate comprehensive suggestions using the utility
-                let suggestions = generateJsonataSuggestions(range);
+                let suggestions = generateJsonataSuggestions(range, word.word);
                 console.log('Base JSONata suggestions:', suggestions.length);
 
                 // Add suggestions from imported data structure
@@ -352,8 +380,33 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
                     );
                 }
 
-                console.log('Final suggestions count:', suggestions.length);
-                return { suggestions };
+                // Convert JsonataSuggestion to Monaco CompletionItem
+                const completionItems: monaco.languages.CompletionItem[] = suggestions.map(suggestion => {
+                    const item: monaco.languages.CompletionItem = {
+                        label: suggestion.label,
+                        kind: suggestion.kind,
+                        insertText: suggestion.insertText,
+                        documentation: suggestion.documentation,
+                        range: suggestion.range,
+                        sortText: suggestion.sortText
+                    };
+
+                    // Only add optional properties if they're defined
+                    if (suggestion.detail !== undefined) {
+                        item.detail = suggestion.detail;
+                    }
+                    if (suggestion.command !== undefined) {
+                        item.command = suggestion.command;
+                    }
+                    if (suggestion.insertTextRules !== undefined) {
+                        item.insertTextRules = suggestion.insertTextRules;
+                    }
+
+                    return item;
+                });
+
+                console.log('Final suggestions count:', completionItems.length);
+                return { suggestions: completionItems };
             },
             triggerCharacters: ['$', '.', ' ', '(', ',', '[', '{']
         });
@@ -374,7 +427,7 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
                 if (doc) {
                     return {
                         contents: [
-                            { value: `**${word.word}**` },
+                            { value: `**${doc.signature}**` },
                             { value: doc.description },
                             { value: '**Examples:**' },
                             ...doc.examples.map(example => ({ value: `\`${example}\`` }))
@@ -387,6 +440,62 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
         console.log('JSONata hover provider registered');
     } catch (error) {
         console.error('Failed to register JSONata hover provider:', error);
+    }
+
+    // Signature help provider for function parameters
+    try {
+        monacoInstance.languages.registerSignatureHelpProvider('jsonata', {
+            signatureHelpTriggerCharacters: ['(', ','],
+            signatureHelpRetriggerCharacters: [','],
+            provideSignatureHelp: (model, position) => {
+                const textUntilPosition = model.getValueInRange({
+                    startLineNumber: position.lineNumber,
+                    startColumn: 1,
+                    endLineNumber: position.lineNumber,
+                    endColumn: position.column
+                });
+
+                // Find the function name before the current position
+                const functionMatch = textUntilPosition.match(/(\$[a-zA-Z_$][\w$]*)\s*\([^)]*$/);
+                if (!functionMatch) return null;
+
+                const functionName = functionMatch[1];
+                const doc = getFunctionDoc(functionName || '');
+                if (!doc) return null;
+
+                // Count commas to determine which parameter we're on
+                const openParenIndex = textUntilPosition.lastIndexOf('(');
+                if (openParenIndex === -1) return null;
+
+                const textAfterParen = textUntilPosition.substring(openParenIndex + 1);
+                const commaCount = (textAfterParen.match(/,/g) || []).length;
+                const activeParameter = commaCount;
+
+                // Create signature information
+                const signatureLabel = doc.signature || `${functionName}(${doc.parameters.map(p => p.name).join(', ')})`;
+                const signature = {
+                    label: signatureLabel,
+                    documentation: doc.description,
+                    parameters: doc.parameters.map(param => ({
+                        label: param.name,
+                        documentation: `${param.type}${param.required ? ' (required)' : ' (optional)'} - ${param.description}`
+                    }))
+                };
+
+                return {
+                    value: {
+                        label: [signatureLabel],
+                        signatures: [signature],
+                        activeSignature: 0,
+                        activeParameter: Math.min(activeParameter, doc.parameters.length - 1)
+                    },
+                    dispose: () => { }
+                };
+            }
+        });
+        console.log('JSONata signature help provider registered');
+    } catch (error) {
+        console.error('Failed to register JSONata signature help provider:', error);
     }
 
     console.log('Language registration completed');
@@ -413,6 +522,18 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
             console.log('Updated currentImportedData with imported file:', currentImportedData);
         }
     }, [importedFile]);
+
+    // Ensure JSONata language is registered when component mounts
+    useEffect(() => {
+        // Try to register the language if Monaco is available
+        if (typeof window !== 'undefined' && (window as any).monaco) {
+            try {
+                registerJsonataLanguage((window as any).monaco);
+            } catch (error) {
+                console.warn('Could not register JSONata language on mount:', error);
+            }
+        }
+    }, []);
 
     // Real-time validation of JSONata expression
     useEffect(() => {
@@ -534,8 +655,20 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
         // Ensure the model is set to jsonata language
         const model = editor.getModel();
         if (model) {
-            monacoInstance.editor.setModelLanguage(model, 'jsonata');
-            console.log('Editor language set to jsonata');
+            try {
+                monacoInstance.editor.setModelLanguage(model, 'jsonata');
+                console.log('Editor language set to jsonata');
+            } catch (error) {
+                console.warn('Could not set editor language to jsonata:', error);
+                // Fallback: try to register the language again
+                try {
+                    registerJsonataLanguage(monacoInstance);
+                    monacoInstance.editor.setModelLanguage(model, 'jsonata');
+                    console.log('Editor language set to jsonata after retry');
+                } catch (retryError) {
+                    console.error('Failed to set editor language after retry:', retryError);
+                }
+            }
         }
 
         // Simplified editor configuration for better suggestions
