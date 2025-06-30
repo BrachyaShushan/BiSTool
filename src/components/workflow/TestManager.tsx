@@ -13,7 +13,6 @@ import {
     FiTrendingUp,
     FiZap,
     FiRefreshCw,
-    FiAlertTriangle,
     FiBarChart,
     FiClock,
     FiCode

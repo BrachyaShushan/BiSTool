@@ -58,7 +58,6 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     globalVariables,
     activeSession,
     handleSaveSession,
-    methodColor,
     openSessionManager,
   } = useAppContext() as AppContextType;
   const [tokenExpiration, setTokenExpiration] = useState<number | null>(null);

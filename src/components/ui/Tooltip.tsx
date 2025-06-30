@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useTheme } from '../../context/ThemeContext';
 
 export interface TooltipProps {
     content: string;
@@ -16,7 +15,6 @@ const Tooltip: React.FC<TooltipProps> = ({
     className = '',
     delay = 200
 }) => {
-    const { isDarkMode } = useTheme();
     const [isVisible, setIsVisible] = useState(false);
     const timeoutRef = useRef<number | undefined>(undefined);
 

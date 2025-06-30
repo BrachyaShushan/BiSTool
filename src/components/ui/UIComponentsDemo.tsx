@@ -5,11 +5,8 @@ import {
     FiTrash2,
     FiEdit2,
     FiDownload,
-    FiUpload,
     FiCheck,
-    FiX,
     FiAlertCircle,
-    FiInfo,
     FiSettings,
     FiSearch
 } from 'react-icons/fi';

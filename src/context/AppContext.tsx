@@ -223,6 +223,20 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
 
   const handleLoadSession = useCallback((session: ExtendedSession) => {
     sessionManager.loadSession(session);
+    // Only update app state fields that are part of the session
+    const sessionData: any = {};
+    if (session.urlData) sessionData.urlData = session.urlData;
+    if (session.requestConfig !== undefined) sessionData.requestConfig = session.requestConfig;
+    if (session.yamlOutput !== undefined) sessionData.yamlOutput = session.yamlOutput;
+    if (session.activeSection) sessionData.activeSection = session.activeSection as SectionId;
+    if (session.segmentVariables) sessionData.segmentVariables = session.segmentVariables;
+    // DO NOT set globalVariables here!
+    appState.loadAppState(sessionData);
+    // Load shared variables from session
+    const sessionVariables = Object.entries(session.sharedVariables || {}).map(
+      ([key, value]) => ({ key, value })
+    );
+    appState.setSharedVariables(sessionVariables);
   }, []);
 
   const handleSaveSession = useCallback((name: string, sessionData?: ExtendedSession) => {

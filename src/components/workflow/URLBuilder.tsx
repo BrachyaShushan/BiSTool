@@ -30,6 +30,38 @@ interface Segment {
   required: boolean;
 }
 
+// Define a key for localStorage persistence
+const LOCAL_STORAGE_KEY = "url_builder_state";
+
+// Utility to check if urlData is empty/default
+function isUrlDataEmpty(urlData: any): boolean {
+  if (!urlData) return true;
+  // Check for empty or default values
+  const {
+    baseURL = '',
+    segments = '',
+    parsedSegments = [],
+    processedURL = '',
+    domain = '',
+    protocol = '',
+    builtUrl = '',
+    environment = '',
+    sessionDescription = '',
+  } = urlData;
+  // If all fields are empty or default, consider it empty
+  return (
+    !baseURL &&
+    !segments &&
+    (!parsedSegments || parsedSegments.length === 0) &&
+    !processedURL &&
+    !domain &&
+    !protocol &&
+    !builtUrl &&
+    !environment &&
+    !sessionDescription
+  );
+}
+
 const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
   const {
     urlData,
@@ -41,16 +73,61 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     openSessionManager,
   } = useAppContext();
 
+  // Helper to get session segment variables as a map
+  const getSessionSegmentVariables = () => {
+    if (activeSession?.urlData?.segmentVariables) {
+      return activeSession.urlData.segmentVariables.reduce((acc, curr) => {
+        acc[curr.key] = curr.value;
+        return acc;
+      }, {} as Record<string, string>);
+    }
+    if (urlData?.segmentVariables) {
+      return urlData.segmentVariables.reduce((acc, curr) => {
+        acc[curr.key] = curr.value;
+        return acc;
+      }, {} as Record<string, string>);
+    }
+    return {};
+  };
+
+  // --- State persistence logic ---
+  // Try to load from localStorage if no active session
+  const loadPersistedState = () => {
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  };
+
+  // Save to localStorage
+  const persistState = (state: any) => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  // --- State initialization ---
+  const persisted = !activeSession ? loadPersistedState() : null;
+
   const [protocol, setProtocol] = useState<string>(() => {
     if (activeSession?.urlData?.processedURL?.startsWith("https"))
       return "https";
-    if (urlData?.processedURL?.startsWith("https")) return "https";
+    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.processedURL?.startsWith("https")) return "https";
+    if (!activeSession && persisted?.protocol) return persisted.protocol;
     return DEFAULT_VALUES.protocol;
   });
 
   const [domain, setDomain] = useState<string>(() => {
     if (activeSession?.urlData?.baseURL) return activeSession.urlData.baseURL;
-    if (urlData?.baseURL) return urlData.baseURL;
+    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.baseURL) return urlData.baseURL;
+    if (!activeSession && persisted?.domain) return persisted.domain;
     return DEFAULT_VALUES.domain;
   });
 
@@ -64,7 +141,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         required: segment.required || false,
       }));
     }
-    if (urlData?.parsedSegments) {
+    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.parsedSegments) {
       return urlData.parsedSegments.map((segment: any) => ({
         value: segment.value || "",
         isDynamic: segment.isDynamic || false,
@@ -73,90 +150,35 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         required: segment.required || false,
       }));
     }
+    if (!activeSession && persisted?.segments) return persisted.segments;
     return DEFAULT_VALUES.segments;
   });
 
   const [builtUrl, setBuiltUrl] = useState<string>(() => {
     if (activeSession?.urlData?.processedURL)
       return activeSession.urlData.processedURL;
-    if (urlData?.processedURL) return urlData.processedURL;
+    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.processedURL) return urlData.processedURL;
+    if (!activeSession && persisted?.builtUrl) return persisted.builtUrl;
     return "";
   });
 
   const [sessionDescription, setSessionDescription] = useState<string>(() => {
     if (activeSession?.urlData?.sessionDescription)
       return activeSession.urlData.sessionDescription;
-    if (urlData?.sessionDescription) return urlData.sessionDescription;
+    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.sessionDescription) return urlData.sessionDescription;
+    if (!activeSession && persisted?.sessionDescription) return persisted.sessionDescription;
     return DEFAULT_VALUES.sessionDescription;
   });
 
-  const [environment, setEnvironment] = useState<string>(DEFAULT_VALUES.environment);
+  const [environment, setEnvironment] = useState<string>(() => {
+    if (activeSession?.urlData?.environment) return activeSession.urlData.environment;
+    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.environment) return urlData.environment;
+    if (!activeSession && persisted?.environment) return persisted.environment;
+    return DEFAULT_VALUES.environment;
+  });
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const initialLoadDone = useRef(false);
-
-  // Check if there's an active session
-  if (!activeSession) {
-    return (
-      <div className="space-y-6">
-        {/* Header Section */}
-        <div className={`overflow-hidden relative p-6 bg-gradient-to-r ${SECTION_CONFIG.header.bgGradient} rounded-2xl border border-blue-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600`}>
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-5 dark:opacity-10">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full translate-x-16 -translate-y-16"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 rounded-full -translate-x-12 translate-y-12"></div>
-          </div>
-
-          <div className="flex relative items-center space-x-4">
-            <div className={`p-3 bg-gradient-to-br ${SECTION_CONFIG.header.iconBgGradient} rounded-xl shadow-lg`}>
-              <SECTION_CONFIG.header.icon className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className={`text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${SECTION_CONFIG.header.titleGradient} dark:from-blue-400 dark:to-indigo-400`}>
-                {SECTION_CONFIG.header.title}
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                {SECTION_CONFIG.header.description}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* No Active Session Warning */}
-        <div className="p-8 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
-          <div className="text-center">
-            <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-              <SECTION_CONFIG.header.icon className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
-              No Active Session
-            </h3>
-            <p className="mb-6 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
-              You need to create or select an active session before building URLs.
-              Please go to the Session Manager to create a session first.
-            </p>
-            <div className="flex justify-center space-x-4">
-              <Button
-                variant="outline"
-                onClick={() => window.history.back()}
-              >
-                Go Back
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  // Open session manager modal on sessions tab
-                  openSessionManager({ tab: 'sessions' });
-                }}
-              >
-                Create Session
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Effect to handle initial load and session changes
   useEffect(() => {
@@ -189,7 +211,10 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         setProtocol(
           sessionUrlData.processedURL?.startsWith("https") ? "https" : "http"
         );
-      } else if (urlData) {
+        setBuiltUrl(sessionUrlData.processedURL || "");
+        setSessionDescription(sessionUrlData.sessionDescription || DEFAULT_VALUES.sessionDescription);
+        setEnvironment(sessionUrlData.environment || DEFAULT_VALUES.environment);
+      } else if (!isUrlDataEmpty(urlData) && urlData) {
         let parsedSegments: Segment[] = [];
         if (typeof urlData.segments === "string" && urlData.segments.trim()) {
           parsedSegments = urlData.segments
@@ -213,6 +238,17 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         setProtocol(
           urlData.processedURL?.startsWith("https") ? "https" : "http"
         );
+        setBuiltUrl(urlData.processedURL || "");
+        setSessionDescription(urlData.sessionDescription || DEFAULT_VALUES.sessionDescription);
+        setEnvironment(urlData.environment || DEFAULT_VALUES.environment);
+      } else if (persisted) {
+        // Restore from persisted state if no session/urlData
+        setProtocol(persisted.protocol || DEFAULT_VALUES.protocol);
+        setDomain(persisted.domain || DEFAULT_VALUES.domain);
+        setSegments(persisted.segments || DEFAULT_VALUES.segments);
+        setBuiltUrl(persisted.builtUrl || "");
+        setSessionDescription(persisted.sessionDescription || DEFAULT_VALUES.sessionDescription);
+        setEnvironment(persisted.environment || DEFAULT_VALUES.environment);
       }
     };
 
@@ -291,6 +327,18 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
       };
       handleSaveSession(activeSession.name, updatedSession);
     }
+
+    // Persist state if no active session
+    if (!activeSession) {
+      persistState({
+        protocol,
+        domain,
+        segments,
+        builtUrl,
+        sessionDescription,
+        environment,
+      });
+    }
   }, [
     segments,
     domain,
@@ -301,27 +349,27 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     activeSession?.name, // Only depend on the session name, not the entire object
   ]);
 
+  // --- Updated getVariableValue: session > global > env-specific global ---
   const getVariableValue = useCallback(
     (paramName: string, env: string) => {
-      // Check global variables first
-      if (globalVariables[paramName]) {
-        return globalVariables[paramName];
+      // 1. Check session segment variables
+      const sessionVars = getSessionSegmentVariables();
+      console.log('sessionVars', sessionVars);
+      if (sessionVars[paramName]) {
+        return sessionVars[paramName];
       }
-
-      // Check segment variables (as object)
-      if (segmentVariables && segmentVariables[paramName]) {
-        return segmentVariables[paramName];
-      }
-
-      // Check environment-specific variables
+      // 2. Check environment-specific global variable
       const envVar = globalVariables[`${paramName}_${env}`];
       if (envVar) {
         return envVar;
       }
-
+      // 3. Check global variables
+      if (globalVariables[paramName]) {
+        return globalVariables[paramName];
+      }
       return null;
     },
-    [globalVariables, segmentVariables]
+    [globalVariables, segmentVariables, activeSession]
   );
 
   const handleSubmit = (): void => {
@@ -403,6 +451,71 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
       );
     });
   };
+
+  // --- Fix: Move early return after all hooks ---
+  let noActiveSessionContent = null;
+  if (!activeSession) {
+    noActiveSessionContent = (
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className={`overflow-hidden relative p-6 bg-gradient-to-r ${SECTION_CONFIG.header.bgGradient} rounded-2xl border border-blue-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600`}>
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-5 dark:opacity-10">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full translate-x-16 -translate-y-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 rounded-full -translate-x-12 translate-y-12"></div>
+          </div>
+
+          <div className="flex relative items-center space-x-4">
+            <div className={`p-3 bg-gradient-to-br ${SECTION_CONFIG.header.iconBgGradient} rounded-xl shadow-lg`}>
+              <SECTION_CONFIG.header.icon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className={`text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${SECTION_CONFIG.header.titleGradient} dark:from-blue-400 dark:to-indigo-400`}>
+                {SECTION_CONFIG.header.title}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                {SECTION_CONFIG.header.description}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* No Active Session Warning */}
+        <div className="p-8 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+          <div className="text-center">
+            <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+              <SECTION_CONFIG.header.icon className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
+              No Active Session
+            </h3>
+            <p className="mb-6 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+              You need to create or select an active session before building URLs.
+              Please go to the Session Manager to create a session first.
+            </p>
+            <div className="flex justify-center space-x-4">
+              <Button
+                variant="outline"
+                onClick={() => window.history.back()}
+              >
+                Go Back
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  // Open session manager modal on sessions tab
+                  openSessionManager({ tab: 'sessions' });
+                }}
+              >
+                Create Session
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (!activeSession) return noActiveSessionContent;
 
   return (
     <div className="space-y-6">

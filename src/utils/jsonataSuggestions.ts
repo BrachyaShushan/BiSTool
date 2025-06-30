@@ -1345,102 +1345,103 @@ export const generateJsonataSuggestions = (
   range: monaco.IRange,
   currentWord?: string
 ): JsonataSuggestion[] => {
-  const suggestions: JsonataSuggestion[] = [];
+  // Helper to generate snippet placeholders for function parameters
+  const getParamPlaceholders = (params: JsonataParameter[]) =>
+    params.map((param, i) =>
+      param.required
+        ? `\${${i + 1}:${param.name}}`
+        : `\${${i + 1}:${param.name}?}`
+    );
 
-  // Add function suggestions with enhanced signatures
-  Object.entries(jsonataFunctionDocs).forEach(([functionName, doc], index) => {
-    // Create insert text with complete function name and parameter placeholders
-    let insertText = functionName;
-    let insertTextRules = undefined;
+  // Function suggestions
+  const functionSuggestions: JsonataSuggestion[] = Object.entries(jsonataFunctionDocs).map(
+    ([functionName, doc], index) => {
+      // Always use the canonical function name for insertText
+      const functionInsertName = functionName;
+      const paramPlaceholders = getParamPlaceholders(doc.parameters);
+      const insertText =
+        doc.parameters.length > 0
+          ? `${functionInsertName}(${paramPlaceholders.join(", ")})`
+          : `${functionInsertName}()`;
 
-    if (doc.parameters.length > 0) {
-      // Create parameter placeholders for the complete function
-      const paramPlaceholders = doc.parameters.map((param, i) => {
-        if (param.required) {
-          return `\${${i + 1}:${param.name}}`;
-        } else {
-          return `\${${i + 1}:${param.name}?}`;
-        }
-      });
+      // Build documentation
+      let documentation = `**${doc.signature}**\n\n${doc.description}`;
+      if (doc.parameters.length > 0) {
+        documentation += "\n\n**Parameters:**\n";
+        doc.parameters.forEach((param) => {
+          const required = param.required ? "required" : "optional";
+          const defaultValue = param.defaultValue
+            ? ` (default: ${param.defaultValue})`
+            : "";
+          documentation += `- \`${param.name}\` (${param.type}, ${required})${defaultValue}: ${param.description}\n`;
+        });
+      }
+      if (doc.examples && doc.examples.length > 0) {
+        documentation += "\n**Examples:**\n";
+        doc.examples.forEach((example) => {
+          documentation += `\`${example}\`\n`;
+        });
+      }
 
-      // Insert complete function with parentheses and parameters
-      insertText = `${functionName}asd(${paramPlaceholders.join(", ")})`;
-      insertTextRules =
-        monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
-    } else {
-      // For functions with no parameters, insert complete function with parentheses
-      insertText = `${functionName}()`;
+      return {
+        label: functionName,
+        kind: monaco.languages.CompletionItemKind.Function,
+        insertText,
+        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        documentation,
+        detail: `${doc.category} function - ${doc.signature}`,
+        range,
+        sortText: `F${index.toString().padStart(4, "0")}`,
+        examples: doc.examples,
+      };
     }
+  );
 
-    // Create detailed documentation with signature and parameters
-    let documentation = `**${doc.signature}**\n\n${doc.description}`;
+  // Keyword suggestions
+  const keywordSuggestions = jsonataKeywords.map((keyword, index) => ({
+    label: keyword,
+    kind: monaco.languages.CompletionItemKind.Keyword,
+    insertText: keyword,
+    documentation: `JSONata keyword: ${keyword}`,
+    range,
+    sortText: `K${index.toString().padStart(4, "0")}`,
+  }));
 
-    if (doc.parameters.length > 0) {
-      documentation += "\n\n**Parameters:**\n";
-      doc.parameters.forEach((param) => {
-        const required = param.required ? "required" : "optional";
-        const defaultValue = param.defaultValue
-          ? " (default: " + param.defaultValue + ")"
-          : "";
-        documentation += `- \`${param.name}\` (${param.type}, ${required})${defaultValue}: ${param.description}\n`;
-      });
-    }
+  // Variable suggestions
+  const variableSuggestions = jsonataVariables.map((variable, index) => ({
+    label: variable,
+    kind: monaco.languages.CompletionItemKind.Variable,
+    insertText: variable,
+    documentation: `JSONata variable: ${variable}`,
+    range,
+    sortText: `V${index.toString().padStart(4, "0")}`,
+  }));
 
-    if (doc.examples && doc.examples.length > 0) {
-      documentation += "\n**Examples:**\n";
-      doc.examples.forEach((example) => {
-        documentation += `\`${example}\`\n`;
-      });
-    }
+  // Operator suggestions
+  const operatorSuggestions = jsonataOperators.map((operator, index) => ({
+    label: operator,
+    kind: monaco.languages.CompletionItemKind.Operator,
+    insertText: operator,
+    documentation: `JSONata operator: ${operator}`,
+    range,
+    sortText: `O${index.toString().padStart(4, "0")}`,
+  }));
 
-    suggestions.push({
-      label: functionName,
-      kind: monaco.languages.CompletionItemKind.Function,
-      insertText,
-      insertTextRules,
-      documentation,
-      detail: `${doc.category} function - ${doc.signature}`,
-      range,
-      sortText: `F${index.toString().padStart(4, "0")}`,
-      examples: doc.examples,
-    });
-  });
+  // Combine all suggestions
+  let suggestions: JsonataSuggestion[] = [
+    ...functionSuggestions,
+    ...keywordSuggestions,
+    ...variableSuggestions,
+    ...operatorSuggestions,
+  ];
 
-  // Add keyword suggestions
-  jsonataKeywords.forEach((keyword, index) => {
-    suggestions.push({
-      label: keyword,
-      kind: monaco.languages.CompletionItemKind.Keyword,
-      insertText: keyword,
-      documentation: `JSONata keyword: ${keyword}`,
-      range,
-      sortText: `K${index.toString().padStart(4, "0")}`,
-    });
-  });
-
-  // Add variable suggestions
-  jsonataVariables.forEach((variable, index) => {
-    suggestions.push({
-      label: variable,
-      kind: monaco.languages.CompletionItemKind.Variable,
-      insertText: variable,
-      documentation: `JSONata variable: ${variable}`,
-      range,
-      sortText: `V${index.toString().padStart(4, "0")}`,
-    });
-  });
-
-  // Add operator suggestions
-  jsonataOperators.forEach((operator, index) => {
-    suggestions.push({
-      label: operator,
-      kind: monaco.languages.CompletionItemKind.Operator,
-      insertText: operator,
-      documentation: `JSONata operator: ${operator}`,
-      range,
-      sortText: `O${index.toString().padStart(4, "0")}`,
-    });
-  });
+  // Filter by currentWord if provided
+  if (currentWord) {
+    const wordLower = currentWord.toLowerCase();
+    suggestions = suggestions.filter((s) =>
+      s.label.toLowerCase().startsWith(wordLower)
+    );
+  }
 
   return suggestions;
 };
@@ -1449,11 +1450,11 @@ export const generateJsonataSuggestions = (
 export const getSuggestionsByCategory = (
   category: string,
   range: monaco.IRange,
-  currentWord?: string
 ): JsonataSuggestion[] => {
   return Object.entries(jsonataFunctionDocs)
     .filter(([_, doc]) => doc.category === category)
     .map(([functionName, doc], index) => {
+      console.log('getSuggestionsByCategory functionName:', functionName);
       // Create insert text with complete function name and parameter placeholders
       let insertText = functionName;
       let insertTextRules = undefined;
@@ -1469,12 +1470,12 @@ export const getSuggestionsByCategory = (
         });
 
         // Insert complete function with parentheses and parameters
-        insertText = `${currentWord}(${paramPlaceholders.join(",asd ")})`;
+        insertText = `${functionName}(${paramPlaceholders.join(", ")})`;
         insertTextRules =
           monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
       } else {
         // For functions with no parameters, insert complete function with parentheses
-        insertText = `${currentWord}()`;
+        insertText = `${functionName}()`;
       }
 
       // Create detailed documentation with signature and parameters
@@ -1487,7 +1488,7 @@ export const getSuggestionsByCategory = (
           const defaultValue = param.defaultValue
             ? " (default: " + param.defaultValue + ")"
             : "";
-          documentation += `- \`${param.name}\` asd(${param.type}, ${required})${defaultValue}: ${param.description}\n`;
+          documentation += `- \`${param.name}\` (${param.type}, ${required})${defaultValue}: ${param.description}\n`;
         });
       }
 
