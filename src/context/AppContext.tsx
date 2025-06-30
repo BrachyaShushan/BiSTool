@@ -251,6 +251,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     sessionManager.importSessions(sessions);
   }, []);
 
+  // Function to open session manager modal
+  const openSessionManager = useCallback((options?: { tab?: 'sessions' | 'variables' | 'projects' }) => {
+    sessionManager.openSessionManager(options);
+  }, []);
+
   // Workflow handlers
   const handleURLBuilderSubmit = useCallback((data: URLData) => {
     appState.setUrlData(data);
@@ -338,6 +343,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
     handleSaveSession,
     handleDeleteSession,
     handleImportSessions,
+    openSessionManager,
 
     // Workflow handlers
     handleURLBuilderSubmit,

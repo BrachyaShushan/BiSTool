@@ -30,6 +30,7 @@ const TestManager: React.FC = () => {
         handleSaveSession,
         setActiveSection,
         generateAuthHeaders,
+        openSessionManager,
     } = useAppContext();
 
     const { isDarkMode } = useTheme();
@@ -284,17 +285,75 @@ const TestManager: React.FC = () => {
 
     if (!activeSession) {
         return (
-            <div className="p-8 text-center bg-gray-50 rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600 dark:bg-gray-700">
-                <FiAlertTriangle className="mx-auto mb-4 w-12 h-12 text-gray-400" />
-                <p className="mb-2 text-gray-500 dark:text-gray-400">No active session available</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">Please create or load a session before creating tests</p>
-                <button
-                    onClick={() => setActiveSection("url")}
-                    className="flex items-center px-4 py-2 mx-auto mt-4 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
-                >
-                    <FiArrowRight className="w-4 h-4" />
-                    <span>Manage Sessions</span>
-                </button>
+            <div className="space-y-6">
+                {/* Header Section */}
+                <div className="overflow-hidden relative p-6 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl border border-emerald-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                    {/* Background Pattern */}
+                    <div className="absolute inset-0 opacity-5 dark:opacity-10">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500 rounded-full translate-x-16 -translate-y-16"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-teal-500 rounded-full -translate-x-12 translate-y-12"></div>
+                    </div>
+
+                    <div className="flex relative justify-between items-center">
+                        <div className="flex items-center space-x-4">
+                            <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg">
+                                <FiCode className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400">
+                                    Test Manager
+                                </h2>
+                                <p className="text-gray-600 dark:text-gray-300">
+                                    Create, configure, and execute comprehensive API tests
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl dark:from-blue-900 dark:to-blue-800">
+                                <FiTarget className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Test Suite</span>
+                            </div>
+                            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-green-100 to-green-200 rounded-xl dark:from-green-900 dark:to-green-800">
+                                <FiActivity className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                <span className="text-sm font-semibold text-green-700 dark:text-green-300">Live Testing</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* No Active Session Warning */}
+                <div className="p-8 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+                    <div className="text-center">
+                        <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                            <FiCode className="w-8 h-8 text-white" />
+                        </div>
+                        <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
+                            No Active Session
+                        </h3>
+                        <p className="mb-6 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+                            You need to create or select an active session before managing tests.
+                            Please go to the Session Manager to create a session first.
+                        </p>
+                        <div className="flex justify-center space-x-4">
+                            <button
+                                onClick={() => window.history.back()}
+                                className="px-6 py-3 font-medium text-gray-700 bg-white border border-gray-300 rounded-lg transition-all duration-200 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
+                            >
+                                Go Back
+                            </button>
+                            <button
+                                onClick={() => {
+                                    // Open session manager modal on sessions tab
+                                    openSessionManager({ tab: 'sessions' });
+                                }}
+                                className="px-6 py-3 font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg"
+                            >
+                                Create Session
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

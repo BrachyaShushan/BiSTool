@@ -3,12 +3,55 @@ import { ExtendedSession } from "../types/features/SavedManager";
 import { URLData, RequestConfigData, SectionId, Variable } from "../types";
 import { DEFAULT_URL_DATA } from "../utils/storage";
 
+// Custom event for opening session manager
+const SESSION_MANAGER_EVENT = "openSessionManager";
+
+// Type for session manager open options
+export interface SessionManagerOpenOptions {
+  tab?: "sessions" | "variables" | "projects";
+}
+
 // Custom hook for managing sessions
 export const useSessionManager = () => {
   const [activeSession, setActiveSession] = useState<ExtendedSession | null>(
     null
   );
   const [savedSessions, setSavedSessions] = useState<ExtendedSession[]>([]);
+
+  // Function to open session manager modal
+  const openSessionManager = useCallback(
+    (options?: SessionManagerOpenOptions) => {
+      const event = new CustomEvent(SESSION_MANAGER_EVENT, {
+        detail: options || { tab: "sessions" },
+      });
+      window.dispatchEvent(event);
+    },
+    []
+  );
+
+  // Function to listen for session manager open requests
+  const useSessionManagerListener = useCallback(
+    (callback: (options?: SessionManagerOpenOptions) => void) => {
+      useMemo(() => {
+        const handleOpenSessionManager = (event: CustomEvent) => {
+          callback(event.detail);
+        };
+
+        window.addEventListener(
+          SESSION_MANAGER_EVENT,
+          handleOpenSessionManager as EventListener
+        );
+
+        return () => {
+          window.removeEventListener(
+            SESSION_MANAGER_EVENT,
+            handleOpenSessionManager as EventListener
+          );
+        };
+      }, [callback]);
+    },
+    []
+  );
 
   // Create a new session from current app state
   const createSession = useCallback(
@@ -158,5 +201,7 @@ export const useSessionManager = () => {
     clearActiveSession,
     getSessionById,
     setSavedSessions,
+    openSessionManager,
+    useSessionManagerListener,
   };
 };

@@ -2,7 +2,24 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { URLBuilderProps } from "../../types/components/components.types";
 import { URLData } from "../../types/core/app.types";
-import { FiPlus, FiTrash2, FiGlobe, FiLink, FiCopy, FiCheck, FiSettings, FiEye, FiEyeOff, FiArrowRight, FiInfo } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiCopy, FiCheck, FiEyeOff, FiArrowRight, FiInfo } from "react-icons/fi";
+import {
+  Button,
+  Input,
+  IconButton,
+  Textarea
+} from "../ui";
+import {
+  PROTOCOL_OPTIONS,
+  ENVIRONMENT_OPTIONS,
+  SECTION_CONFIG,
+  DEFAULT_VALUES,
+  COPY_TIMEOUT,
+  VARIABLE_STATUS_STYLES,
+  BUTTON_VARIANTS,
+  INPUT_PLACEHOLDERS,
+  LABELS
+} from "../../constants/urlBuilder";
 
 // Define Segment interface based on the parsedSegments type in URLData
 interface Segment {
@@ -21,19 +38,20 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     segmentVariables,
     activeSession,
     handleSaveSession,
+    openSessionManager,
   } = useAppContext();
 
   const [protocol, setProtocol] = useState<string>(() => {
     if (activeSession?.urlData?.processedURL?.startsWith("https"))
       return "https";
     if (urlData?.processedURL?.startsWith("https")) return "https";
-    return "http";
+    return DEFAULT_VALUES.protocol;
   });
 
   const [domain, setDomain] = useState<string>(() => {
     if (activeSession?.urlData?.baseURL) return activeSession.urlData.baseURL;
     if (urlData?.baseURL) return urlData.baseURL;
-    return "{base_url}";
+    return DEFAULT_VALUES.domain;
   });
 
   const [segments, setSegments] = useState<Segment[]>(() => {
@@ -55,7 +73,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         required: segment.required || false,
       }));
     }
-    return [];
+    return DEFAULT_VALUES.segments;
   });
 
   const [builtUrl, setBuiltUrl] = useState<string>(() => {
@@ -69,13 +87,76 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     if (activeSession?.urlData?.sessionDescription)
       return activeSession.urlData.sessionDescription;
     if (urlData?.sessionDescription) return urlData.sessionDescription;
-    return "";
+    return DEFAULT_VALUES.sessionDescription;
   });
 
-  const [environment, setEnvironment] = useState<string>("development");
+  const [environment, setEnvironment] = useState<string>(DEFAULT_VALUES.environment);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const initialLoadDone = useRef(false);
+
+  // Check if there's an active session
+  if (!activeSession) {
+    return (
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className={`overflow-hidden relative p-6 bg-gradient-to-r ${SECTION_CONFIG.header.bgGradient} rounded-2xl border border-blue-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600`}>
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-5 dark:opacity-10">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full translate-x-16 -translate-y-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 rounded-full -translate-x-12 translate-y-12"></div>
+          </div>
+
+          <div className="flex relative items-center space-x-4">
+            <div className={`p-3 bg-gradient-to-br ${SECTION_CONFIG.header.iconBgGradient} rounded-xl shadow-lg`}>
+              <SECTION_CONFIG.header.icon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className={`text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${SECTION_CONFIG.header.titleGradient} dark:from-blue-400 dark:to-indigo-400`}>
+                {SECTION_CONFIG.header.title}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                {SECTION_CONFIG.header.description}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* No Active Session Warning */}
+        <div className="p-8 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+          <div className="text-center">
+            <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+              <SECTION_CONFIG.header.icon className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
+              No Active Session
+            </h3>
+            <p className="mb-6 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+              You need to create or select an active session before building URLs.
+              Please go to the Session Manager to create a session first.
+            </p>
+            <div className="flex justify-center space-x-4">
+              <Button
+                variant="outline"
+                onClick={() => window.history.back()}
+              >
+                Go Back
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  // Open session manager modal on sessions tab
+                  openSessionManager({ tab: 'sessions' });
+                }}
+              >
+                Create Session
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Effect to handle initial load and session changes
   useEffect(() => {
@@ -104,7 +185,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
             });
         }
         setSegments(parsedSegments);
-        setDomain(sessionUrlData.baseURL || "{base_url}");
+        setDomain(sessionUrlData.baseURL || DEFAULT_VALUES.domain);
         setProtocol(
           sessionUrlData.processedURL?.startsWith("https") ? "https" : "http"
         );
@@ -128,7 +209,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
             });
         }
         setSegments(parsedSegments);
-        setDomain(urlData.baseURL || "{base_url}");
+        setDomain(urlData.baseURL || DEFAULT_VALUES.domain);
         setProtocol(
           urlData.processedURL?.startsWith("https") ? "https" : "http"
         );
@@ -148,7 +229,13 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
   // Effect to update builtUrl when segments, domain, or protocol changes
   useEffect(() => {
-    const newUrl = `${protocol}://${domain}${segments.length > 0
+    // Resolve base_url from global variables if domain is {base_url}
+    let resolvedDomain = domain;
+    if (domain === "{base_url}" && globalVariables?.['base_url']) {
+      resolvedDomain = globalVariables['base_url'];
+    }
+
+    const newUrl = `${protocol}://${resolvedDomain}${segments.length > 0
       ? "/" +
       segments
         .map((segment) =>
@@ -160,7 +247,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
       : ""
       }`;
     setBuiltUrl(newUrl);
-  }, [segments, domain, protocol]);
+  }, [segments, domain, protocol, globalVariables]);
 
   // Effect to update context and save session when local state changes
   useEffect(() => {
@@ -237,8 +324,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     [globalVariables, segmentVariables]
   );
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
-    e.preventDefault();
+  const handleSubmit = (): void => {
     const segmentsString = segments
       .map((segment) =>
         segment.isDynamic ? `{${segment.paramName}}` : segment.value
@@ -282,16 +368,46 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     try {
       await navigator.clipboard.writeText(builtUrl);
       setCopiedUrl(true);
-      setTimeout(() => setCopiedUrl(false), 2000);
+      setTimeout(() => setCopiedUrl(false), COPY_TIMEOUT);
     } catch (err) {
       console.error('Failed to copy URL:', err);
     }
   };
 
+  const renderOptionButton = (
+    options: typeof PROTOCOL_OPTIONS | typeof ENVIRONMENT_OPTIONS,
+    selectedValue: string,
+    onSelect: (value: string) => void,
+    ringColor: string
+  ) => {
+    return options.map((option) => {
+      const isSelected = selectedValue === option.id;
+      return (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onSelect(option.id)}
+          className={`relative flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-200 focus:outline-none group shadow-sm overflow-hidden
+            bg-gradient-to-br ${isSelected ? option.selectedColor + ' border-transparent shadow-lg scale-105' : option.color + ' border-gray-200 dark:border-gray-600 hover:scale-105 hover:shadow-md'}
+            ${isSelected ? `ring-2 ring-offset-2 ${ringColor}` : ''}
+          `}
+          aria-pressed={isSelected}
+        >
+          <span className="text-2xl mb-1">{option.icon}</span>
+          <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>{option.label}</span>
+          <span className={`text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>{option.description}</span>
+          {isSelected && (
+            <span className="absolute top-2 right-2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white dark:border-gray-900"></span>
+          )}
+        </button>
+      );
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="overflow-hidden relative p-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border border-blue-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+      <div className={`overflow-hidden relative p-6 bg-gradient-to-r ${SECTION_CONFIG.header.bgGradient} rounded-2xl border border-blue-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600`}>
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5 dark:opacity-10">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full translate-x-16 -translate-y-16"></div>
@@ -299,146 +415,62 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         </div>
 
         <div className="flex relative items-center space-x-4">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-            <FiGlobe className="w-6 h-6 text-white" />
+          <div className={`p-3 bg-gradient-to-br ${SECTION_CONFIG.header.iconBgGradient} rounded-xl shadow-lg`}>
+            <SECTION_CONFIG.header.icon className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-              URL Builder
+            <h2 className={`text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${SECTION_CONFIG.header.titleGradient} dark:from-blue-400 dark:to-indigo-400`}>
+              {SECTION_CONFIG.header.title}
             </h2>
             <p className="text-gray-600 dark:text-gray-300">
-              Construct dynamic URLs with variables and path segments
+              {SECTION_CONFIG.header.description}
             </p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-6">
         {/* Configuration Section */}
         <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <div className="flex items-center mb-6 space-x-3">
-            <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
-              <FiSettings className="w-5 h-5 text-white" />
+            <div className={`p-2 bg-gradient-to-br ${SECTION_CONFIG.configuration.iconBgGradient} rounded-lg`}>
+              <SECTION_CONFIG.configuration.icon className="w-5 h-5 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Configuration</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{SECTION_CONFIG.configuration.title}</h3>
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
             {/* Protocol */}
             <div>
               <label className="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Protocol
+                {LABELS.protocol}
               </label>
               <div className="grid grid-cols-2 gap-3">
-                {[
-                  {
-                    id: 'http',
-                    label: 'HTTP',
-                    icon: '🌐',
-                    description: 'Unsecured protocol',
-                    color: 'from-gray-200 to-gray-300',
-                    selectedColor: 'from-blue-500 to-blue-600',
-                  },
-                  {
-                    id: 'https',
-                    label: 'HTTPS',
-                    icon: '🔒',
-                    description: 'Secured with SSL',
-                    color: 'from-gray-200 to-gray-300',
-                    selectedColor: 'from-green-500 to-green-600',
-                  },
-                ].map((option) => {
-                  const isSelected = protocol === option.id;
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => setProtocol(option.id)}
-                      className={`relative flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-200 focus:outline-none group shadow-sm overflow-hidden
-                        bg-gradient-to-br ${isSelected ? option.selectedColor + ' border-transparent shadow-lg scale-105' : option.color + ' border-gray-200 dark:border-gray-600 hover:scale-105 hover:shadow-md'}
-                        ${isSelected ? 'ring-2 ring-offset-2 ring-blue-400' : ''}
-                      `}
-                      aria-pressed={isSelected}
-                    >
-                      <span className="text-2xl mb-1">{option.icon}</span>
-                      <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>{option.label}</span>
-                      <span className={`text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>{option.description}</span>
-                      {isSelected && (
-                        <span className="absolute top-2 right-2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white dark:border-gray-900"></span>
-                      )}
-                    </button>
-                  );
-                })}
+                {renderOptionButton(PROTOCOL_OPTIONS, protocol, setProtocol, 'ring-blue-400')}
               </div>
             </div>
 
             {/* Domain */}
             <div>
               <label className="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Domain
+                {LABELS.domain}
               </label>
-              <input
+              <Input
                 type="text"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
-                placeholder="example.com or {base_url}"
-                className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder={INPUT_PLACEHOLDERS.domain}
+                fullWidth
               />
             </div>
 
             {/* Environment */}
             <div>
               <label className="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Environment
+                {LABELS.environment}
               </label>
               <div className="grid grid-cols-3 gap-3">
-                {[
-                  {
-                    id: 'development',
-                    label: 'Development',
-                    icon: '🛠️',
-                    description: 'Local/test environment',
-                    color: 'from-green-200 to-green-300',
-                    selectedColor: 'from-green-500 to-green-600',
-                  },
-                  {
-                    id: 'staging',
-                    label: 'Staging',
-                    icon: '🚧',
-                    description: 'Pre-production testing',
-                    color: 'from-yellow-100 to-yellow-200',
-                    selectedColor: 'from-yellow-400 to-yellow-500',
-                  },
-                  {
-                    id: 'production',
-                    label: 'Production',
-                    icon: '🚀',
-                    description: 'Live environment',
-                    color: 'from-red-100 to-red-200',
-                    selectedColor: 'from-red-500 to-red-600',
-                  },
-                ].map((option) => {
-                  const isSelected = environment === option.id;
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => setEnvironment(option.id)}
-                      className={`relative flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-200 focus:outline-none group shadow-sm overflow-hidden
-                        bg-gradient-to-br ${isSelected ? option.selectedColor + ' border-transparent shadow-lg scale-105' : option.color + ' border-gray-200 dark:border-gray-600 hover:scale-105 hover:shadow-md'}
-                        ${isSelected ? 'ring-2 ring-offset-2 ring-green-400' : ''}
-                      `}
-                      aria-pressed={isSelected}
-                    >
-                      <span className="text-2xl mb-1">{option.icon}</span>
-                      <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>{option.label}</span>
-                      <span className={`text-xs ${isSelected ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'}`}>{option.description}</span>
-                      {isSelected && (
-                        <span className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></span>
-                      )}
-                    </button>
-                  );
-                })}
+                {renderOptionButton(ENVIRONMENT_OPTIONS, environment, setEnvironment, 'ring-green-400')}
               </div>
             </div>
           </div>
@@ -446,14 +478,14 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
           {/* Session Description */}
           <div className="mt-6">
             <label className="block mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Session Description
+              {LABELS.sessionDescription}
             </label>
-            <textarea
+            <Textarea
               value={sessionDescription}
               onChange={(e) => setSessionDescription(e.target.value)}
-              placeholder="Enter a description for this API endpoint..."
-              className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 resize-none dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder={INPUT_PLACEHOLDERS.sessionDescription}
               rows={3}
+              fullWidth
             />
           </div>
         </div>
@@ -462,26 +494,25 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
-                <FiLink className="w-5 h-5 text-white" />
+              <div className={`p-2 bg-gradient-to-br ${SECTION_CONFIG.pathSegments.iconBgGradient} rounded-lg`}>
+                <SECTION_CONFIG.pathSegments.icon className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Path Segments</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{SECTION_CONFIG.pathSegments.title}</h3>
             </div>
-            <button
-              type="button"
+            <Button
+              variant={BUTTON_VARIANTS.addSegment.variant}
+              icon={FiPlus}
               onClick={handleSegmentAdd}
-              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
             >
-              <FiPlus className="w-4 h-4" />
-              <span>Add Segment</span>
-            </button>
+              {LABELS.addSegment}
+            </Button>
           </div>
 
           {segments.length === 0 ? (
             <div className="p-8 text-center rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600">
-              <FiLink className="mx-auto mb-4 w-12 h-12 text-gray-400" />
-              <p className="mb-4 text-gray-500 dark:text-gray-400">No path segments added yet</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500">Add segments to build your URL path</p>
+              <SECTION_CONFIG.pathSegments.icon className="mx-auto mb-4 w-12 h-12 text-gray-400" />
+              <p className="mb-4 text-gray-500 dark:text-gray-400">{LABELS.noSegments}</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">{LABELS.noSegmentsDescription}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -515,7 +546,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                     {/* Segment Value/Parameter Name */}
                     <div className="md:col-span-4">
                       {segment.isDynamic ? (
-                        <input
+                        <Input
                           type="text"
                           value={segment.paramName}
                           onChange={(e) => {
@@ -526,11 +557,11 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                             };
                             setSegments(newSegments);
                           }}
-                          placeholder="Variable name (e.g., user_id)"
-                          className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder={INPUT_PLACEHOLDERS.dynamicSegment}
+                          fullWidth
                         />
                       ) : (
-                        <input
+                        <Input
                           type="text"
                           value={segment.value}
                           onChange={(e) => {
@@ -541,15 +572,15 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                             };
                             setSegments(newSegments);
                           }}
-                          placeholder="Segment value (e.g., api)"
-                          className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder={INPUT_PLACEHOLDERS.staticSegment}
+                          fullWidth
                         />
                       )}
                     </div>
 
                     {/* Description */}
                     <div className="md:col-span-4">
-                      <input
+                      <Input
                         type="text"
                         value={segment.description ?? ""}
                         onChange={(e) => {
@@ -560,21 +591,20 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                           };
                           setSegments(newSegments);
                         }}
-                        placeholder="Description (optional)"
-                        className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder={INPUT_PLACEHOLDERS.description}
+                        fullWidth
                       />
                     </div>
 
                     {/* Actions */}
                     <div className="md:col-span-2">
-                      <button
-                        type="button"
+                      <IconButton
+                        icon={FiTrash2}
+                        variant={BUTTON_VARIANTS.removeSegment.variant}
+                        size={BUTTON_VARIANTS.removeSegment.size}
                         onClick={() => handleSegmentRemove(index)}
-                        className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 group dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 hover:scale-105"
                         title="Remove segment"
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
+                      />
                     </div>
                   </div>
                 </div>
@@ -587,28 +617,24 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg">
-                <FiEye className="w-5 h-5 text-white" />
+              <div className={`p-2 bg-gradient-to-br ${SECTION_CONFIG.urlPreview.iconBgGradient} rounded-lg`}>
+                <SECTION_CONFIG.urlPreview.icon className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">URL Preview</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{SECTION_CONFIG.urlPreview.title}</h3>
             </div>
             <div className="flex items-center space-x-2">
-              <button
-                type="button"
+              <IconButton
+                icon={showPreview ? FiEyeOff : SECTION_CONFIG.urlPreview.icon}
+                variant={BUTTON_VARIANTS.togglePreview.variant}
                 onClick={() => setShowPreview(!showPreview)}
-                className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                 title={showPreview ? "Hide preview" : "Show preview"}
-              >
-                {showPreview ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
-              </button>
-              <button
-                type="button"
+              />
+              <IconButton
+                icon={copiedUrl ? FiCheck : FiCopy}
+                variant={BUTTON_VARIANTS.copyUrl.variant}
                 onClick={copyToClipboard}
-                className="p-2 text-gray-600 rounded-lg transition-all duration-200 group dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900"
                 title="Copy URL"
-              >
-                {copiedUrl ? <FiCheck className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
-              </button>
+              />
             </div>
           </div>
 
@@ -617,8 +643,8 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
               {/* Generated URL */}
               <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Generated URL</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Click to copy</span>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{LABELS.generatedUrl}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{LABELS.clickToCopy}</span>
                 </div>
                 <div
                   onClick={copyToClipboard}
@@ -631,13 +657,28 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
               </div>
 
               {/* Variable Values */}
-              {segments.some((s) => s.isDynamic) && (
+              {(segments.some((s) => s.isDynamic) || domain === "{base_url}") && (
                 <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 dark:bg-blue-900/20 dark:border-blue-700">
                   <div className="flex items-center mb-3 space-x-2">
                     <FiInfo className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Variable Values</span>
+                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{LABELS.variableValues}</span>
                   </div>
                   <div className="grid gap-2 md:grid-cols-2">
+                    {/* Show base_url variable if it's being used */}
+                    {domain === "{base_url}" && (
+                      <div className="flex justify-between items-center p-2 bg-white rounded-lg dark:bg-gray-700">
+                        <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                          base_url:
+                        </span>
+                        <span className={`text-sm px-2 py-1 rounded ${globalVariables?.['base_url']
+                          ? VARIABLE_STATUS_STYLES.set
+                          : VARIABLE_STATUS_STYLES.notSet
+                          }`}>
+                          {globalVariables?.['base_url'] || "Not set"}
+                        </span>
+                      </div>
+                    )}
+                    {/* Show segment variables */}
                     {segments
                       .filter((s) => s.isDynamic && s.paramName)
                       .map((segment, i) => {
@@ -648,8 +689,8 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                               {segment.paramName}:
                             </span>
                             <span className={`text-sm px-2 py-1 rounded ${value === "Not set"
-                              ? "text-red-600 bg-red-100 dark:bg-red-900 dark:text-red-300"
-                              : "text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300"
+                              ? VARIABLE_STATUS_STYLES.notSet
+                              : VARIABLE_STATUS_STYLES.set
                               }`}>
                               {value}
                             </span>
@@ -665,15 +706,17 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
         {/* Submit Button */}
         <div className="flex justify-end">
-          <button
-            type="submit"
-            className="flex items-center px-8 py-4 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+          <Button
+            variant={BUTTON_VARIANTS.submit.variant}
+            size={BUTTON_VARIANTS.submit.size}
+            icon={FiArrowRight}
+            iconPosition="right"
+            onClick={handleSubmit}
           >
-            <span>Continue to Request Configuration</span>
-            <FiArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-          </button>
+            Continue to Request Configuration
+          </Button>
         </div>
-      </form>
+      </div>
     </div>
   );
 };

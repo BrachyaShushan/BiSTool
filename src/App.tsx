@@ -40,6 +40,7 @@ const AppContent: React.FC = () => {
     const { currentProject, clearCurrentProject } = useProjectContext();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [showUnifiedManager, setShowUnifiedManager] = useState(false);
+    const [sessionManagerTab, setSessionManagerTab] = useState<'sessions' | 'variables' | 'projects'>('sessions');
     const [isTokenLoading, setIsTokenLoading] = useState(false);
     const [isTokenExpired, setIsTokenExpired] = useState(false);
     const [tokenDuration, setTokenDuration] = useState<number | null>(null);
@@ -94,6 +95,21 @@ const AppContent: React.FC = () => {
         const interval = setInterval(checkTokenExpiration, 30000);
         return () => clearInterval(interval);
     }, [checkTokenExpiration]);
+
+    // Listen for session manager open events
+    React.useEffect(() => {
+        const handleOpenSessionManager = (event: CustomEvent) => {
+            const options = event.detail || { tab: 'sessions' };
+            setSessionManagerTab(options.tab || 'sessions');
+            setShowUnifiedManager(true);
+        };
+
+        window.addEventListener('openSessionManager', handleOpenSessionManager as EventListener);
+
+        return () => {
+            window.removeEventListener('openSessionManager', handleOpenSessionManager as EventListener);
+        };
+    }, []);
 
     // Token regeneration logic (reuse from TokenGenerator)
     const handleRegenerateToken = async () => {
@@ -321,6 +337,7 @@ const AppContent: React.FC = () => {
             <UnifiedManager
                 isOpen={showUnifiedManager}
                 onClose={() => setShowUnifiedManager(false)}
+                initialTab={sessionManagerTab}
                 activeSession={activeSession}
                 savedSessions={savedSessions}
                 globalVariables={globalVariables}

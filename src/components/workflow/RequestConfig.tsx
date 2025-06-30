@@ -59,6 +59,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     activeSession,
     handleSaveSession,
     methodColor,
+    openSessionManager,
   } = useAppContext() as AppContextType;
   const [tokenExpiration, setTokenExpiration] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<RequestConfigState["activeTab"]>(
@@ -566,6 +567,69 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     if (tokenExpiration > 1) return TOKEN_EXPIRATION_STYLES.warning;
     return TOKEN_EXPIRATION_STYLES.expired;
   };
+
+  // Check if there's an active session
+  if (!activeSession) {
+    return (
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="overflow-hidden relative p-6 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-indigo-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-5 dark:opacity-10">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full translate-x-16 -translate-y-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500 rounded-full -translate-x-12 translate-y-12"></div>
+          </div>
+
+          <div className="flex relative items-center space-x-4">
+            <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+              <FiSettings className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                Request Configuration
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Configure HTTP method, headers, parameters, and request body
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* No Active Session Warning */}
+        <div className="p-8 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+          <div className="text-center">
+            <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+              <FiSettings className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
+              No Active Session
+            </h3>
+            <p className="mb-6 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+              You need to create or select an active session before configuring request settings.
+              Please go back to the URL Builder or Session Manager to create a session first.
+            </p>
+            <div className="flex justify-center space-x-4">
+              <Button
+                variant="outline"
+                onClick={() => window.history.back()}
+              >
+                Go Back
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  // Open session manager modal on sessions tab
+                  openSessionManager({ tab: 'sessions' });
+                }}
+              >
+                Create Session
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

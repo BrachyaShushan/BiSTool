@@ -242,6 +242,9 @@ export interface AppContextType {
   handleSaveSession: (name: string, sessionData?: ExtendedSession) => void;
   handleDeleteSession: (id: string) => void;
   handleImportSessions: (sessions: any[]) => void;
+  openSessionManager: (options?: {
+    tab?: "sessions" | "variables" | "projects";
+  }) => void;
   handleURLBuilderSubmit: (data: URLData) => void;
   handleRequestConfigSubmit: (data: RequestConfigData) => void;
   handleYAMLGenerated: (yaml: string) => void;

@@ -14,6 +14,7 @@ import { useAppContext } from "../../context/AppContext";
 interface UnifiedManagerProps {
     isOpen: boolean;
     onClose: () => void;
+    initialTab?: 'sessions' | 'variables' | 'projects';
     activeSession: ExtendedSession | null;
     savedSessions: ExtendedSession[];
     globalVariables: Record<string, string>;
@@ -30,6 +31,7 @@ type TabType = 'sessions' | 'variables' | 'projects';
 const UnifiedManager: React.FC<UnifiedManagerProps> = ({
     isOpen,
     onClose,
+    initialTab,
     activeSession,
     savedSessions,
     globalVariables,
@@ -53,7 +55,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
     } = useProjectContext();
     const { switchToProject } = useProjectSwitch();
 
-    const [activeTab, setActiveTab] = useState<TabType>('projects');
+    const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'projects');
     const [sessionName, setSessionName] = useState<string>("");
     const [showSessionModal, setShowSessionModal] = useState<boolean>(false);
     const [showVariableModal, setShowVariableModal] = useState<boolean>(false);
@@ -113,6 +115,13 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
             valueInputRef.current.select();
         }
     }, [showVariableModal, modalType]);
+
+    // Update active tab when initialTab prop changes
+    useEffect(() => {
+        if (initialTab) {
+            setActiveTab(initialTab);
+        }
+    }, [initialTab]);
 
     // Session management functions
     const validateSessionName = (name: string): boolean => {
