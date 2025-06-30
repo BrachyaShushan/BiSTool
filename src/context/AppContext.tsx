@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import {
   AppContextType,
@@ -33,6 +34,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const intendedActiveSessionId = useRef<string | null>(null);
 
   // Initialize storage manager
   const storageManager = useMemo(() => new StorageManager(getProjectStorageKey), [getProjectStorageKey]);
@@ -75,17 +77,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
         const loadedAppState = appStateStorage.loadAppState();
         appState.loadAppState(loadedAppState);
 
-        // Load sessions
-        const loadedActiveSession = sessionStorage.loadActiveSession();
+        // Load sessions (saved first, then active)
         const loadedSavedSessions = sessionStorage.loadSavedSessions();
-
-        if (loadedActiveSession) {
-          sessionManager.loadSession(loadedActiveSession);
-        }
-        // Set saved sessions in the session manager
-        if (loadedSavedSessions.length > 0) {
-          sessionManager.setSavedSessions(loadedSavedSessions);
-        }
+        const loadedActiveSession = sessionStorage.loadActiveSession();
+        intendedActiveSessionId.current = loadedActiveSession?.id || null;
+        sessionManager.setSavedSessionsAndRestoreActive(
+          loadedSavedSessions,
+          intendedActiveSessionId.current
+        );
 
         // Load shared variables
         const loadedSharedVariables = variableStorage.loadSharedVariables();
@@ -99,7 +98,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, getProjectSt
       } catch (err) {
         console.error("Failed to load project data:", err);
         setError(`Failed to load project data: ${err}`);
-      } finally {
         setIsLoading(false);
       }
     };

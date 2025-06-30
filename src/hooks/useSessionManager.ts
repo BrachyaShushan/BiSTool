@@ -186,6 +186,23 @@ export const useSessionManager = () => {
     [savedSessions]
   );
 
+  // Set saved sessions and restore active session atomically
+  const setSavedSessionsAndRestoreActive = useCallback((sessions: ExtendedSession[], intendedActiveSessionId?: string | null) => {
+    setSavedSessions(sessions);
+    if (sessions.length > 0) {
+      let sessionToActivate: ExtendedSession | null = null;
+      if (intendedActiveSessionId) {
+        sessionToActivate = sessions.find(s => s.id === intendedActiveSessionId) || null;
+      }
+      if (!sessionToActivate) {
+        sessionToActivate = sessions[0] || null;
+      }
+      setActiveSession(sessionToActivate);
+    } else {
+      setActiveSession(null);
+    }
+  }, []);
+
   return {
     // State
     activeSession,
@@ -201,6 +218,7 @@ export const useSessionManager = () => {
     clearActiveSession,
     getSessionById,
     setSavedSessions,
+    setSavedSessionsAndRestoreActive,
     openSessionManager,
     useSessionManagerListener,
   };
