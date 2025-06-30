@@ -10,18 +10,34 @@ import {
   FiPlus,
   FiTrash2,
   FiSettings,
-  FiCode,
-  FiHash,
-  FiFileText,
   FiArrowRight,
   FiClock,
   FiShield,
   FiZap,
   FiGlobe,
-  FiDatabase,
-  FiLayers
+  FiHash
 } from "react-icons/fi";
 import Modal from "../core/Modal";
+import {
+  Button,
+  Input,
+  IconButton,
+  Textarea
+} from "../ui";
+import {
+  METHOD_ICONS,
+  BODY_TYPE_OPTIONS,
+  TAB_CONFIG,
+  BODY_CONTENT_CONFIG,
+  METHODS_WITH_BODY,
+  DEFAULT_JSON_BODY,
+  DEFAULT_FORM_DATA,
+  TOKEN_CHECK_INTERVAL,
+  EDITOR_OPTIONS,
+  COLOR_CLASSES,
+  TOKEN_EXPIRATION_STYLES,
+  HTTP_METHODS
+} from "../../constants/requestConfig";
 
 interface RequestConfigState {
   method: string;
@@ -48,7 +64,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   const [activeTab, setActiveTab] = useState<RequestConfigState["activeTab"]>(
     () => {
       // Check if the method supports body and if there's body content
-      const supportsBody = ["POST", "PUT", "PATCH"].includes(
+      const supportsBody = METHODS_WITH_BODY.includes(
         (activeSession?.requestConfig?.method || savedConfig?.method || "GET").toUpperCase()
       );
 
@@ -96,14 +112,14 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     if (activeSession?.requestConfig?.jsonBody)
       return activeSession.requestConfig.jsonBody;
     if (savedConfig?.jsonBody) return savedConfig.jsonBody;
-    return "{\n  \n}";
+    return DEFAULT_JSON_BODY;
   });
 
   const [formData, setFormData] = useState<FormDataField[]>(() => {
     if (activeSession?.requestConfig?.formData)
       return activeSession.requestConfig.formData;
     if (savedConfig?.formData) return savedConfig.formData;
-    return [{ key: "", value: "", type: "text", required: false }];
+    return DEFAULT_FORM_DATA;
   });
 
   const [textBody, setTextBody] = useState<string>("");
@@ -159,14 +175,13 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   // Check token expiration periodically
   useEffect(() => {
     checkTokenExpiration();
-    const interval = setInterval(checkTokenExpiration, 30000); // Check every 30 seconds
+    const interval = setInterval(checkTokenExpiration, TOKEN_CHECK_INTERVAL);
     return () => clearInterval(interval);
   }, [checkTokenExpiration]);
 
   // Function to check if HTTP method supports a body
   const methodSupportsBody = (httpMethod: string): boolean => {
-    const methodsWithBody = ["POST", "PUT", "PATCH"];
-    return methodsWithBody.includes(httpMethod.toUpperCase());
+    return METHODS_WITH_BODY.includes(httpMethod.toUpperCase());
   };
 
   // Effect to handle method changes and body tab visibility
@@ -348,17 +363,20 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   const getBodyContent = (): React.ReactElement => {
     switch (bodyType) {
       case "json":
+        const jsonConfig = BODY_CONTENT_CONFIG.json;
         return (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-2">
-                <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
-                  <FiCode className="w-4 h-4 text-white" />
+                <div className={`p-2 bg-gradient-to-br ${jsonConfig.bgGradient} rounded-lg`}>
+                  <jsonConfig.icon className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">JSON Body</span>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{jsonConfig.label}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     try {
                       const formatted = JSON.stringify(JSON.parse(jsonBody), null, 2);
@@ -367,10 +385,9 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                       // Invalid JSON, ignore
                     }
                   }}
-                  className="px-3 py-1 text-xs font-medium text-purple-600 bg-purple-100 rounded-lg transition-all duration-200 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800"
                 >
                   Format JSON
-                </button>
+                </Button>
               </div>
             </div>
             <div
@@ -385,24 +402,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 theme={isDarkMode ? "vs-dark" : "vs"}
                 onChange={handleEditorChange}
                 onMount={handleEditorDidMount}
-                options={{
-                  minimap: { enabled: false },
-                  scrollBeyondLastLine: false,
-                  fontSize: 14,
-                  lineNumbers: "on",
-                  roundedSelection: false,
-                  scrollbar: {
-                    vertical: "visible",
-                    horizontal: "visible",
-                    useShadows: false,
-                    verticalScrollbarSize: 10,
-                    horizontalScrollbarSize: 10,
-                  },
-                  automaticLayout: true,
-                  formatOnPaste: true,
-                  formatOnType: true,
-                  tabSize: 2,
-                }}
+                options={EDITOR_OPTIONS}
               />
               <div
                 className="absolute right-0 bottom-0 left-0 h-2 bg-gradient-to-r from-gray-200 to-gray-300 transition-all duration-200 dark:from-gray-600 dark:to-gray-700 cursor-ns-resize hover:from-gray-300 hover:to-gray-400 dark:hover:from-gray-500 dark:hover:to-gray-600"
@@ -412,13 +412,14 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           </div>
         );
       case "form":
+        const formConfig = BODY_CONTENT_CONFIG.form;
         return (
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
-                <FiDatabase className="w-4 h-4 text-white" />
+              <div className={`p-2 bg-gradient-to-br ${formConfig.bgGradient} rounded-lg`}>
+                <formConfig.icon className="w-4 h-4 text-white" />
               </div>
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Form Data</span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{formConfig.label}</span>
             </div>
             <div className="space-y-3">
               {formData.map((field, index) => (
@@ -428,25 +429,25 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 >
                   <div className="grid gap-4 items-center md:grid-cols-12">
                     <div className="md:col-span-5">
-                      <input
+                      <Input
                         type="text"
                         value={field.key}
                         onChange={(e) =>
                           updateFormDataField(index, "key", e.target.value)
                         }
                         placeholder="Field name"
-                        className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        fullWidth
                       />
                     </div>
                     <div className="md:col-span-5">
-                      <input
+                      <Input
                         type="text"
                         value={field.value}
                         onChange={(e) =>
                           updateFormDataField(index, "value", e.target.value)
                         }
                         placeholder="Field value"
-                        className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        fullWidth
                       />
                     </div>
                     <div className="md:col-span-1">
@@ -463,50 +464,52 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                       </div>
                     </div>
                     <div className="md:col-span-1">
-                      <button
+                      <IconButton
+                        icon={FiTrash2}
+                        variant="danger"
+                        size="sm"
                         onClick={() => removeFormDataField(index)}
-                        className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 group dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 hover:scale-105"
                         title="Remove field"
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
+                      />
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            <button
+            <Button
+              variant="success"
+              icon={FiPlus}
               onClick={addFormDataField}
-              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-green-600 to-green-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
             >
-              <FiPlus className="w-4 h-4" />
-              <span>Add Form Field</span>
-            </button>
+              Add Form Field
+            </Button>
           </div>
         );
       case "text":
+        const textConfig = BODY_CONTENT_CONFIG.text;
         return (
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
-                <FiFileText className="w-4 h-4 text-white" />
+              <div className={`p-2 bg-gradient-to-br ${textConfig.bgGradient} rounded-lg`}>
+                <textConfig.icon className="w-4 h-4 text-white" />
               </div>
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Text Body</span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{textConfig.label}</span>
             </div>
-            <textarea
+            <Textarea
               value={textBody}
               onChange={(e) => setTextBody(e.target.value)}
               placeholder="Enter your text body content here..."
-              className="px-4 py-3 w-full text-gray-900 bg-white rounded-xl border border-gray-300 shadow-sm transition-all duration-200 resize-none dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               rows={8}
+              fullWidth
             />
           </div>
         );
       case "none":
       default:
+        const noneConfig = BODY_CONTENT_CONFIG.none;
         return (
           <div className="p-8 text-center bg-gray-50 rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600 dark:bg-gray-700">
-            <FiLayers className="mx-auto mb-4 w-12 h-12 text-gray-400" />
+            <noneConfig.icon className="mx-auto mb-4 w-12 h-12 text-gray-400" />
             <p className="mb-2 text-gray-500 dark:text-gray-400">No body content for this request</p>
             <p className="text-sm text-gray-400 dark:text-gray-500">This HTTP method doesn't support a request body</p>
           </div>
@@ -557,6 +560,13 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     setShowTokenModal(true);
   };
 
+  const getTokenExpirationStyle = () => {
+    if (tokenExpiration === null) return "";
+    if (tokenExpiration > 5) return TOKEN_EXPIRATION_STYLES.valid;
+    if (tokenExpiration > 1) return TOKEN_EXPIRATION_STYLES.warning;
+    return TOKEN_EXPIRATION_STYLES.expired;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -584,23 +594,16 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
           <div className="flex justify-end items-center space-x-3 w-8/12">
             <TokenGenerator />
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              icon={FiShield}
               onClick={handleShowTokenModal}
-              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
               title="Token Details"
             >
-              <FiShield className="w-4 h-4" />
-              <span>Token Details</span>
-            </button>
+              Token Details
+            </Button>
             {tokenExpiration !== null && (
-              <div className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 ${tokenExpiration > 5
-                ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
-                : tokenExpiration > 1
-                  ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"
-                  : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
-                }`}
-              >
+              <div className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 ${getTokenExpirationStyle()}`}>
                 <FiClock className="w-4 h-4" />
                 <span>{Math.floor(tokenExpiration)}m</span>
               </div>
@@ -620,8 +623,9 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
               {/* Scrollable Method Container */}
               <div className="relative w-full group">
                 {/* Left Arrow */}
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     const container = document.getElementById('http-methods-scroll');
                     if (container) {
@@ -632,11 +636,12 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   title="Scroll left"
                 >
                   <FiArrowRight className="w-3 h-3 text-gray-600 rotate-180 dark:text-gray-300" />
-                </button>
+                </Button>
 
                 {/* Right Arrow */}
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     const container = document.getElementById('http-methods-scroll');
                     if (container) {
@@ -647,7 +652,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   title="Scroll right"
                 >
                   <FiArrowRight className="w-3 h-3 text-gray-600 dark:text-gray-300" />
-                </button>
+                </Button>
 
                 {/* Scrollable Content */}
                 <div
@@ -655,19 +660,9 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   className="flex overflow-x-auto items-center px-6 space-x-2 w-full scrollbar-hide scroll-smooth"
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
-                  {Object.values(methodColor).map((option: any) => {
+                  {HTTP_METHODS.map((option) => {
                     const isSelected = method === option.value;
-                    // Map method to icon
-                    const methodIcons: Record<string, string> = {
-                      GET: '🔍',
-                      POST: '➕',
-                      PUT: '♻️',
-                      PATCH: '🩹',
-                      DELETE: '🗑️',
-                      HEAD: '🧠',
-                      OPTIONS: '⚙️',
-                    };
-                    const icon = methodIcons[option.value] || '🔗';
+                    const icon = METHOD_ICONS[option.value] || '🔗';
                     return (
                       <button
                         key={option.value}
@@ -693,9 +688,36 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
                 {/* Scroll Indicator */}
                 <div className="flex justify-center mt-2 space-x-1">
-                  <div className="w-1.5 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                  <div className="w-1.5 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                  <div className="w-1.5 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                  <button
+                    onClick={() => {
+                      const container = document.getElementById('http-methods-scroll');
+                      if (container) {
+                        container.scrollTo({ left: 0, behavior: 'smooth' });
+                      }
+                    }}
+                    className="w-1.5 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200 cursor-pointer"
+                    title="Scroll to beginning"
+                  />
+                  <button
+                    onClick={() => {
+                      const container = document.getElementById('http-methods-scroll');
+                      if (container) {
+                        container.scrollTo({ left: container.scrollWidth / 2, behavior: 'smooth' });
+                      }
+                    }}
+                    className="w-1.5 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200 cursor-pointer"
+                    title="Scroll to middle"
+                  />
+                  <button
+                    onClick={() => {
+                      const container = document.getElementById('http-methods-scroll');
+                      if (container) {
+                        container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+                      }
+                    }}
+                    className="w-1.5 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200 cursor-pointer"
+                    title="Scroll to end"
+                  />
                 </div>
               </div>
             </div>
@@ -708,38 +730,26 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">Request Configuration</h3>
           <div className="flex items-center p-1 space-x-1 bg-gray-100 rounded-xl dark:bg-gray-700">
-            <button
-              onClick={() => setActiveTab("params")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === "params"
-                ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                }`}
-            >
-              <FiHash className="w-4 h-4" />
-              <span>Parameters</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("headers")}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === "headers"
-                ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                }`}
-            >
-              <FiGlobe className="w-4 h-4" />
-              <span>Headers</span>
-            </button>
-            {methodSupportsBody(method) && (
-              <button
-                onClick={() => setActiveTab("body")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === "body"
-                  ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                  }`}
-              >
-                <FiZap className="w-4 h-4" />
-                <span>Body</span>
-              </button>
-            )}
+            {TAB_CONFIG.map((tab) => {
+              const TabIcon = tab.icon;
+              const isVisible = tab.id === "body" ? methodSupportsBody(method) : true;
+
+              if (!isVisible) return null;
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as "params" | "headers" | "body")}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === tab.id
+                    ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                    }`}
+                >
+                  <TabIcon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -755,13 +765,13 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   </div>
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Query Parameters</span>
                 </div>
-                <button
+                <Button
+                  variant="warning"
+                  icon={FiPlus}
                   onClick={addQueryParam}
-                  className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-orange-600 to-orange-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
                 >
-                  <FiPlus className="w-4 h-4" />
-                  <span>Add Parameter</span>
-                </button>
+                  Add Parameter
+                </Button>
               </div>
 
               {queryParams.length === 0 ? (
@@ -779,36 +789,36 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                     >
                       <div className="grid gap-4 items-center md:grid-cols-12">
                         <div className="md:col-span-3">
-                          <input
+                          <Input
                             type="text"
                             value={param.key}
                             onChange={(e) =>
                               updateQueryParam(index, "key", e.target.value)
                             }
                             placeholder="Parameter name"
-                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                            fullWidth
                           />
                         </div>
                         <div className="md:col-span-3">
-                          <input
+                          <Input
                             type="text"
                             value={param.value}
                             onChange={(e) =>
                               updateQueryParam(index, "value", e.target.value)
                             }
                             placeholder="Parameter value"
-                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                            fullWidth
                           />
                         </div>
                         <div className="md:col-span-3">
-                          <input
+                          <Input
                             type="text"
                             value={param.description}
                             onChange={(e) =>
                               updateQueryParam(index, "description", e.target.value)
                             }
                             placeholder="Description (optional)"
-                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                            fullWidth
                           />
                         </div>
                         <div className="md:col-span-2">
@@ -825,13 +835,13 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           </div>
                         </div>
                         <div className="md:col-span-1">
-                          <button
+                          <IconButton
+                            icon={FiTrash2}
+                            variant="danger"
+                            size="sm"
                             onClick={() => removeQueryParam(index)}
-                            className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 group dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 hover:scale-105"
                             title="Remove parameter"
-                          >
-                            <FiTrash2 className="w-4 h-4" />
-                          </button>
+                          />
                         </div>
                       </div>
                     </div>
@@ -851,13 +861,13 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   </div>
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Request Headers</span>
                 </div>
-                <button
+                <Button
+                  variant="primary"
+                  icon={FiPlus}
                   onClick={addHeader}
-                  className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
                 >
-                  <FiPlus className="w-4 h-4" />
-                  <span>Add Header</span>
-                </button>
+                  Add Header
+                </Button>
               </div>
 
               {headers.length === 0 ? (
@@ -875,36 +885,36 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                     >
                       <div className="grid gap-4 items-center md:grid-cols-12">
                         <div className="md:col-span-3">
-                          <input
+                          <Input
                             type="text"
                             value={header.key}
                             onChange={(e) =>
                               updateHeader(index, "key", e.target.value)
                             }
                             placeholder="Header name"
-                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            fullWidth
                           />
                         </div>
                         <div className="md:col-span-3">
-                          <input
+                          <Input
                             type="text"
                             value={header.value}
                             onChange={(e) =>
                               updateHeader(index, "value", e.target.value)
                             }
                             placeholder="Header value"
-                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            fullWidth
                           />
                         </div>
                         <div className="md:col-span-3">
-                          <input
+                          <Input
                             type="text"
                             value={header.description}
                             onChange={(e) =>
                               updateHeader(index, "description", e.target.value)
                             }
                             placeholder="Description (optional)"
-                            className="px-3 py-2 w-full text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 dark:bg-gray-600 dark:text-white dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            fullWidth
                           />
                         </div>
                         <div className="md:col-span-2">
@@ -921,13 +931,13 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                           </div>
                         </div>
                         <div className="md:col-span-1">
-                          <button
+                          <IconButton
+                            icon={FiTrash2}
+                            variant="danger"
+                            size="sm"
                             onClick={() => removeHeader(index)}
-                            className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 group dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 hover:scale-105"
                             title="Remove header"
-                          >
-                            <FiTrash2 className="w-4 h-4" />
-                          </button>
+                          />
                         </div>
                       </div>
                     </div>
@@ -949,79 +959,19 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                 </div>
                 {/* Modern Dataset Tab Interface for Body Type */}
                 <div className="grid grid-cols-4 gap-2">
-                  {[
-                    {
-                      id: 'none',
-                      label: 'None',
-                      description: 'No body',
-                      icon: '🚫',
-                      color: 'gray'
-                    },
-                    {
-                      id: 'json',
-                      label: 'JSON',
-                      description: 'JSON data',
-                      icon: '🔧',
-                      color: 'purple'
-                    },
-                    {
-                      id: 'form',
-                      label: 'Form Data',
-                      description: 'Form fields',
-                      icon: '📝',
-                      color: 'green'
-                    },
-                    {
-                      id: 'text',
-                      label: 'Text',
-                      description: 'Plain text',
-                      icon: '📄',
-                      color: 'blue'
-                    }
-                  ].map((option) => {
+                  {BODY_TYPE_OPTIONS.map((option) => {
                     const isSelected = bodyType === option.id;
-                    const colorClasses = {
-                      gray: {
-                        selected: isDarkMode
-                          ? "bg-gray-600 border-gray-500 text-white shadow-lg shadow-gray-500/25"
-                          : "bg-gray-600 border-gray-500 text-white shadow-lg shadow-gray-500/25",
-                        unselected: isDarkMode
-                          ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500"
-                          : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
-                      },
-                      purple: {
-                        selected: isDarkMode
-                          ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/25"
-                          : "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/25",
-                        unselected: isDarkMode
-                          ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-purple-500"
-                          : "bg-white border-gray-300 text-gray-700 hover:bg-purple-50 hover:border-purple-300"
-                      },
-                      green: {
-                        selected: isDarkMode
-                          ? "bg-green-600 border-green-500 text-white shadow-lg shadow-green-500/25"
-                          : "bg-green-600 border-green-500 text-white shadow-lg shadow-green-500/25",
-                        unselected: isDarkMode
-                          ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-green-500"
-                          : "bg-white border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-300"
-                      },
-                      blue: {
-                        selected: isDarkMode
-                          ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/25"
-                          : "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/25",
-                        unselected: isDarkMode
-                          ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-blue-500"
-                          : "bg-white border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300"
-                      }
-                    };
+                    const colorClass = COLOR_CLASSES[option.color as keyof typeof COLOR_CLASSES];
+                    const selectedClass = isDarkMode ? colorClass.selected : colorClass.selected;
+                    const unselectedClass = isDarkMode ? colorClass.unselectedDark : colorClass.unselected;
 
                     return (
                       <button
                         key={option.id}
                         onClick={() => setBodyType(option.id as "none" | "json" | "form" | "text")}
                         className={`relative p-3 rounded-lg border-2 transition-all duration-300 transform hover:scale-105 group overflow-hidden ${isSelected
-                          ? colorClasses[option.color as keyof typeof colorClasses].selected
-                          : colorClasses[option.color as keyof typeof colorClasses].unselected
+                          ? selectedClass
+                          : unselectedClass
                           }`}
                       >
                         {/* Background Pattern */}
@@ -1084,13 +1034,15 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
 
       {/* Submit Button */}
       <div className="flex justify-end">
-        <button
+        <Button
+          variant="primary"
+          size="xl"
+          icon={FiArrowRight}
+          iconPosition="right"
           onClick={handleSubmit}
-          className="flex items-center px-8 py-4 space-x-2 font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
         >
-          <span>Continue to YAML Generator</span>
-          <FiArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-        </button>
+          Continue to YAML Generator
+        </Button>
       </div>
 
       <Modal
