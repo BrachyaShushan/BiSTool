@@ -12,7 +12,7 @@ import { ProjectProvider, useProjectContext } from "./context/ProjectContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { AIConfigProvider } from "./context/AIConfigContext";
 import { Section } from "./types/core";
-import { FiFolder, FiSettings, FiKey, FiMenu, FiX, FiSun, FiMoon } from "react-icons/fi";
+import { FiFolder, FiSettings, FiKey, FiMenu, FiX, FiSun, FiMoon, FiArrowRight } from "react-icons/fi";
 import SaveControls from './components/ui/SaveControls';
 
 const AppContent: React.FC = () => {
@@ -205,30 +205,65 @@ const AppContent: React.FC = () => {
 
                                     {/* Sessions of Current Category */}
                                     {activeSession?.category && (
-                                        <div className={`flex gap-2 p-3 bg-white rounded-xl border border-gray-200 shadow-md ${isHeaderCollapsed ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
-                                            <div className="flex items-center space-x-2">
+                                        <div className={`flex gap-2 p-3 bg-white rounded-xl border border-gray-200 shadow-md min-w-0 ${isHeaderCollapsed ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-md opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
+                                            <div className="flex items-center space-x-2 flex-shrink-0">
                                                 <span className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                                                     {activeSession.category}
                                                 </span>
                                                 <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
                                             </div>
                                             {savedSessions.filter((s: any) => s.category === activeSession.category).length > 0 ? (
-                                                <div className="flex gap-1">
-                                                    {savedSessions
-                                                        .filter((s: any) => s.category === activeSession.category)
-                                                        .map((session: any) => (
-                                                            <button
-                                                                key={session.id}
-                                                                onClick={() => handleLoadSession(session)}
-                                                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color
-                                                                    } ${activeSession.id === session.id
-                                                                        ? "bg-opacity-100 shadow-md"
-                                                                        : "bg-opacity-30 dark:bg-opacity-30 hover:bg-opacity-50"
-                                                                    }`}
-                                                            >
-                                                                {session.name}
-                                                            </button>
-                                                        ))}
+                                                <div className="relative flex-1 min-w-0 group">
+                                                    {/* Left Arrow */}
+                                                    <button
+                                                        onClick={() => {
+                                                            const container = document.getElementById('sessions-scroll');
+                                                            if (container) {
+                                                                container.scrollBy({ left: -200, behavior: 'smooth' });
+                                                            }
+                                                        }}
+                                                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1 bg-white dark:bg-gray-700 rounded-full shadow-md border border-gray-200 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+                                                        title="Scroll left"
+                                                    >
+                                                        <FiArrowRight className="w-2.5 h-2.5 text-gray-600 rotate-180 dark:text-gray-300" />
+                                                    </button>
+
+                                                    {/* Right Arrow */}
+                                                    <button
+                                                        onClick={() => {
+                                                            const container = document.getElementById('sessions-scroll');
+                                                            if (container) {
+                                                                container.scrollBy({ left: 200, behavior: 'smooth' });
+                                                            }
+                                                        }}
+                                                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-1 bg-white dark:bg-gray-700 rounded-full shadow-md border border-gray-200 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+                                                        title="Scroll right"
+                                                    >
+                                                        <FiArrowRight className="w-2.5 h-2.5 text-gray-600 dark:text-gray-300" />
+                                                    </button>
+
+                                                    {/* Scrollable Content */}
+                                                    <div
+                                                        id="sessions-scroll"
+                                                        className="flex overflow-x-auto items-center px-4 gap-1 scrollbar-hide scroll-smooth"
+                                                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                                    >
+                                                        {savedSessions
+                                                            .filter((s: any) => s.category === activeSession.category)
+                                                            .map((session: any) => (
+                                                                <button
+                                                                    key={session.id}
+                                                                    onClick={() => handleLoadSession(session)}
+                                                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 flex-shrink-0 whitespace-nowrap ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color
+                                                                        } ${activeSession.id === session.id
+                                                                            ? "bg-opacity-100 shadow-md"
+                                                                            : "bg-opacity-30 dark:bg-opacity-30 hover:bg-opacity-50"
+                                                                        }`}
+                                                                >
+                                                                    {session.name}
+                                                                </button>
+                                                            ))}
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 <span className="text-sm text-gray-500 dark:text-gray-400">No other sessions</span>
