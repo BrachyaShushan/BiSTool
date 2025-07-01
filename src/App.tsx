@@ -12,7 +12,8 @@ import { ProjectProvider, useProjectContext } from "./context/ProjectContext";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { AIConfigProvider } from "./context/AIConfigContext";
 import { Section } from "./types/core";
-import { FiFolder, FiSettings, FiKey, FiMenu, FiX } from "react-icons/fi";
+import { FiFolder, FiSettings, FiKey, FiMenu, FiX, FiSun, FiMoon } from "react-icons/fi";
+import SaveControls from './components/ui/SaveControls';
 
 const AppContent: React.FC = () => {
     const {
@@ -35,6 +36,17 @@ const AppContent: React.FC = () => {
         methodColor,
         tokenConfig,
         regenerateToken,
+        // Save management
+        autoSave,
+        isSaving,
+        lastSaved,
+        hasUnsavedChanges,
+        saveFrequency,
+        manualSave,
+        undo,
+        toggleAutoSave,
+        updateSaveFrequency,
+        isUndoAvailable,
     } = useAppContext();
 
     const { currentProject, clearCurrentProject } = useProjectContext();
@@ -160,40 +172,37 @@ const AppContent: React.FC = () => {
                 >
                     <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                         {/* Header */}
-                        <header className="overflow-hidden relative bg-gradient-to-r from-white via-gray-50 to-white border-b border-gray-200 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-700">
-                            {/* Background Pattern */}
-                            <div className="absolute inset-0 opacity-5 dark:opacity-10">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full translate-x-16 -translate-y-16"></div>
-                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 rounded-full -translate-x-12 translate-y-12"></div>
-                            </div>
+                        <header className={`sticky top-0 z-40 transition-all duration-300 ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm`}>
+                            <div className="flex items-center justify-between px-6 py-3">
+                                {/* Left side - Project info and navigation */}
+                                <div className="flex items-center space-x-4">
+                                    <button
+                                        onClick={handleReturnToWelcome}
+                                        className="flex items-center space-x-3 transition-all duration-200 group hover:scale-105"
+                                        title="Return to Welcome Screen"
+                                    >
+                                        <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                                            <h1 className="text-2xl font-bold text-white">B</h1>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+                                                BiSTool
+                                            </h1>
+                                            {currentProject && (
+                                                <div className="flex items-center mt-1 space-x-2">
+                                                    <FiFolder size={14} className="text-gray-500 dark:text-gray-400" />
+                                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                                                        {currentProject.name}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </button>
+                                </div>
 
-                            <div className="relative px-4 py-6 mx-auto max-w-7xl sm:px-6 lg:px-8">
-                                <div className="flex justify-between items-center">
-                                    {/* Logo and Project Info */}
-                                    <div className="flex items-center space-x-4">
-                                        <button
-                                            onClick={handleReturnToWelcome}
-                                            className="flex items-center space-x-3 transition-all duration-200 group hover:scale-105"
-                                            title="Return to Welcome Screen"
-                                        >
-                                            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-                                                <h1 className="text-2xl font-bold text-white">B</h1>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-                                                    BiSTool
-                                                </h1>
-                                                {currentProject && (
-                                                    <div className="flex items-center mt-1 space-x-2">
-                                                        <FiFolder size={14} className="text-gray-500 dark:text-gray-400" />
-                                                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                                            {currentProject.name}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </button>
-                                    </div>
+                                {/* Right side - Save controls and theme toggle */}
+                                <div className="flex items-center space-x-3">
+
                                     {/* Sessions of Current Category */}
                                     {activeSession?.category && (
                                         <div className={`flex gap-2 p-3 bg-white rounded-xl border border-gray-200 shadow-md ${isHeaderCollapsed ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
@@ -229,11 +238,32 @@ const AppContent: React.FC = () => {
                                     <div className="flex gap-2 justify-end items-center">
                                         {/* Collapsible Header Content */}
                                         <div className={`flex items-center space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
-
-
-
                                             {/* Action Buttons */}
                                             <div className="flex items-center space-x-2">
+
+                                                {/* Save Controls */}
+                                                <SaveControls
+                                                    autoSave={autoSave}
+                                                    onAutoSaveToggle={toggleAutoSave}
+                                                    onManualSave={manualSave}
+                                                    onUndo={undo}
+                                                    hasUnsavedChanges={hasUnsavedChanges}
+                                                    isSaving={isSaving}
+                                                    canUndo={isUndoAvailable}
+                                                    lastSaved={lastSaved}
+                                                    saveFrequency={saveFrequency}
+                                                    onSaveFrequencyChange={updateSaveFrequency}
+                                                />
+
+                                                {/* Theme toggle */}
+                                                <button
+                                                    onClick={toggleDarkMode}
+                                                    className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                                                    title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                                                >
+                                                    {isDarkMode ? <FiSun className="w-5 h-5" /> : <FiMoon className="w-5 h-5" />}
+                                                </button>
+
                                                 {/* Active Session Method Badge */}
                                                 {activeSession?.requestConfig && (
                                                     <div className="flex items-center space-x-2">
@@ -253,18 +283,6 @@ const AppContent: React.FC = () => {
                                                     title="Manager"
                                                 >
                                                     <FiSettings size={18} className="transition-transform duration-200 group-hover:rotate-90" />
-                                                </button>
-
-                                                {/* Dark Mode Toggle */}
-                                                <button
-                                                    onClick={toggleDarkMode}
-                                                    className={`p-2 text-gray-700 bg-gray-100 rounded-xl shadow-md transition-all duration-200 group hover:scale-105 dark:text-yellow-300 dark:bg-gray-700 dark:hover:bg-gray-600 hover:bg-gray-200`}
-                                                    aria-label="Toggle dark mode"
-                                                    title="Toggle dark mode"
-                                                >
-                                                    <span className="text-lg transition-transform duration-200 group-hover:scale-110">
-                                                        {isDarkMode ? "☀️" : "🌙"}
-                                                    </span>
                                                 </button>
 
                                                 {/* Token Status */}
@@ -378,7 +396,6 @@ const AppContentWrapper: React.FC = () => {
             currentProjectId={currentProject?.id || null}
         >
             <AppProvider
-                getProjectStorageKey={getProjectStorageKey}
                 currentProjectId={currentProject?.id || null}
                 forceReload={forceReload}
             >

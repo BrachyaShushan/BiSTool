@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect, useState } from "react";
-import { StorageManager } from "../utils/storage";
+import { StorageManager, ProjectData } from "../utils/storage";
 
 // Debounce utility
 const useDebounce = function <T>(value: T, delay: number): T {
@@ -19,8 +19,16 @@ const useDebounce = function <T>(value: T, delay: number): T {
 };
 
 // Custom hook for storage operations with debouncing
-export const useStorage = (storageManager: StorageManager) => {
+export const useStorage = (
+  storageManager: StorageManager,
+  projectId: string | null
+) => {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Set the current project for the storage manager
+  useEffect(() => {
+    storageManager.setCurrentProject(projectId);
+  }, [storageManager, projectId]);
 
   // Debounced save function
   const debouncedSave = useCallback(
@@ -58,113 +66,125 @@ export const useStorage = (storageManager: StorageManager) => {
 // Hook for managing app state with automatic saving
 export const useAppStateStorage = (
   storageManager: StorageManager,
-  state: {
-    urlData: any;
-    requestConfig: any;
-    yamlOutput: string;
-    activeSection: any;
-    segmentVariables: Record<string, string>;
-    globalVariables: Record<string, string>;
-  }
+  state: ProjectData["appState"],
+  projectId: string | null,
+  projectName: string
 ) => {
-  const { debouncedSave } = useStorage(storageManager);
+  const { debouncedSave } = useStorage(storageManager, projectId);
 
   // Debounce the state to avoid excessive saves
   const debouncedState = useDebounce(state, 500);
 
   // Auto-save when state changes
   useEffect(() => {
+    if (!projectId) return;
     debouncedSave(() => {
-      storageManager.saveAppState(debouncedState);
+      storageManager.updateAppState(debouncedState, projectName);
     }, 300);
-  }, [debouncedState, storageManager, debouncedSave]);
+  }, [debouncedState, storageManager, debouncedSave, projectId, projectName]);
 
   return {
     saveAppState: useCallback(() => {
-      storageManager.saveAppState(state);
-    }, [storageManager, state]),
+      storageManager.updateAppState(state, projectName);
+    }, [storageManager, state, projectName]),
     loadAppState: useCallback(() => {
-      return storageManager.loadAppState();
-    }, [storageManager]),
+      if (!projectId) return state;
+      // Load the full project data and return the appState
+      const loadedState = storageManager.loadAppState(projectName);
+      console.log("useAppStateStorage: Loaded app state", loadedState);
+      return loadedState;
+    }, [storageManager, projectId, projectName, state]),
   };
 };
 
 // Hook for managing sessions with automatic saving
-export const useSessionStorage = (storageManager: StorageManager) => {
-  const { debouncedSave } = useStorage(storageManager);
+export const useSessionStorage = (
+  storageManager: StorageManager,
+  projectId: string | null,
+  projectName: string
+) => {
+  const { debouncedSave } = useStorage(storageManager, projectId);
 
   const saveActiveSession = useCallback(
     (session: any) => {
       debouncedSave(() => {
-        storageManager.saveActiveSession(session);
+        storageManager.saveActiveSession(session, projectName);
       }, 200);
     },
-    [storageManager, debouncedSave]
+    [storageManager, debouncedSave, projectName]
   );
 
   const saveSavedSessions = useCallback(
     (sessions: any[]) => {
       debouncedSave(() => {
-        storageManager.saveSavedSessions(sessions);
+        storageManager.saveSavedSessions(sessions, projectName);
       }, 200);
     },
-    [storageManager, debouncedSave]
+    [storageManager, debouncedSave, projectName]
   );
 
   return {
     saveActiveSession,
     saveSavedSessions,
-    loadActiveSession: useCallback(
-      () => storageManager.loadActiveSession(),
-      [storageManager]
-    ),
-    loadSavedSessions: useCallback(
-      () => storageManager.loadSavedSessions(),
-      [storageManager]
-    ),
+    loadActiveSession: useCallback(() => {
+      if (!projectId) return null;
+      return storageManager.loadActiveSession(projectName);
+    }, [storageManager, projectId, projectName]),
+    loadSavedSessions: useCallback(() => {
+      if (!projectId) return [];
+      return storageManager.loadSavedSessions(projectName);
+    }, [storageManager, projectId, projectName]),
   };
 };
 
 // Hook for managing variables with automatic saving
-export const useVariableStorage = (storageManager: StorageManager) => {
-  const { debouncedSave } = useStorage(storageManager);
+export const useVariableStorage = (
+  storageManager: StorageManager,
+  projectId: string | null,
+  projectName: string
+) => {
+  const { debouncedSave } = useStorage(storageManager, projectId);
 
   const saveSharedVariables = useCallback(
     (variables: any[]) => {
       debouncedSave(() => {
-        storageManager.saveSharedVariables(variables);
+        storageManager.saveSharedVariables(variables, projectName);
       }, 200);
     },
-    [storageManager, debouncedSave]
+    [storageManager, debouncedSave, projectName]
   );
 
   return {
     saveSharedVariables,
-    loadSharedVariables: useCallback(
-      () => storageManager.loadSharedVariables(),
-      [storageManager]
-    ),
+    loadSharedVariables: useCallback(() => {
+      if (!projectId) return [];
+      return storageManager.loadSharedVariables(projectName);
+    }, [storageManager, projectId, projectName]),
   };
 };
 
 // Hook for managing token config with automatic saving
-export const useTokenConfigStorage = (storageManager: StorageManager) => {
-  const { debouncedSave } = useStorage(storageManager);
+export const useTokenConfigStorage = (
+  storageManager: StorageManager,
+  projectId: string | null,
+  projectName: string
+) => {
+  const { debouncedSave } = useStorage(storageManager, projectId);
 
   const saveTokenConfig = useCallback(
     (config: any) => {
       debouncedSave(() => {
-        storageManager.saveTokenConfig(config);
+        storageManager.saveTokenConfig(config, projectName);
       }, 200);
     },
-    [storageManager, debouncedSave]
+    [storageManager, debouncedSave, projectName]
   );
 
   return {
     saveTokenConfig,
-    loadTokenConfig: useCallback(
-      () => storageManager.loadTokenConfig(),
-      [storageManager]
-    ),
+    loadTokenConfig: useCallback(() => {
+      if (!projectId) return null;
+      return storageManager.loadTokenConfig(projectName);
+    }, [storageManager, projectId, projectName]),
   };
 };

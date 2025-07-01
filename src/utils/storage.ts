@@ -7,14 +7,86 @@ import {
   TokenConfig,
 } from "../types";
 
-// Storage keys
-export const STORAGE_KEYS = {
-  APP_STATE: "app_state",
-  ACTIVE_SESSION: "active_session",
-  SAVED_SESSIONS: "saved_sessions",
-  SHARED_VARIABLES: "shared_variables",
-  TOKEN_CONFIG: "token_config",
-} as const;
+// New hierarchical storage structure
+export interface ProjectData {
+  metadata: {
+    projectId: string;
+    projectName: string;
+    createdAt: string;
+    lastModified: string;
+    version: string;
+  };
+  settings: {
+    theme: "light" | "dark";
+    autoSave: boolean;
+    saveFrequency: number;
+    defaultEnvironment: string;
+  };
+  appState: {
+    urlData: URLData;
+    requestConfig: RequestConfigData | null;
+    yamlOutput: string;
+    activeSection: SectionId;
+    segmentVariables: Record<string, string>;
+    globalVariables: Record<string, string>;
+  };
+  sessions: {
+    activeSession: ExtendedSession | null;
+    savedSessions: ExtendedSession[];
+  };
+  variables: {
+    shared: Variable[];
+    global: Record<string, string>;
+  };
+  tokenConfig: TokenConfig;
+  categories: {
+    [categoryId: string]: {
+      categoryName: string;
+      sessions: {
+        [sessionId: string]: {
+          config: any;
+          variables: any;
+          tests: any;
+        };
+      };
+    };
+  };
+}
+
+// Unified storage root structure
+export interface BiSToolStorageRoot {
+  theme: string;
+  defaultAutoSave?: boolean;
+  projects: {
+    [projectId: string]: ProjectData;
+  };
+}
+
+export const STORAGE_ROOT_KEY = "bistool_data";
+
+// Helper to get the full storage root
+export function getStorageRoot(): BiSToolStorageRoot {
+  const raw = localStorage.getItem(STORAGE_ROOT_KEY);
+  if (!raw) {
+    return { theme: "light", defaultAutoSave: true, projects: {} };
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    // Ensure defaultAutoSave exists for backward compatibility
+    if (parsed.defaultAutoSave === undefined) {
+      parsed.defaultAutoSave = true;
+    }
+    return parsed;
+  } catch (e) {
+    console.error("Failed to parse bistool_data root:", e);
+    return { theme: "light", defaultAutoSave: true, projects: {} };
+  }
+}
+
+// Helper to save the full storage root
+export function setStorageRoot(root: BiSToolStorageRoot) {
+  localStorage.setItem(STORAGE_ROOT_KEY, JSON.stringify(root));
+}
 
 // Default values
 export const DEFAULT_URL_DATA: URLData = {
@@ -109,6 +181,109 @@ export const DEFAULT_TOKEN_CONFIG: TokenConfig = {
   },
 };
 
+// Default project data structure
+export const createDefaultProjectData = (
+  projectId: string,
+  projectName: string,
+  preserveSettings?: boolean
+): ProjectData => {
+  // Check if there's an existing project to preserve settings
+  const root = getStorageRoot();
+  const existingProject = root.projects[projectId];
+
+  // Get default auto-save setting from root or use true as fallback
+  const defaultAutoSave =
+    root.defaultAutoSave !== undefined ? root.defaultAutoSave : true;
+
+  return {
+    metadata: {
+      projectId,
+      projectName,
+      createdAt: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+      version: "1.0.0",
+    },
+    settings: {
+      theme:
+        preserveSettings && existingProject
+          ? existingProject.settings.theme
+          : "light",
+      autoSave:
+        preserveSettings && existingProject
+          ? existingProject.settings.autoSave
+          : defaultAutoSave,
+      saveFrequency:
+        preserveSettings && existingProject
+          ? existingProject.settings.saveFrequency
+          : 300,
+      defaultEnvironment:
+        preserveSettings && existingProject
+          ? existingProject.settings.defaultEnvironment
+          : "development",
+    },
+    appState: {
+      urlData:
+        preserveSettings && existingProject
+          ? existingProject.appState.urlData
+          : DEFAULT_URL_DATA,
+      requestConfig:
+        preserveSettings && existingProject
+          ? existingProject.appState.requestConfig
+          : null,
+      yamlOutput:
+        preserveSettings && existingProject
+          ? existingProject.appState.yamlOutput
+          : "",
+      activeSection:
+        preserveSettings && existingProject
+          ? existingProject.appState.activeSection
+          : "url",
+      segmentVariables:
+        preserveSettings && existingProject
+          ? existingProject.appState.segmentVariables
+          : {},
+      globalVariables:
+        preserveSettings && existingProject
+          ? existingProject.appState.globalVariables
+          : {
+              username: "",
+              password: "",
+              base_url: "",
+            },
+    },
+    sessions: {
+      activeSession:
+        preserveSettings && existingProject
+          ? existingProject.sessions.activeSession
+          : null,
+      savedSessions:
+        preserveSettings && existingProject
+          ? existingProject.sessions.savedSessions
+          : [],
+    },
+    variables: {
+      shared:
+        preserveSettings && existingProject
+          ? existingProject.variables.shared
+          : [],
+      global:
+        preserveSettings && existingProject
+          ? existingProject.variables.global
+          : {
+              username: "",
+              password: "",
+              base_url: "",
+            },
+    },
+    tokenConfig:
+      preserveSettings && existingProject
+        ? existingProject.tokenConfig
+        : DEFAULT_TOKEN_CONFIG,
+    categories:
+      preserveSettings && existingProject ? existingProject.categories : {},
+  };
+};
+
 // Helper function to safely parse JSON
 export const safeParseJSON = function <T>(
   jsonString: string,
@@ -122,111 +297,179 @@ export const safeParseJSON = function <T>(
   }
 };
 
-// Storage operations with error handling
 export class StorageManager {
-  private getProjectStorageKey: (key: string) => string;
+  private currentProjectId: string | null = null;
 
-  constructor(getProjectStorageKey: (key: string) => string) {
-    this.getProjectStorageKey = getProjectStorageKey;
-  }
-
-  // Generic save operation
-  private save<T>(key: string, data: T): void {
-    try {
-      const storageKey = this.getProjectStorageKey(key);
-      localStorage.setItem(storageKey, JSON.stringify(data));
-    } catch (err) {
-      console.error(`Failed to save ${key}:`, err);
-      throw new Error(`Failed to save ${key}: ${err}`);
-    }
-  }
-
-  // Generic load operation
-  private load<T>(key: string, defaultValue: T): T {
-    try {
-      const storageKey = this.getProjectStorageKey(key);
-      const savedData = localStorage.getItem(storageKey);
-      return savedData ? safeParseJSON(savedData, defaultValue) : defaultValue;
-    } catch (err) {
-      console.error(`Failed to load ${key}:`, err);
-      return defaultValue;
-    }
-  }
-
-  // App state operations
-  saveAppState(state: {
-    urlData: URLData;
-    requestConfig: RequestConfigData | null;
-    yamlOutput: string;
-    activeSection: SectionId;
-    segmentVariables: Record<string, string>;
-    globalVariables: Record<string, string>;
-  }): void {
-    this.save(STORAGE_KEYS.APP_STATE, state);
-  }
-
-  loadAppState(): {
-    urlData: URLData;
-    requestConfig: RequestConfigData | null;
-    yamlOutput: string;
-    activeSection: SectionId;
-    segmentVariables: Record<string, string>;
-    globalVariables: Record<string, string>;
-  } {
-    return this.load(STORAGE_KEYS.APP_STATE, {
-      urlData: DEFAULT_URL_DATA,
-      requestConfig: null,
-      yamlOutput: "",
-      activeSection: "url",
-      segmentVariables: {},
-      globalVariables: {},
+  setCurrentProject(projectId: string | null): void {
+    console.log("StorageManager: setCurrentProject called", {
+      oldProjectId: this.currentProjectId,
+      newProjectId: projectId,
     });
+    this.currentProjectId = projectId;
   }
 
-  // Session operations
-  saveActiveSession(session: ExtendedSession | null): void {
-    this.save(STORAGE_KEYS.ACTIVE_SESSION, session);
-  }
+  // Get the current project data (or default)
+  getCurrentProjectData(projectName: string): ProjectData {
+    console.log("StorageManager: getCurrentProjectData called", {
+      currentProjectId: this.currentProjectId,
+      projectName,
+    });
 
-  loadActiveSession(): ExtendedSession | null {
-    return this.load(STORAGE_KEYS.ACTIVE_SESSION, null);
-  }
-
-  saveSavedSessions(sessions: ExtendedSession[]): void {
-    this.save(STORAGE_KEYS.SAVED_SESSIONS, sessions);
-  }
-
-  loadSavedSessions(): ExtendedSession[] {
-    return this.load(STORAGE_KEYS.SAVED_SESSIONS, []);
-  }
-
-  // Shared variables operations
-  saveSharedVariables(variables: Variable[]): void {
-    this.save(STORAGE_KEYS.SHARED_VARIABLES, variables);
-  }
-
-  loadSharedVariables(): Variable[] {
-    return this.load(STORAGE_KEYS.SHARED_VARIABLES, []);
-  }
-
-  // Token config operations
-  saveTokenConfig(config: TokenConfig): void {
-    this.save(STORAGE_KEYS.TOKEN_CONFIG, config);
-  }
-
-  loadTokenConfig(): TokenConfig {
-    return this.load(STORAGE_KEYS.TOKEN_CONFIG, DEFAULT_TOKEN_CONFIG);
-  }
-
-  // Clear all project data
-  clearProjectData(): void {
-    try {
-      Object.values(STORAGE_KEYS).forEach((key) => {
-        const storageKey = this.getProjectStorageKey(key);
-        localStorage.removeItem(storageKey);
-      });
-    } catch (err) {
-      console.error("Failed to clear project data:", err);
+    if (!this.currentProjectId) {
+      console.error("StorageManager: No current project set");
+      throw new Error("No current project set");
     }
+
+    const root = getStorageRoot();
+    console.log("StorageManager: Storage root loaded", {
+      hasProjects: !!root.projects,
+      projectCount: Object.keys(root.projects || {}).length,
+      hasCurrentProject: !!root.projects[this.currentProjectId],
+    });
+
+    if (!root.projects[this.currentProjectId]) {
+      console.log("StorageManager: Creating default project data");
+      // Create default if missing
+      root.projects[this.currentProjectId] = createDefaultProjectData(
+        this.currentProjectId,
+        projectName,
+        false // Don't preserve settings for new projects
+      );
+      setStorageRoot(root);
+      console.log("StorageManager: Default project data created and saved");
+    }
+
+    const projectData = root.projects[this.currentProjectId]!;
+    console.log("StorageManager: Returning project data", {
+      autoSave: projectData.settings.autoSave,
+    });
+    return projectData;
+  }
+
+  // Save the current project data
+  saveCurrentProjectData(data: ProjectData) {
+    if (!this.currentProjectId) throw new Error("No current project set");
+    const root = getStorageRoot();
+    root.projects[this.currentProjectId] = data;
+    setStorageRoot(root);
+  }
+
+  // Update a section of the current project
+  updateAppState(appState: ProjectData["appState"], projectName: string): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.appState = appState;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+  updateSessions(sessions: ProjectData["sessions"], projectName: string): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.sessions = sessions;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+  updateVariables(
+    variables: ProjectData["variables"],
+    projectName: string
+  ): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.variables = variables;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+  updateTokenConfig(tokenConfig: TokenConfig, projectName: string): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.tokenConfig = tokenConfig;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+  updateSettings(settings: ProjectData["settings"], projectName: string): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.settings = settings;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+  updateCategories(
+    categories: ProjectData["categories"],
+    projectName: string
+  ): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.categories = categories;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+
+  // Load all project data
+  loadProjectData(projectId: string, projectName: string): ProjectData {
+    this.setCurrentProject(projectId);
+    return this.getCurrentProjectData(projectName);
+  }
+  saveProjectData(projectId: string, data: ProjectData) {
+    const root = getStorageRoot();
+    root.projects[projectId] = data;
+    setStorageRoot(root);
+  }
+
+  // Legacy compatibility methods (deprecated but kept for migration)
+  saveAppState(state: ProjectData["appState"], projectName: string): void {
+    this.updateAppState(state, projectName);
+  }
+  loadAppState(projectName: string): ProjectData["appState"] {
+    const appState = this.getCurrentProjectData(projectName).appState;
+    console.log("StorageManager: loadAppState", appState);
+    return appState;
+  }
+  saveActiveSession(
+    session: ExtendedSession | null,
+    projectName: string
+  ): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.sessions.activeSession = session;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+  loadActiveSession(projectName: string): ExtendedSession | null {
+    return this.getCurrentProjectData(projectName).sessions.activeSession;
+  }
+  saveSavedSessions(sessions: ExtendedSession[], projectName: string): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.sessions.savedSessions = sessions;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+  loadSavedSessions(projectName: string): ExtendedSession[] {
+    return this.getCurrentProjectData(projectName).sessions.savedSessions;
+  }
+  saveSharedVariables(variables: Variable[], projectName: string): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.variables.shared = variables;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+  loadSharedVariables(projectName: string): Variable[] {
+    return this.getCurrentProjectData(projectName).variables.shared;
+  }
+  saveTokenConfig(config: TokenConfig, projectName: string): void {
+    this.updateTokenConfig(config, projectName);
+  }
+  loadTokenConfig(projectName: string): TokenConfig {
+    return this.getCurrentProjectData(projectName).tokenConfig;
+  }
+  clearProjectData(projectId: string): void {
+    const root = getStorageRoot();
+    delete root.projects[projectId];
+    setStorageRoot(root);
+  }
+  // Migration helper to convert old flat structure to new hierarchical structure
+  migrateFromFlatStructure(
+    projectId: string,
+    projectName: string
+  ): ProjectData {
+    // ...implement as needed, merging into the root.projects[projectId]...
+    // For now, just create default
+    const root = getStorageRoot();
+    const defaultData = createDefaultProjectData(projectId, projectName);
+    root.projects[projectId] = defaultData;
+    setStorageRoot(root);
+    return defaultData;
   }
 }

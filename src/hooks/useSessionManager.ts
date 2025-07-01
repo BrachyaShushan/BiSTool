@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { ExtendedSession } from "../types/features/SavedManager";
-import { URLData, RequestConfigData, SectionId, Variable } from "../types";
+import { URLData, RequestConfigData, Variable } from "../types";
 import { DEFAULT_URL_DATA } from "../utils/storage";
 
 // Custom event for opening session manager
@@ -53,7 +53,7 @@ export const useSessionManager = () => {
     []
   );
 
-  // Create a new session from current app state
+  // Create a new session from current app state (excluding activeSection - it should be global)
   const createSession = useCallback(
     (
       name: string,
@@ -61,7 +61,6 @@ export const useSessionManager = () => {
         urlData: URLData;
         requestConfig: RequestConfigData | null;
         yamlOutput: string;
-        activeSection: SectionId;
         segmentVariables: Record<string, string>;
         sharedVariables: Variable[];
       }
@@ -84,7 +83,8 @@ export const useSessionManager = () => {
         sharedVariables: Object.fromEntries(
           appState.sharedVariables.map((v) => [v.key, v.value])
         ),
-        activeSection: appState.activeSection,
+        // Set activeSection to default "url" for new sessions (it won't be used anyway)
+        activeSection: "url",
       };
 
       return newSession;
@@ -147,7 +147,8 @@ export const useSessionManager = () => {
             yamlOutput: session.yamlOutput || "",
             segmentVariables: session.segmentVariables || {},
             sharedVariables: session.sharedVariables || {},
-            activeSection: session.activeSection || "url",
+            // activeSection is now global, not per session - set default for compatibility
+            activeSection: "url",
           };
         }
       );
@@ -187,21 +188,25 @@ export const useSessionManager = () => {
   );
 
   // Set saved sessions and restore active session atomically
-  const setSavedSessionsAndRestoreActive = useCallback((sessions: ExtendedSession[], intendedActiveSessionId?: string | null) => {
-    setSavedSessions(sessions);
-    if (sessions.length > 0) {
-      let sessionToActivate: ExtendedSession | null = null;
-      if (intendedActiveSessionId) {
-        sessionToActivate = sessions.find(s => s.id === intendedActiveSessionId) || null;
+  const setSavedSessionsAndRestoreActive = useCallback(
+    (sessions: ExtendedSession[], intendedActiveSessionId?: string | null) => {
+      setSavedSessions(sessions);
+      if (sessions.length > 0) {
+        let sessionToActivate: ExtendedSession | null = null;
+        if (intendedActiveSessionId) {
+          sessionToActivate =
+            sessions.find((s) => s.id === intendedActiveSessionId) || null;
+        }
+        if (!sessionToActivate) {
+          sessionToActivate = sessions[0] || null;
+        }
+        setActiveSession(sessionToActivate);
+      } else {
+        setActiveSession(null);
       }
-      if (!sessionToActivate) {
-        sessionToActivate = sessions[0] || null;
-      }
-      setActiveSession(sessionToActivate);
-    } else {
-      setActiveSession(null);
-    }
-  }, []);
+    },
+    []
+  );
 
   return {
     // State

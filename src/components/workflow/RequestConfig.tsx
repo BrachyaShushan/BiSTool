@@ -4,7 +4,7 @@ import { useTheme } from "../../context/ThemeContext";
 import Editor, { OnMount } from "@monaco-editor/react";
 import TokenGenerator from "../utils/TokenGenerator";
 import { RequestConfigProps } from "../../types/components/components.types";
-import { RequestConfigData, Header, QueryParam, FormDataField, AppContextType, ThemeContextType } from "../../types";
+import { RequestConfigData, Header, QueryParam, FormDataField } from "../../types";
 import { editor } from "monaco-editor";
 import {
   FiPlus,
@@ -51,7 +51,7 @@ interface RequestConfigState {
 }
 
 const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
-  const { isDarkMode } = useTheme() as ThemeContextType;
+  const { isDarkMode } = useTheme();
   const {
     requestConfig: savedConfig,
     setRequestConfig,
@@ -59,7 +59,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     activeSession,
     handleSaveSession,
     openSessionManager,
-  } = useAppContext() as AppContextType;
+  } = useAppContext();
   const [tokenExpiration, setTokenExpiration] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<RequestConfigState["activeTab"]>(
     () => {

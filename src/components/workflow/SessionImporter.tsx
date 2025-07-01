@@ -777,30 +777,67 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
             expression: '$map($.data, { "id": $.id, "status": $if($.settings.active = true, "active", "inactive"), "priority": $case($.metrics.score >= 90, "high", $.metrics.score >= 70, "medium", "low") })'
         },
         {
-            name: 'Transform to BiSTool format with nested data',
+            name: 'Create basic BiSTool session',
+            expression: `{
+        "id": $millis(),
+        "name": "Sample Session",
+        "timestamp": $now(),
+        "category": "Sample",
+        "urlData": {
+          "baseURL": "https://api.example.com",
+          "segments": "users/123",
+          "parsedSegments": [],
+          "queryParams": [],
+          "segmentVariables": [],
+          "processedURL": "https://api.example.com/users/123",
+          "domain": "api.example.com",
+          "protocol": "https",
+          "builtUrl": "https://api.example.com/users/123",
+          "environment": "development"
+        },
+        "requestConfig": {
+          "method": "GET",
+          "queryParams": [],
+          "headers": [],
+          "bodyType": "none",
+          "jsonBody": "",
+          "formData": []
+        },
+        "yamlOutput": "",
+        "segmentVariables": {},
+        "sharedVariables": {}
+      }`
+        },
+        {
+            name: 'Transform to BiSTool session format',
             expression: `$map($.data, {
         "id": $string($.id),
         "name": $.name,
-        "category": $.category.name,
+        "timestamp": $now(),
+        "category": $.category.name ? $.category.name : "Imported",
         "urlData": {
           "domain": $split($.endpoint.url, "/")[2],
           "protocol": $substring($.endpoint.url, 0, $indexOf($.endpoint.url, "://")),
           "builtUrl": $.endpoint.url,
-          "environment": $.config.environment,
+          "environment": $.config.environment ? $.config.environment : "development",
           "baseURL": $substring($.endpoint.url, 0, $lastIndexOf($.endpoint.url, "/")),
           "processedURL": $.endpoint.url,
           "segments": $substring($.endpoint.url, $lastIndexOf($.endpoint.url, "/") + 1),
           "parsedSegments": [],
-          "queryParams": $.endpoint.params,
+          "queryParams": $.endpoint.params ? $.endpoint.params : [],
           "segmentVariables": []
         },
         "requestConfig": {
-          "method": $.method,
-          "headers": $.headers,
-          "queryParams": $.endpoint.queryParams,
+          "method": $.method ? $.method : "GET",
+          "headers": $.headers ? $.headers : [],
+          "queryParams": $.endpoint.queryParams ? $.endpoint.queryParams : [],
           "bodyType": "json",
-          "jsonBody": $stringify($.body)
-        }
+          "jsonBody": $stringify($.body),
+          "formData": []
+        },
+        "yamlOutput": "",
+        "segmentVariables": {},
+        "sharedVariables": {}
       })`
         }
     ];

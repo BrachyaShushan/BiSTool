@@ -253,6 +253,19 @@ export interface AppContextType {
   generateAuthHeaders: () => Record<string, string>;
   getCurrentToken: () => string | null;
   isAuthenticated: () => boolean;
+  // Save manager properties
+  autoSave: boolean;
+  isSaving: boolean;
+  lastSaved?: string | undefined;
+  hasUnsavedChanges: boolean;
+  saveFrequency: number;
+  manualSave: () => Promise<void>;
+  toggleAutoSave: (enabled: boolean) => void;
+  updateSaveFrequency: (frequency: number) => void;
+  undo: () => void;
+  redo: () => void;
+  isUndoAvailable: boolean;
+  isRedoAvailable: boolean;
 }
 
 export interface ThemeContextType {

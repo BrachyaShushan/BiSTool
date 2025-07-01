@@ -1,3 +1,1 @@
-
-export * from "./core/app.types";
-export * from "./core/project.types";
+export * from "./core/index";

@@ -76,40 +76,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [error, setError] = useState<string | null>(null);
     const [forceReload, setForceReload] = useState(0);
 
-    const initializeDefaultGlobalVariables = useCallback((projectId: string) => {
-        try {
-            const storageKey = `${projectId}_app_state`;
-            const existing = localStorage.getItem(storageKey);
-            const parsed = existing ? JSON.parse(existing) : null;
-            const globalVariables = parsed?.globalVariables || {};
-
-            // Define default variables (removed AI configuration variables)
-            const defaultVariables = {
-                username: "",
-                password: "",
-                base_url: "",
-            };
-
-            const updatedGlobalVariables = { ...globalVariables };
-
-            // Add missing default variables
-            Object.entries(defaultVariables).forEach(([key, defaultValue]) => {
-                if (!(key in updatedGlobalVariables)) {
-                    updatedGlobalVariables[key] = defaultValue;
-                }
-            });
-
-            // Save updated global variables
-            const updatedState = {
-                ...parsed,
-                globalVariables: updatedGlobalVariables,
-            };
-            localStorage.setItem(storageKey, JSON.stringify(updatedState));
-        } catch (err) {
-            console.error("Failed to initialize default global variables:", err);
-        }
-    }, []);
-
     // Load current project after projects are loaded
     useEffect(() => {
         try {
@@ -122,9 +88,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 if (project) {
                     console.log("Setting current project:", project.name);
                     setCurrentProject(project);
-                    // Initialize default global variables for the current project
-                    initializeDefaultGlobalVariables(project.id);
-                    // Don't force reload here - let AppContext handle initial load
                 } else {
                     // Active project not found, but projects exist - set the first one as active
                     const firstProject = projects[0];
@@ -132,8 +95,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                         console.log("Active project not found, setting first project as active:", firstProject.name);
                         setCurrentProject(firstProject);
                         localStorage.setItem(ACTIVE_PROJECT_KEY, firstProject.id);
-                        initializeDefaultGlobalVariables(firstProject.id);
-                        // Don't force reload here - let AppContext handle initial load
                     }
                 }
             } else if (projects.length > 0) {
@@ -143,8 +104,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     console.log("No active project, setting first project as active:", firstProject.name);
                     setCurrentProject(firstProject);
                     localStorage.setItem(ACTIVE_PROJECT_KEY, firstProject.id);
-                    initializeDefaultGlobalVariables(firstProject.id);
-                    // Don't force reload here - let AppContext handle initial load
                 }
             } else {
                 // No projects available - clear current project to show welcome screen
@@ -155,7 +114,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } catch (err) {
             console.error("Failed to load active project:", err);
         }
-    }, [projects, initializeDefaultGlobalVariables]);
+    }, [projects]);
 
     // Save projects to localStorage whenever they change
     useEffect(() => {
@@ -214,29 +173,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setCurrentProject(newProject);
         setError(null);
 
-        // Initialize default global variables for the new project
-        const defaultGlobalVariables = {
-            username: "",
-            password: "",
-            base_url: "",
-        };
-
-        // Save default global variables to localStorage for the new project
-        try {
-            const storageKey = `${newProject.id}_app_state`;
-            const initialState = {
-                globalVariables: defaultGlobalVariables,
-                urlData: {},
-                requestConfig: null,
-                yamlOutput: "",
-                activeSection: "url",
-                segmentVariables: {},
-            };
-            localStorage.setItem(storageKey, JSON.stringify(initialState));
-        } catch (err) {
-            console.error("Failed to initialize default global variables:", err);
-        }
-
         // Force AppContext to reload data for the new project
         setForceReload(prev => prev + 1);
     }, []);
@@ -262,23 +198,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             localStorage.setItem(ACTIVE_PROJECT_KEY, projectId);
             console.log(`Set active project in localStorage: ${projectId}`);
 
-            // Initialize default global variables if they don't exist
-            initializeDefaultGlobalVariables(projectId);
-
             // Force AppContext to reload data for the new project
             console.log(`Incrementing forceReload to trigger AppContext reload`);
-            setForceReload(prev => {
-                const newValue = prev + 1;
-                console.log(`forceReload changed from ${prev} to ${newValue}`);
-                return newValue;
-            });
-
-            console.log(`Project switch completed successfully`);
+            setForceReload(prev => prev + 1);
         } else {
             console.error(`Project not found: ${projectId}`);
-            setError("Project not found");
+            setError(`Project not found: ${projectId}`);
         }
-    }, [projects, initializeDefaultGlobalVariables]);
+    }, [projects]);
 
     const deleteProject = useCallback((projectId: string) => {
         const wasCurrentProject = currentProject?.id === projectId;

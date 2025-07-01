@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { URLBuilderProps } from "../../types/components/components.types";
 import { URLData } from "../../types/core/app.types";
@@ -33,10 +33,9 @@ interface Segment {
 // Define a key for localStorage persistence
 const LOCAL_STORAGE_KEY = "url_builder_state";
 
-// Utility to check if urlData is empty/default
-function isUrlDataEmpty(urlData: any): boolean {
+// Utility functions
+const isUrlDataEmpty = (urlData: any): boolean => {
   if (!urlData) return true;
-  // Check for empty or default values
   const {
     baseURL = '',
     segments = '',
@@ -48,7 +47,6 @@ function isUrlDataEmpty(urlData: any): boolean {
     environment = '',
     sessionDescription = '',
   } = urlData;
-  // If all fields are empty or default, consider it empty
   return (
     !baseURL &&
     !segments &&
@@ -60,21 +58,122 @@ function isUrlDataEmpty(urlData: any): boolean {
     !environment &&
     !sessionDescription
   );
-}
+};
+
+const parseSegmentsFromString = (segmentsString: string): Segment[] => {
+  if (!segmentsString?.trim()) return [];
+
+  return segmentsString
+    .split("/")
+    .filter(Boolean)
+    .map((segment: string) => {
+      const isDynamic = segment.startsWith("{") && segment.endsWith("}");
+      const paramName = isDynamic ? segment.slice(1, -1) : "";
+      return {
+        value: isDynamic ? "" : segment,
+        isDynamic,
+        paramName,
+        description: "",
+        required: false,
+      };
+    });
+};
+
+const parseSegmentsFromParsed = (parsedSegments: any[]): Segment[] => {
+  if (!parsedSegments?.length) return [];
+
+  return parsedSegments.map((segment: any) => ({
+    value: segment.value || "",
+    isDynamic: segment.isDynamic || false,
+    paramName: segment.paramName || "",
+    description: segment.description || "",
+    required: segment.required || false,
+  }));
+};
+
+
+
+const buildUrlFromSegments = (protocol: string, domain: string, segments: Segment[], globalVariables: Record<string, string>): string => {
+  // Resolve base_url from global variables if domain is {base_url}
+  let resolvedDomain = domain;
+  if (domain === "{base_url}" && globalVariables?.['base_url']) {
+    resolvedDomain = globalVariables['base_url'];
+  }
+
+  const segmentPath = segments.length > 0
+    ? "/" + segments
+      .map((segment) =>
+        segment.isDynamic && segment.paramName
+          ? `{${segment.paramName}}`
+          : segment.value
+      )
+      .join("/")
+    : "";
+
+  return `${protocol}://${resolvedDomain}${segmentPath}`;
+};
 
 const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
   const {
     urlData,
     setUrlData,
     globalVariables,
-    segmentVariables,
+    sharedVariables,
     activeSession,
     handleSaveSession,
     openSessionManager,
+    isLoading
   } = useAppContext();
 
-  // Helper to get session segment variables as a map
-  const getSessionSegmentVariables = () => {
+  // Ref to track which session we've initialized for
+  const initializedSessionId = useRef<string | null>(null);
+
+  // Simple state without complex initialization
+  const [protocol, setProtocol] = useState<string>(DEFAULT_VALUES.protocol);
+  const [domain, setDomain] = useState<string>(DEFAULT_VALUES.domain);
+  const [segments, setSegments] = useState<Segment[]>(DEFAULT_VALUES.segments);
+  const [sessionDescription, setSessionDescription] = useState<string>(DEFAULT_VALUES.sessionDescription);
+  const [environment, setEnvironment] = useState<string>(DEFAULT_VALUES.environment);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
+
+  // Memoized built URL - automatically updates when dependencies change
+  const builtUrl = useMemo(() => {
+    return buildUrlFromSegments(protocol, domain, segments, globalVariables || {});
+  }, [protocol, domain, segments, globalVariables]);
+
+  // Memoized URL data - automatically updates when local state changes
+  const currentUrlData = useMemo((): URLData => {
+    const segmentsString = segments
+      .map((segment) =>
+        segment.isDynamic ? `{${segment.paramName}}` : segment.value
+      )
+      .join("/");
+
+    const segmentVarsList = segments
+      .filter((segment) => segment.isDynamic)
+      .map((segment) => ({
+        key: segment.paramName,
+        value: segment.value,
+      }));
+
+    return {
+      baseURL: domain,
+      segments: segmentsString,
+      parsedSegments: segments,
+      queryParams: urlData?.queryParams || [],
+      segmentVariables: segmentVarsList,
+      processedURL: builtUrl,
+      sessionDescription: sessionDescription,
+      domain: domain,
+      protocol: protocol,
+      builtUrl: builtUrl,
+      environment: environment,
+    };
+  }, [domain, segments, urlData?.queryParams, builtUrl, sessionDescription, protocol, environment]);
+
+  // Helper functions
+  const getSessionSegmentVariables = useCallback(() => {
     if (activeSession?.urlData?.segmentVariables) {
       return activeSession.urlData.segmentVariables.reduce((acc, curr) => {
         acc[curr.key] = curr.value;
@@ -88,331 +187,192 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
       }, {} as Record<string, string>);
     }
     return {};
-  };
+  }, [activeSession?.urlData?.segmentVariables, urlData?.segmentVariables]);
 
-  // --- State persistence logic ---
-  // Try to load from localStorage if no active session
-  const loadPersistedState = () => {
+  const loadPersistedState = useCallback(() => {
+    if (activeSession) return null; // Don't load persisted state if there's an active session
+
     try {
       const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (raw) {
-        return JSON.parse(raw);
-      }
+      return raw ? JSON.parse(raw) : null;
     } catch (e) {
-      // ignore
+      return null;
     }
-    return null;
-  };
+  }, [activeSession]);
 
-  // Save to localStorage
-  const persistState = (state: any) => {
+  const persistState = useCallback((state: any) => {
+    if (activeSession) return; // Don't persist if there's an active session
+
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
       // ignore
     }
-  };
+  }, [activeSession]);
 
-  // --- State initialization ---
-  const persisted = !activeSession ? loadPersistedState() : null;
+  const getVariableValue = useCallback(
+    (paramName: string, env: string) => {
+      // 1. Check session segment variables
+      const sessionVars = getSessionSegmentVariables();
+      if (sessionVars[paramName]) {
+        return sessionVars[paramName];
+      }
+      // 2. Check shared variables (session-specific variables)
+      const sharedVar = sharedVariables?.find(v => v.key === paramName);
+      if (sharedVar) {
+        return sharedVar.value;
+      }
+      // 3. Check environment-specific global variable
+      const envVar = globalVariables?.[`${paramName}_${env}`];
+      if (envVar) {
+        return envVar;
+      }
+      // 4. Check global variables
+      if (globalVariables?.[paramName]) {
+        return globalVariables[paramName];
+      }
+      return null;
+    },
+    [globalVariables, sharedVariables, getSessionSegmentVariables]
+  );
 
-  const [protocol, setProtocol] = useState<string>(() => {
-    if (activeSession?.urlData?.processedURL?.startsWith("https"))
-      return "https";
-    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.processedURL?.startsWith("https")) return "https";
-    if (!activeSession && persisted?.protocol) return persisted.protocol;
-    return DEFAULT_VALUES.protocol;
-  });
+  // Initialize state from data sources
+  const initializeFromData = useCallback(() => {
+    console.log("URLBuilder: Initializing from data sources");
 
-  const [domain, setDomain] = useState<string>(() => {
-    if (activeSession?.urlData?.baseURL) return activeSession.urlData.baseURL;
-    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.baseURL) return urlData.baseURL;
-    if (!activeSession && persisted?.domain) return persisted.domain;
-    return DEFAULT_VALUES.domain;
-  });
+    // Priority: activeSession > urlData > persisted > defaults
+    if (activeSession?.urlData) {
+      const sessionUrlData = activeSession.urlData;
+      console.log("URLBuilder: Loading from active session", sessionUrlData);
 
-  const [segments, setSegments] = useState<Segment[]>(() => {
-    if (activeSession?.urlData?.parsedSegments) {
-      return activeSession.urlData.parsedSegments.map((segment: any) => ({
-        value: segment.value || "",
-        isDynamic: segment.isDynamic || false,
-        paramName: segment.paramName || "",
-        description: segment.description || "",
-        required: segment.required || false,
-      }));
-    }
-    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.parsedSegments) {
-      return urlData.parsedSegments.map((segment: any) => ({
-        value: segment.value || "",
-        isDynamic: segment.isDynamic || false,
-        paramName: segment.paramName || "",
-        description: segment.description || "",
-        required: segment.required || false,
-      }));
-    }
-    if (!activeSession && persisted?.segments) return persisted.segments;
-    return DEFAULT_VALUES.segments;
-  });
+      // Parse segments
+      let parsedSegments: Segment[] = [];
+      if (sessionUrlData.parsedSegments?.length > 0) {
+        parsedSegments = parseSegmentsFromParsed(sessionUrlData.parsedSegments);
+      } else if (sessionUrlData.segments) {
+        parsedSegments = parseSegmentsFromString(sessionUrlData.segments);
+      }
 
-  const [builtUrl, setBuiltUrl] = useState<string>(() => {
-    if (activeSession?.urlData?.processedURL)
-      return activeSession.urlData.processedURL;
-    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.processedURL) return urlData.processedURL;
-    if (!activeSession && persisted?.builtUrl) return persisted.builtUrl;
-    return "";
-  });
-
-  const [sessionDescription, setSessionDescription] = useState<string>(() => {
-    if (activeSession?.urlData?.sessionDescription)
-      return activeSession.urlData.sessionDescription;
-    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.sessionDescription) return urlData.sessionDescription;
-    if (!activeSession && persisted?.sessionDescription) return persisted.sessionDescription;
-    return DEFAULT_VALUES.sessionDescription;
-  });
-
-  const [environment, setEnvironment] = useState<string>(() => {
-    if (activeSession?.urlData?.environment) return activeSession.urlData.environment;
-    if (!activeSession && !isUrlDataEmpty(urlData) && urlData?.environment) return urlData.environment;
-    if (!activeSession && persisted?.environment) return persisted.environment;
-    return DEFAULT_VALUES.environment;
-  });
-  const [copiedUrl, setCopiedUrl] = useState(false);
-  const [showPreview, setShowPreview] = useState(true);
-  const initialLoadDone = useRef(false);
-
-  // Effect to handle initial load and session changes
-  useEffect(() => {
-    const initializeState = () => {
-      if (activeSession?.urlData) {
-        const sessionUrlData = activeSession.urlData;
-        let parsedSegments: Segment[] = [];
-        if (
-          typeof sessionUrlData.segments === "string" &&
-          sessionUrlData.segments.trim()
-        ) {
-          parsedSegments = sessionUrlData.segments
-            .split("/")
-            .filter(Boolean)
-            .map((segment: string) => {
-              const isDynamic =
-                segment.startsWith("{") && segment.endsWith("}");
-              const paramName = isDynamic ? segment.slice(1, -1) : "";
-              return {
-                value: isDynamic ? "" : segment,
-                isDynamic,
-                paramName,
-                description: "",
-                required: false,
-              };
-            });
+      // Resolve variable values for dynamic segments
+      const resolvedSegments = parsedSegments.map(segment => {
+        if (segment.isDynamic && segment.paramName) {
+          const resolvedValue = getVariableValue(segment.paramName, sessionUrlData.environment || DEFAULT_VALUES.environment);
+          return {
+            ...segment,
+            value: resolvedValue || segment.value || ""
+          };
         }
-        setSegments(parsedSegments);
-        setDomain(sessionUrlData.baseURL || DEFAULT_VALUES.domain);
-        setProtocol(
-          sessionUrlData.processedURL?.startsWith("https") ? "https" : "http"
-        );
-        setBuiltUrl(sessionUrlData.processedURL || "");
-        setSessionDescription(sessionUrlData.sessionDescription || DEFAULT_VALUES.sessionDescription);
-        setEnvironment(sessionUrlData.environment || DEFAULT_VALUES.environment);
-      } else if (!isUrlDataEmpty(urlData) && urlData) {
-        let parsedSegments: Segment[] = [];
-        if (typeof urlData.segments === "string" && urlData.segments.trim()) {
-          parsedSegments = urlData.segments
-            .split("/")
-            .filter(Boolean)
-            .map((segment: string) => {
-              const isDynamic =
-                segment.startsWith("{") && segment.endsWith("}");
-              const paramName = isDynamic ? segment.slice(1, -1) : "";
-              return {
-                value: isDynamic ? "" : segment,
-                isDynamic,
-                paramName,
-                description: "",
-                required: false,
-              };
-            });
+        return segment;
+      });
+
+      setSegments(resolvedSegments);
+      setDomain(sessionUrlData.baseURL || DEFAULT_VALUES.domain);
+      setProtocol(sessionUrlData.processedURL?.startsWith("https") ? "https" : "http");
+      setSessionDescription(sessionUrlData.sessionDescription || DEFAULT_VALUES.sessionDescription);
+      setEnvironment(sessionUrlData.environment || DEFAULT_VALUES.environment);
+
+    } else if (!isUrlDataEmpty(urlData) && urlData) {
+      console.log("URLBuilder: Loading from urlData", urlData);
+
+      // Parse segments
+      let parsedSegments: Segment[] = [];
+      if (urlData.parsedSegments?.length > 0) {
+        parsedSegments = parseSegmentsFromParsed(urlData.parsedSegments);
+      } else if (urlData.segments) {
+        parsedSegments = parseSegmentsFromString(urlData.segments);
+      }
+
+      // Resolve variable values for dynamic segments
+      const resolvedSegments = parsedSegments.map(segment => {
+        if (segment.isDynamic && segment.paramName) {
+          const resolvedValue = getVariableValue(segment.paramName, urlData.environment || DEFAULT_VALUES.environment);
+          return {
+            ...segment,
+            value: resolvedValue || segment.value || ""
+          };
         }
-        setSegments(parsedSegments);
-        setDomain(urlData.baseURL || DEFAULT_VALUES.domain);
-        setProtocol(
-          urlData.processedURL?.startsWith("https") ? "https" : "http"
-        );
-        setBuiltUrl(urlData.processedURL || "");
-        setSessionDescription(urlData.sessionDescription || DEFAULT_VALUES.sessionDescription);
-        setEnvironment(urlData.environment || DEFAULT_VALUES.environment);
-      } else if (persisted) {
-        // Restore from persisted state if no session/urlData
+        return segment;
+      });
+
+      setSegments(resolvedSegments);
+      setDomain(urlData.baseURL || DEFAULT_VALUES.domain);
+      setProtocol(urlData.processedURL?.startsWith("https") ? "https" : "http");
+      setSessionDescription(urlData.sessionDescription || DEFAULT_VALUES.sessionDescription);
+      setEnvironment(urlData.environment || DEFAULT_VALUES.environment);
+
+    } else {
+      // Try to load from persisted state
+      const persisted = loadPersistedState();
+      if (persisted) {
+        console.log("URLBuilder: Loading from persisted state", persisted);
         setProtocol(persisted.protocol || DEFAULT_VALUES.protocol);
         setDomain(persisted.domain || DEFAULT_VALUES.domain);
         setSegments(persisted.segments || DEFAULT_VALUES.segments);
-        setBuiltUrl(persisted.builtUrl || "");
         setSessionDescription(persisted.sessionDescription || DEFAULT_VALUES.sessionDescription);
         setEnvironment(persisted.environment || DEFAULT_VALUES.environment);
+      } else {
+        console.log("URLBuilder: Using default values");
+        // Already initialized with defaults
       }
-    };
-
-    if (!initialLoadDone.current) {
-      initialLoadDone.current = true;
-      initializeState();
     }
-  }, [urlData, activeSession]);
+  }, [activeSession, urlData, loadPersistedState, getVariableValue]);
 
-  // Reset initialLoadDone when session changes
+  // Single useEffect to handle initialization and session changes
   useEffect(() => {
-    initialLoadDone.current = false;
-  }, [activeSession?.id]);
+    if (isLoading) return;
 
-  // Effect to update builtUrl when segments, domain, or protocol changes
+    const currentSessionId = activeSession?.id || null;
+
+    // Initialize if we haven't yet, or if the session changed
+    if (initializedSessionId.current !== currentSessionId) {
+      initializedSessionId.current = currentSessionId;
+      initializeFromData();
+    }
+  }, [isLoading, activeSession?.id, initializeFromData]);
+
+  // Single useEffect to sync state with context and persist
   useEffect(() => {
-    // Resolve base_url from global variables if domain is {base_url}
-    let resolvedDomain = domain;
-    if (domain === "{base_url}" && globalVariables?.['base_url']) {
-      resolvedDomain = globalVariables['base_url'];
+    // Skip if we haven't initialized yet or if there's no meaningful data
+    if (initializedSessionId.current === undefined || (!segments.length && !domain)) {
+      return;
     }
 
-    const newUrl = `${protocol}://${resolvedDomain}${segments.length > 0
-      ? "/" +
-      segments
-        .map((segment) =>
-          segment.isDynamic && segment.paramName
-            ? `{${segment.paramName}}`
-            : segment.value
-        )
-        .join("/")
-      : ""
-      }`;
-    setBuiltUrl(newUrl);
-  }, [segments, domain, protocol, globalVariables]);
-
-  // Effect to update context and save session when local state changes
-  useEffect(() => {
-    if (!segments.length && !domain) return;
-
-    const segmentsString = segments
-      .map((segment) =>
-        segment.isDynamic ? `{${segment.paramName}}` : segment.value
-      )
-      .join("/");
-
-    const segmentVarsList = segments
-      .filter((segment) => segment.isDynamic)
-      .map((segment) => ({
-        key: segment.paramName,
-        value: segment.value,
-      }));
-
-    const newUrlData: URLData = {
-      baseURL: domain,
-      segments: segmentsString,
-      parsedSegments: segments,
-      queryParams: urlData?.queryParams || [],
-      segmentVariables: segmentVarsList,
-      processedURL: builtUrl,
-      sessionDescription: sessionDescription,
-      domain: domain,
-      protocol: protocol,
-      builtUrl: builtUrl,
-      environment: environment,
-    };
-
-    // Always update the context
-    setUrlData(newUrlData);
+    // Update context
+    setUrlData(currentUrlData);
 
     // Save to active session if exists
     if (activeSession) {
       const updatedSession = {
         ...activeSession,
-        urlData: newUrlData,
+        urlData: currentUrlData,
       };
       handleSaveSession(activeSession.name, updatedSession);
-    }
-
-    // Persist state if no active session
-    if (!activeSession) {
+    } else {
+      // Persist state if no active session
       persistState({
         protocol,
         domain,
         segments,
-        builtUrl,
         sessionDescription,
         environment,
       });
     }
-  }, [
-    segments,
-    domain,
-    protocol,
-    builtUrl,
-    sessionDescription,
-    environment,
-    activeSession?.name, // Only depend on the session name, not the entire object
-  ]);
+  }, [currentUrlData, activeSession, handleSaveSession, setUrlData, persistState, protocol, domain, segments, sessionDescription, environment]);
 
-  // --- Updated getVariableValue: session > global > env-specific global ---
-  const getVariableValue = useCallback(
-    (paramName: string, env: string) => {
-      // 1. Check session segment variables
-      const sessionVars = getSessionSegmentVariables();
-      console.log('sessionVars', sessionVars);
-      if (sessionVars[paramName]) {
-        return sessionVars[paramName];
-      }
-      // 2. Check environment-specific global variable
-      const envVar = globalVariables[`${paramName}_${env}`];
-      if (envVar) {
-        return envVar;
-      }
-      // 3. Check global variables
-      if (globalVariables[paramName]) {
-        return globalVariables[paramName];
-      }
-      return null;
-    },
-    [globalVariables, segmentVariables, activeSession]
-  );
+  // Event handlers
+  const handleSubmit = useCallback((): void => {
+    onSubmit(currentUrlData);
+  }, [onSubmit, currentUrlData]);
 
-  const handleSubmit = (): void => {
-    const segmentsString = segments
-      .map((segment) =>
-        segment.isDynamic ? `{${segment.paramName}}` : segment.value
-      )
-      .join("/");
+  const handleSegmentAdd = useCallback(() => {
+    setSegments(prev => [...prev, { value: "", isDynamic: false, paramName: "", description: "", required: false }]);
+  }, []);
 
-    const segmentVarsList = segments
-      .filter((segment) => segment.isDynamic)
-      .map((segment) => ({
-        key: segment.paramName,
-        value: segment.value,
-      }));
+  const handleSegmentRemove = useCallback((index: number) => {
+    setSegments(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
-    const newUrlData: URLData = {
-      baseURL: domain,
-      segments: segmentsString,
-      parsedSegments: segments,
-      queryParams: urlData?.queryParams || [],
-      segmentVariables: segmentVarsList,
-      processedURL: builtUrl,
-      sessionDescription: sessionDescription,
-      domain: domain,
-      protocol: protocol,
-      builtUrl: builtUrl,
-      environment: environment,
-    };
-
-    onSubmit(newUrlData);
-  };
-
-  const handleSegmentAdd = () => {
-    setSegments([...segments, { value: "", isDynamic: false, paramName: "", description: "", required: false }]);
-  };
-
-  const handleSegmentRemove = (index: number) => {
-    const newSegments = segments.filter((_, i) => i !== index);
-    setSegments(newSegments);
-  };
-
-  const copyToClipboard = async () => {
+  const copyToClipboard = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(builtUrl);
       setCopiedUrl(true);
@@ -420,9 +380,13 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     } catch (err) {
       console.error('Failed to copy URL:', err);
     }
-  };
+  }, [builtUrl]);
 
-  const renderOptionButton = (
+
+
+
+
+  const renderOptionButton = useCallback((
     options: typeof PROTOCOL_OPTIONS | typeof ENVIRONMENT_OPTIONS,
     selectedValue: string,
     onSelect: (value: string) => void,
@@ -450,12 +414,11 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         </button>
       );
     });
-  };
+  }, []);
 
-  // --- Fix: Move early return after all hooks ---
-  let noActiveSessionContent = null;
+  // Early return for no active session
   if (!activeSession) {
-    noActiveSessionContent = (
+    return (
       <div className="space-y-6">
         {/* Header Section */}
         <div className={`overflow-hidden relative p-6 bg-gradient-to-r ${SECTION_CONFIG.header.bgGradient} rounded-2xl border border-blue-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600`}>
@@ -515,7 +478,6 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
       </div>
     );
   }
-  if (!activeSession) return noActiveSessionContent;
 
   return (
     <div className="space-y-6">
