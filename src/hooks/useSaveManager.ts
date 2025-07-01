@@ -65,7 +65,7 @@ export const useSaveManager = (
     }
   });
 
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedStateRef = useRef<string>("");
 
   const undoManager = useUndoManager(maxUndoHistory);

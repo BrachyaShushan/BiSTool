@@ -23,7 +23,7 @@ export const useStorage = (
   storageManager: StorageManager,
   projectId: string | null
 ) => {
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Set the current project for the storage manager
   useEffect(() => {
