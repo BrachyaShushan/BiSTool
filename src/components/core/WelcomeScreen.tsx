@@ -15,7 +15,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onCreateProject }) => {
     };
 
     const handleProjectSwitch = async (projectId: string) => {
-        console.log(`WelcomeScreen: Switching to project ${projectId}`);
         const success = await switchToProject(projectId);
         if (success) {
             console.log(`WelcomeScreen: Project switch completed successfully`);

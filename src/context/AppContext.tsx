@@ -47,7 +47,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   useEffect(() => {
     if (currentProjectId) {
       storageManager.setCurrentProject(currentProjectId);
-      console.log("AppContext: Set current project in storage manager:", currentProjectId);
     }
   }, [currentProjectId, storageManager]);
 
@@ -95,7 +94,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
       try {
         // Load app state
         const loadedAppState = appStateStorage.loadAppState();
-        console.log("AppContext: Loaded app state", loadedAppState);
         appState.loadAppState(loadedAppState);
 
         // Load sessions (saved first, then active)

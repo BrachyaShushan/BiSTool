@@ -91,7 +91,6 @@ export const useAppStateStorage = (
       if (!projectId) return state;
       // Load the full project data and return the appState
       const loadedState = storageManager.loadAppState(projectName);
-      console.log("useAppStateStorage: Loaded app state", loadedState);
       return loadedState;
     }, [storageManager, projectId, projectName, state]),
   };

@@ -127,6 +127,8 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
   // Ref to track which session we've initialized for
   const initializedSessionId = useRef<string | null>(null);
+  // Ref to prevent infinite saves
+  const lastSyncedData = useRef<string>('');
 
   // Simple state without complex initialization
   const [protocol, setProtocol] = useState<string>(DEFAULT_VALUES.protocol);
@@ -238,13 +240,10 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
   // Initialize state from data sources
   const initializeFromData = useCallback(() => {
-    console.log("URLBuilder: Initializing from data sources");
 
     // Priority: activeSession > urlData > persisted > defaults
     if (activeSession?.urlData) {
       const sessionUrlData = activeSession.urlData;
-      console.log("URLBuilder: Loading from active session", sessionUrlData);
-
       // Parse segments
       let parsedSegments: Segment[] = [];
       if (sessionUrlData.parsedSegments?.length > 0) {
@@ -272,8 +271,6 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
       setEnvironment(sessionUrlData.environment || DEFAULT_VALUES.environment);
 
     } else if (!isUrlDataEmpty(urlData) && urlData) {
-      console.log("URLBuilder: Loading from urlData", urlData);
-
       // Parse segments
       let parsedSegments: Segment[] = [];
       if (urlData.parsedSegments?.length > 0) {
@@ -303,17 +300,11 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
     } else {
       // Try to load from persisted state
       const persisted = loadPersistedState();
-      if (persisted) {
-        console.log("URLBuilder: Loading from persisted state", persisted);
-        setProtocol(persisted.protocol || DEFAULT_VALUES.protocol);
-        setDomain(persisted.domain || DEFAULT_VALUES.domain);
-        setSegments(persisted.segments || DEFAULT_VALUES.segments);
-        setSessionDescription(persisted.sessionDescription || DEFAULT_VALUES.sessionDescription);
-        setEnvironment(persisted.environment || DEFAULT_VALUES.environment);
-      } else {
-        console.log("URLBuilder: Using default values");
-        // Already initialized with defaults
-      }
+      setProtocol(persisted.protocol || DEFAULT_VALUES.protocol);
+      setDomain(persisted.domain || DEFAULT_VALUES.domain);
+      setSegments(persisted.segments || DEFAULT_VALUES.segments);
+      setSessionDescription(persisted.sessionDescription || DEFAULT_VALUES.sessionDescription);
+      setEnvironment(persisted.environment || DEFAULT_VALUES.environment);
     }
   }, [activeSession, urlData, loadPersistedState, getVariableValue]);
 
@@ -337,6 +328,23 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
       return;
     }
 
+    // Create a hash of current data to prevent unnecessary updates
+    const currentDataHash = JSON.stringify({
+      protocol,
+      domain,
+      segments,
+      sessionDescription,
+      environment,
+      sessionId: activeSession?.id
+    });
+
+    // Only proceed if data has actually changed
+    if (lastSyncedData.current === currentDataHash) {
+      return;
+    }
+
+    lastSyncedData.current = currentDataHash;
+
     // Update context
     setUrlData(currentUrlData);
 
@@ -357,7 +365,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         environment,
       });
     }
-  }, [currentUrlData, activeSession, handleSaveSession, setUrlData, persistState, protocol, domain, segments, sessionDescription, environment]);
+  }, [protocol, domain, segments, sessionDescription, environment, activeSession, handleSaveSession, setUrlData, persistState]);
 
   // Event handlers
   const handleSubmit = useCallback((): void => {

@@ -301,34 +301,19 @@ export class StorageManager {
   private currentProjectId: string | null = null;
 
   setCurrentProject(projectId: string | null): void {
-    console.log("StorageManager: setCurrentProject called", {
-      oldProjectId: this.currentProjectId,
-      newProjectId: projectId,
-    });
     this.currentProjectId = projectId;
   }
 
   // Get the current project data (or default)
   getCurrentProjectData(projectName: string): ProjectData {
-    console.log("StorageManager: getCurrentProjectData called", {
-      currentProjectId: this.currentProjectId,
-      projectName,
-    });
-
     if (!this.currentProjectId) {
       console.error("StorageManager: No current project set");
       throw new Error("No current project set");
     }
 
     const root = getStorageRoot();
-    console.log("StorageManager: Storage root loaded", {
-      hasProjects: !!root.projects,
-      projectCount: Object.keys(root.projects || {}).length,
-      hasCurrentProject: !!root.projects[this.currentProjectId],
-    });
 
     if (!root.projects[this.currentProjectId]) {
-      console.log("StorageManager: Creating default project data");
       // Create default if missing
       root.projects[this.currentProjectId] = createDefaultProjectData(
         this.currentProjectId,
@@ -336,13 +321,9 @@ export class StorageManager {
         false // Don't preserve settings for new projects
       );
       setStorageRoot(root);
-      console.log("StorageManager: Default project data created and saved");
     }
 
     const projectData = root.projects[this.currentProjectId]!;
-    console.log("StorageManager: Returning project data", {
-      autoSave: projectData.settings.autoSave,
-    });
     return projectData;
   }
 
@@ -415,7 +396,6 @@ export class StorageManager {
   }
   loadAppState(projectName: string): ProjectData["appState"] {
     const appState = this.getCurrentProjectData(projectName).appState;
-    console.log("StorageManager: loadAppState", appState);
     return appState;
   }
   saveActiveSession(

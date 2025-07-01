@@ -66,9 +66,9 @@ const AppContent: React.FC = () => {
         clearCurrentProject();
     };
 
-    const toggleHeaderCollapse = () => {
-        setIsHeaderCollapsed(!isHeaderCollapsed);
-    };
+    const toggleHeaderCollapse = React.useCallback(() => {
+        setIsHeaderCollapsed(prev => !prev);
+    }, []);
 
     // Helper to decode JWT and check expiration
     const checkTokenExpiration = React.useCallback(() => {
@@ -205,7 +205,7 @@ const AppContent: React.FC = () => {
 
                                     {/* Sessions of Current Category */}
                                     {activeSession?.category && (
-                                        <div className={`flex gap-2 p-3 bg-white rounded-xl border border-gray-200 shadow-md min-w-0 ${isHeaderCollapsed ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-md opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
+                                        <div className={`flex gap-2 p-3 bg-white rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-md opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
                                             <div className="flex items-center space-x-2 flex-shrink-0">
                                                 <span className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                                                     {activeSession.category}
@@ -272,7 +272,7 @@ const AppContent: React.FC = () => {
                                     )}
                                     <div className="flex gap-2 justify-end items-center">
                                         {/* Collapsible Header Content */}
-                                        <div className={`flex items-center space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
+                                        <div className={`flex items-center space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
                                             {/* Action Buttons */}
                                             <div className="flex items-center space-x-2">
 
@@ -350,11 +350,11 @@ const AppContent: React.FC = () => {
                                                 ? "text-gray-300 bg-gray-700 hover:bg-gray-600"
                                                 : "text-gray-700 bg-gray-100 hover:bg-gray-200"
                                                 }`}
-                                            title={isHeaderCollapsed ? "Expand header" : "Collapse header"}
-                                            aria-label={isHeaderCollapsed ? "Expand header" : "Collapse header"}
+                                            title={isHeaderCollapsed === true ? "Expand header" : "Collapse header"}
+                                            aria-label={isHeaderCollapsed === true ? "Expand header" : "Collapse header"}
                                         >
                                             <div className="transition-transform duration-200 group-hover:scale-110">
-                                                {isHeaderCollapsed ? <FiMenu size={18} /> : <FiX size={18} />}
+                                                {isHeaderCollapsed === true ? <FiMenu size={18} /> : <FiX size={18} />}
                                             </div>
                                         </button>
                                     </div>
@@ -386,21 +386,23 @@ const AppContent: React.FC = () => {
                 </div >
             )}
 
-            {/* Unified Manager Modal */}
-            <UnifiedManager
-                isOpen={showUnifiedManager}
-                onClose={() => setShowUnifiedManager(false)}
-                initialTab={sessionManagerTab}
-                activeSession={activeSession}
-                savedSessions={savedSessions}
-                globalVariables={globalVariables}
-                handleLoadSession={handleLoadSession}
-                handleSaveSession={handleSaveSession}
-                handleDeleteSession={handleDeleteSession}
-                updateGlobalVariable={updateGlobalVariable}
-                updateSessionVariable={updateSessionVariable}
-                deleteGlobalVariable={deleteGlobalVariable}
-            />
+            {/* Unified Manager Modal - Only render when modal is open */}
+            {showUnifiedManager && (
+                <UnifiedManager
+                    isOpen={showUnifiedManager}
+                    onClose={() => setShowUnifiedManager(false)}
+                    initialTab={sessionManagerTab}
+                    activeSession={activeSession}
+                    savedSessions={savedSessions}
+                    globalVariables={globalVariables}
+                    handleLoadSession={handleLoadSession}
+                    handleSaveSession={handleSaveSession}
+                    handleDeleteSession={handleDeleteSession}
+                    updateGlobalVariable={updateGlobalVariable}
+                    updateSessionVariable={updateSessionVariable}
+                    deleteGlobalVariable={deleteGlobalVariable}
+                />
+            )}
         </>
     );
 };
@@ -418,12 +420,6 @@ const App: React.FC = () => {
 // Wrapper component to access ProjectContext and pass getProjectStorageKey to AppProvider
 const AppContentWrapper: React.FC = () => {
     const { getProjectStorageKey, currentProject, forceReload } = useProjectContext();
-
-    // Debug effect to track project changes
-    React.useEffect(() => {
-        console.log(`AppContentWrapper: currentProject changed to:`, currentProject?.id || 'null');
-        console.log(`AppContentWrapper: forceReload:`, forceReload);
-    }, [currentProject, forceReload]);
 
     return (
         <AIConfigProvider

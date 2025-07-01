@@ -1454,7 +1454,6 @@ export const getSuggestionsByCategory = (
   return Object.entries(jsonataFunctionDocs)
     .filter(([_, doc]) => doc.category === category)
     .map(([functionName, doc], index) => {
-      console.log('getSuggestionsByCategory functionName:', functionName);
       // Create insert text with complete function name and parameter placeholders
       let insertText = functionName;
       let insertTextRules = undefined;

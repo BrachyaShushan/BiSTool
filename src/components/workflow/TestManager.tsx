@@ -46,8 +46,6 @@ const TestManager: React.FC = () => {
 
     // Add Test handler
     const handleAddTest = () => {
-        console.log('handleAddTest called');
-        console.log('activeSession:', activeSession);
 
         if (!activeSession) {
             console.error('No active session available');
@@ -61,17 +59,12 @@ const TestManager: React.FC = () => {
             expectedResponse: '',
         };
 
-        console.log('Creating new test:', newTest);
-
         const updatedSession = {
             ...activeSession,
             tests: [...(activeSession.tests || []), newTest],
         };
 
-        console.log('Updated session:', updatedSession);
-
         handleSaveSession(activeSession.name, updatedSession);
-        console.log('Test added successfully');
     };
 
     // Update Test handler

@@ -23,29 +23,15 @@ export const useSaveManager = (
 
   // Load auto-save setting from project settings
   const [autoSave, setAutoSave] = useState(() => {
-    console.log("useSaveManager: Initializing auto-save state", {
-      projectId,
-      projectName,
-      autoSaveEnabled,
-    });
     if (!projectId) {
-      console.log(
-        "useSaveManager: No project ID, using default:",
-        autoSaveEnabled
-      );
       return autoSaveEnabled;
     }
     try {
       const projectData = storageManager.getCurrentProjectData(projectName);
       const projectAutoSave = projectData.settings.autoSave;
-      console.log(
-        "useSaveManager: Loaded auto-save from project:",
-        projectAutoSave
-      );
       return projectAutoSave;
     } catch (error) {
       console.error("useSaveManager: Failed to load auto-save setting:", error);
-      console.log("useSaveManager: Using default auto-save:", autoSaveEnabled);
       return autoSaveEnabled;
     }
   });
@@ -72,16 +58,7 @@ export const useSaveManager = (
 
   // Reload auto-save setting and save frequency when project changes
   useEffect(() => {
-    console.log("useSaveManager: Project changed, reloading settings", {
-      projectId,
-      projectName,
-    });
-
     if (!projectId) {
-      console.log("useSaveManager: No project ID, using default settings:", {
-        autoSave: autoSaveEnabled,
-        saveFrequency: autoSaveDelay,
-      });
       setAutoSave(autoSaveEnabled);
       setSaveFrequency(autoSaveDelay);
       return;
@@ -93,19 +70,10 @@ export const useSaveManager = (
       const projectSaveFrequency =
         projectData.settings.saveFrequency || autoSaveDelay;
 
-      console.log("useSaveManager: Loaded settings from project:", {
-        autoSave: projectAutoSave,
-        saveFrequency: projectSaveFrequency,
-      });
-
       setAutoSave(projectAutoSave);
       setSaveFrequency(projectSaveFrequency);
     } catch (error) {
       console.error("useSaveManager: Failed to load settings:", error);
-      console.log("useSaveManager: Using default settings:", {
-        autoSave: autoSaveEnabled,
-        saveFrequency: autoSaveDelay,
-      });
       setAutoSave(autoSaveEnabled);
       setSaveFrequency(autoSaveDelay);
     }
@@ -157,7 +125,6 @@ export const useSaveManager = (
         setLastSaved(new Date().toISOString());
         setHasUnsavedChanges(false);
 
-        console.log("Manual save completed");
       } catch (error) {
         console.error("Manual save failed:", error);
         throw error;
@@ -241,38 +208,20 @@ export const useSaveManager = (
   // Toggle auto-save
   const toggleAutoSave = useCallback(
     (enabled: boolean) => {
-      console.log("useSaveManager: Toggling auto-save to:", enabled, {
-        projectId,
-        projectName,
-      });
       setAutoSave(enabled);
 
       // Save the setting to project settings
       if (projectId) {
         try {
-          const projectData = storageManager.getCurrentProjectData(projectName);
-          console.log(
-            "useSaveManager: Current project auto-save setting before update:",
-            projectData.settings.autoSave
-          );
+          const projectData = storageManager.getCurrentProjectData(projectName);  
           projectData.settings.autoSave = enabled;
           storageManager.saveCurrentProjectData(projectData);
-          console.log("useSaveManager: Saved auto-save setting to:", enabled);
-
-          // Verify the save worked
-          const verifyData = storageManager.getCurrentProjectData(projectName);
-          console.log(
-            "useSaveManager: Verified saved setting:",
-            verifyData.settings.autoSave
-          );
         } catch (error) {
           console.error(
             "useSaveManager: Failed to save auto-save setting:",
             error
           );
         }
-      } else {
-        console.log("useSaveManager: No project ID, cannot save setting");
       }
 
       // If turning off auto-save, save current state immediately
@@ -296,38 +245,21 @@ export const useSaveManager = (
   // Update save frequency
   const updateSaveFrequency = useCallback(
     (frequency: number) => {
-      console.log("useSaveManager: Updating save frequency to:", frequency, {
-        projectId,
-        projectName,
-      });
       setSaveFrequency(frequency);
 
       // Save the setting to project settings
       if (projectId) {
         try {
           const projectData = storageManager.getCurrentProjectData(projectName);
-          console.log(
-            "useSaveManager: Current project save frequency before update:",
-            projectData.settings.saveFrequency
-          );
           projectData.settings.saveFrequency = frequency;
           storageManager.saveCurrentProjectData(projectData);
-          console.log("useSaveManager: Saved save frequency to:", frequency);
 
-          // Verify the save worked
-          const verifyData = storageManager.getCurrentProjectData(projectName);
-          console.log(
-            "useSaveManager: Verified saved frequency:",
-            verifyData.settings.saveFrequency
-          );
         } catch (error) {
           console.error(
             "useSaveManager: Failed to save save frequency:",
             error
           );
         }
-      } else {
-        console.log("useSaveManager: No project ID, cannot save frequency");
       }
     },
     [storageManager, projectName, projectId]

@@ -75,13 +75,10 @@ const TokenGenerator: React.FC = () => {
         const defaultNames = ['token', 'access_token', 'auth_token', 'jwt'];
         const searchNames = cookieNames.length > 0 ? cookieNames : defaultNames;
 
-        console.log("Available cookies:", document.cookie);
-        console.log("Searching for cookie names:", searchNames);
 
         for (const cookieName of searchNames) {
             const value = getCookieValue(cookieName);
             if (value) {
-                console.log(`Found token in cookie: ${cookieName}`);
                 return value;
             }
         }
@@ -92,8 +89,6 @@ const TokenGenerator: React.FC = () => {
             return { name: name?.trim(), value: value?.trim() };
         }).filter(cookie => cookie.name);
 
-        console.log("All available cookies:", allCookies);
-
         const tokenCookie = allCookies.find(cookie =>
             cookie.name?.toLowerCase().includes('token') ||
             cookie.name?.toLowerCase().includes('auth') ||
@@ -101,7 +96,6 @@ const TokenGenerator: React.FC = () => {
         );
 
         if (tokenCookie) {
-            console.log(`Found token cookie: ${tokenCookie.name}`);
             return tokenCookie.value ?? null;
         }
 
@@ -112,19 +106,16 @@ const TokenGenerator: React.FC = () => {
         // Try to extract from Set-Cookie header directly
         const setCookieHeader = response.headers.get('set-cookie');
         if (!setCookieHeader) {
-            console.log("No Set-Cookie header found - this might be due to CORS restrictions");
 
             // Try to get all headers to see what's available
             const allHeaders: string[] = [];
             response.headers.forEach((value, key) => {
                 allHeaders.push(`${key}: ${value}`);
             });
-            console.log("Available response headers:", allHeaders);
 
             return null;
         }
 
-        console.log("Set-Cookie header:", setCookieHeader);
 
         // Parse the Set-Cookie header
         const cookies = setCookieHeader.split(',').map(cookie => {
@@ -133,7 +124,6 @@ const TokenGenerator: React.FC = () => {
             return { name: name?.trim(), value: value?.trim() };
         });
 
-        console.log("Parsed cookies from Set-Cookie:", cookies);
 
         // Default cookie names to try if none specified
         const defaultNames = ['token', 'access_token', 'auth_token', 'jwt'];
@@ -142,7 +132,6 @@ const TokenGenerator: React.FC = () => {
         for (const cookieName of searchNames) {
             const cookie = cookies.find(c => c.name === cookieName);
             if (cookie?.value) {
-                console.log(`Found token in Set-Cookie: ${cookieName}`);
                 return cookie.value;
             }
         }
@@ -155,7 +144,6 @@ const TokenGenerator: React.FC = () => {
         );
 
         if (tokenCookie?.value) {
-            console.log(`Found token cookie in Set-Cookie: ${tokenCookie.name}`);
             return tokenCookie.value;
         }
 
@@ -178,13 +166,11 @@ const TokenGenerator: React.FC = () => {
     }, []);
 
     const extractTokenFromResponseText = useCallback((responseText: string): string | null => {
-        console.log("Response text:", responseText);
 
         // Try to find JWT pattern in the response text
         const jwtPattern = /jwt[=:]\s*([a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/i;
         const match = responseText.match(jwtPattern);
         if (match) {
-            console.log("Found JWT in response text:", match[1]);
             return match[1] ?? null;
         }
 
@@ -192,7 +178,6 @@ const TokenGenerator: React.FC = () => {
         const tokenPattern = /(?:token|access_token|auth_token)[=:]\s*([a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/i;
         const tokenMatch = responseText.match(tokenPattern);
         if (tokenMatch) {
-            console.log("Found token in response text:", tokenMatch[1]);
             return tokenMatch[1] ?? null;
         }
 
@@ -250,9 +235,6 @@ const TokenGenerator: React.FC = () => {
             response.headers.forEach((value, key) => {
                 allHeaders.push({ name: key, value });
             });
-            console.log("response", response);
-            console.log("response.headers", response.headers);
-            console.log("set-cookie", response.headers.get('set-cookie'));
             const setCookieHeader = response.headers.get('set-cookie');
 
             // Wait a moment for cookies to be set by the browser
@@ -299,17 +281,12 @@ const TokenGenerator: React.FC = () => {
                     extractionSource = 'Set-Cookie header';
                 } else {
                     // Wait longer for cookies to be set by the browser
-                    console.log("Waiting for cookies to be set by browser...");
                     await new Promise(resolve => setTimeout(resolve, 500));
 
-                    console.log("Checking for cookies after wait...");
                     token = extractTokenFromCookies(tokenConfig.extractionMethods.cookieNames);
                     if (token) {
                         extractionSource = 'response cookies';
                     } else {
-                        console.log("Still no cookies found. This might be due to domain/path restrictions.");
-                        console.log("Current domain:", window.location.hostname);
-                        console.log("Current path:", window.location.pathname);
                     }
                 }
             }

@@ -74,11 +74,9 @@ let jsonataLanguageRegistered = false;
 
 // Custom JSONata language definition
 const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
-    console.log('Starting language registration...');
 
     // Check if language is already registered to prevent duplicates
     if (jsonataLanguageRegistered) {
-        console.log('JSONata language already registered globally, skipping...');
         return;
     }
 
@@ -87,7 +85,6 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
         const jsonataExists = existingLanguages.some(lang => lang.id === 'jsonata');
 
         if (jsonataExists) {
-            console.log('JSONata language already registered in Monaco, skipping...');
             jsonataLanguageRegistered = true;
             return;
         }
@@ -98,7 +95,6 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
     // Define JSONata language
     try {
         monacoInstance.languages.register({ id: 'jsonata' });
-        console.log('JSONata language registered successfully');
         jsonataLanguageRegistered = true;
     } catch (error) {
         console.error('Failed to register jsonata language:', error);
@@ -114,7 +110,6 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
             jsonataLanguageRegistered = false;
             return;
         }
-        console.log('JSONata language verified in languages list');
     } catch (error) {
         console.warn('Could not verify language registration:', error);
     }
@@ -122,9 +117,6 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
     // Function to generate suggestions from data structure
     const generateDataStructureSuggestions = (data: any, range: monaco.IRange): JsonataSuggestion[] => {
         const suggestions: JsonataSuggestion[] = [];
-
-        console.log('=== GENERATE DATA STRUCTURE SUGGESTIONS ===');
-        console.log('Input data:', data);
 
         // Helper function to extract properties from an object with unlimited depth
         const extractProperties = (obj: any, path: string = '', maxDepth: number = 10): { [key: string]: any } => {
@@ -163,7 +155,6 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
 
         // Extract properties from the entire imported file object with unlimited depth
         const properties = extractProperties(data);
-        console.log('Final extracted properties:', properties);
 
         // Create suggestions for each property with better organization
         Object.entries(properties).forEach(([key, value], index) => {
@@ -223,7 +214,6 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
             });
         });
 
-        console.log('Total data suggestions created:', suggestions.length);
         return suggestions;
     };
 
@@ -315,14 +305,12 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
                 ],
             }
         });
-        console.log('JSONata tokens provider set successfully');
     } catch (error) {
         console.error('Failed to set tokens provider:', error);
     }
 
     // Enhanced completion provider with better suggestions
     try {
-        console.log('Registering JSONata completion provider...');
 
         // Dispose any existing provider first
         try {
@@ -335,9 +323,6 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
 
         monacoInstance.languages.registerCompletionItemProvider('jsonata', {
             provideCompletionItems: (model, position) => {
-                console.log('=== COMPLETION PROVIDER CALLED ===');
-                console.log('Model language:', model.getLanguageId());
-                console.log('Position:', position);
 
                 const word = model.getWordUntilPosition(position);
                 const range = {
@@ -351,18 +336,12 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
                 const lineText = model.getLineContent(position.lineNumber);
                 const beforeCursor = lineText.substring(0, position.column - 1);
 
-                console.log('Current word:', word.word);
-                console.log('Before cursor:', beforeCursor);
-
                 // Generate comprehensive suggestions using the utility
                 let suggestions = generateJsonataSuggestions(range, word.word);
-                console.log('Base JSONata suggestions:', suggestions.length);
 
                 // Add suggestions from imported data structure
                 if (currentImportedData) {
-                    console.log('Adding data structure suggestions...');
                     const dataSuggestions = generateDataStructureSuggestions(currentImportedData.data, range);
-                    console.log('Data suggestions count:', dataSuggestions.length);
                     suggestions = [...suggestions, ...dataSuggestions];
                 }
 
@@ -405,13 +384,11 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
                     return item;
                 });
 
-                console.log('Final suggestions count:', completionItems.length);
                 return { suggestions: completionItems };
             },
             triggerCharacters: ['$', '.', ' ', '(', ',', '[', '{']
         });
 
-        console.log('JSONata completion provider registered successfully');
     } catch (error) {
         console.error('Failed to register JSONata completion provider:', error);
     }
@@ -437,7 +414,6 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
                 return null;
             }
         });
-        console.log('JSONata hover provider registered');
     } catch (error) {
         console.error('Failed to register JSONata hover provider:', error);
     }
@@ -493,12 +469,10 @@ const registerJsonataLanguage = (monacoInstance: typeof monaco) => {
                 };
             }
         });
-        console.log('JSONata signature help provider registered');
     } catch (error) {
         console.error('Failed to register JSONata signature help provider:', error);
     }
 
-    console.log('Language registration completed');
 };
 
 const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) => {
@@ -519,7 +493,6 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
     useEffect(() => {
         if (importedFile) {
             currentImportedData = importedFile;
-            console.log('Updated currentImportedData with imported file:', currentImportedData);
         }
     }, [importedFile]);
 
@@ -646,7 +619,6 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
 
     // Handle Monaco editor mount
     const handleEditorDidMount = useCallback((editor: any, monacoInstance: any) => {
-        console.log('Monaco editor mounted');
         setEditorInstance(editor);
 
         // Register the language and providers
@@ -657,14 +629,12 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
         if (model) {
             try {
                 monacoInstance.editor.setModelLanguage(model, 'jsonata');
-                console.log('Editor language set to jsonata');
             } catch (error) {
                 console.warn('Could not set editor language to jsonata:', error);
                 // Fallback: try to register the language again
                 try {
                     registerJsonataLanguage(monacoInstance);
                     monacoInstance.editor.setModelLanguage(model, 'jsonata');
-                    console.log('Editor language set to jsonata after retry');
                 } catch (retryError) {
                     console.error('Failed to set editor language after retry:', retryError);
                 }
@@ -705,7 +675,6 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
 
         // Simple manual trigger for suggestions
         editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monaco.KeyCode.Space, () => {
-            console.log('Manual trigger for suggestions');
             editor.trigger('keyboard', 'editor.action.triggerSuggest', {});
         });
 
@@ -1162,22 +1131,6 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
                                                 className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                                             >
                                                 Test Suggestions (Ctrl+Space)
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    if (editorInstance) {
-                                                        console.log('Setting test expression and triggering suggestions');
-                                                        setJsonataExpression('$');
-                                                        editorInstance.setValue('$');
-                                                        editorInstance.setPosition({ lineNumber: 1, column: 2 });
-                                                        setTimeout(() => {
-                                                            editorInstance.trigger('keyboard', 'editor.action.triggerSuggest', {});
-                                                        }, 100);
-                                                    }
-                                                }}
-                                                className="text-xs text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                                            >
-                                                Test with $
                                             </button>
                                             <button
                                                 onClick={() => {

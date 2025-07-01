@@ -25,7 +25,6 @@ export const useProjectSwitch = () => {
     const { switchProject, currentProject, projects } = useProjectContext();
 
     const switchToProject = useCallback(async (projectId: string) => {
-        console.log(`useProjectSwitch: Switching to project ${projectId}`);
 
         if (!projectId) {
             console.error("useProjectSwitch: No project ID provided");
@@ -33,13 +32,11 @@ export const useProjectSwitch = () => {
         }
 
         if (currentProject?.id === projectId) {
-            console.log("useProjectSwitch: Already on the requested project");
             return true;
         }
 
         try {
             switchProject(projectId);
-            console.log("useProjectSwitch: Project switch completed successfully");
             return true;
         } catch (error) {
             console.error("useProjectSwitch: Error switching project:", error);
@@ -61,10 +58,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (savedProjects) {
                 const parsed = JSON.parse(savedProjects);
                 const projectsArray = Array.isArray(parsed) ? parsed : [];
-                console.log("Loaded projects from localStorage:", projectsArray.length);
                 return projectsArray;
             }
-            console.log("No projects found in localStorage");
             return [];
         } catch (err) {
             console.error("Failed to load projects:", err);
@@ -80,19 +75,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     useEffect(() => {
         try {
             const activeProjectId = localStorage.getItem(ACTIVE_PROJECT_KEY);
-            console.log("Active project ID from localStorage:", activeProjectId);
-            console.log("Available projects:", projects.length);
 
             if (activeProjectId && projects.length > 0) {
                 const project = projects.find(p => p.id === activeProjectId);
                 if (project) {
-                    console.log("Setting current project:", project.name);
                     setCurrentProject(project);
                 } else {
                     // Active project not found, but projects exist - set the first one as active
                     const firstProject = projects[0];
                     if (firstProject) {
-                        console.log("Active project not found, setting first project as active:", firstProject.name);
                         setCurrentProject(firstProject);
                         localStorage.setItem(ACTIVE_PROJECT_KEY, firstProject.id);
                     }
@@ -101,13 +92,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 // No active project but projects exist, set the first one as active
                 const firstProject = projects[0];
                 if (firstProject) {
-                    console.log("No active project, setting first project as active:", firstProject.name);
                     setCurrentProject(firstProject);
                     localStorage.setItem(ACTIVE_PROJECT_KEY, firstProject.id);
                 }
             } else {
                 // No projects available - clear current project to show welcome screen
-                console.log("No projects available - clearing current project");
                 setCurrentProject(null);
                 localStorage.removeItem(ACTIVE_PROJECT_KEY);
             }
@@ -130,10 +119,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
             if (currentProject) {
                 localStorage.setItem(ACTIVE_PROJECT_KEY, currentProject.id);
-                console.log(`Saved current project to localStorage: ${currentProject.id}`);
             } else {
                 localStorage.removeItem(ACTIVE_PROJECT_KEY);
-                console.log(`Removed current project from localStorage`);
             }
         } catch (err) {
             console.error("Failed to save active project:", err);
@@ -141,15 +128,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
     }, [currentProject]);
 
-    // Debug effect to track currentProject changes
-    useEffect(() => {
-        console.log(`ProjectContext: currentProject changed to:`, currentProject?.id || 'null');
-    }, [currentProject]);
-
     // Effect to handle when all projects are deleted
     useEffect(() => {
         if (projects.length === 0 && currentProject) {
-            console.log("All projects deleted - clearing current project to show welcome screen");
             setCurrentProject(null);
             localStorage.removeItem(ACTIVE_PROJECT_KEY);
         }
@@ -178,12 +159,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, []);
 
     const switchProject = useCallback((projectId: string) => {
-        console.log(`Switching to project: ${projectId}`);
-        console.log(`Available projects:`, projects.map(p => ({ id: p.id, name: p.name })));
 
         const project = projects.find(p => p.id === projectId);
         if (project) {
-            console.log(`Found project: ${project.name}`);
 
             // Update projects list to mark the new project as active
             setProjects(prev =>
@@ -196,10 +174,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             // Set active project in localStorage immediately
             localStorage.setItem(ACTIVE_PROJECT_KEY, projectId);
-            console.log(`Set active project in localStorage: ${projectId}`);
 
             // Force AppContext to reload data for the new project
-            console.log(`Incrementing forceReload to trigger AppContext reload`);
             setForceReload(prev => prev + 1);
         } else {
             console.error(`Project not found: ${projectId}`);
@@ -209,8 +185,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const deleteProject = useCallback((projectId: string) => {
         const wasCurrentProject = currentProject?.id === projectId;
-
-        console.log(`Deleting project: ${projectId}, was current project: ${wasCurrentProject}`);
 
         setProjects(prev => prev.filter(p => p.id !== projectId));
 
@@ -227,12 +201,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         storageKeys.forEach(key => {
             const fullKey = `${projectId}_${key}`;
             localStorage.removeItem(fullKey);
-            console.log(`Cleared storage key: ${fullKey}`);
         });
 
         // If we deleted the current project, force reload when another project becomes active
         if (wasCurrentProject) {
-            console.log('Deleted current project, forcing reload');
             setForceReload(prev => prev + 1);
         }
     }, [currentProject]);
@@ -248,7 +220,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, []);
 
     const clearCurrentProject = useCallback(() => {
-        console.log("Clearing current project - returning to welcome screen");
         setCurrentProject(null);
         setError(null);
         localStorage.removeItem(ACTIVE_PROJECT_KEY);
