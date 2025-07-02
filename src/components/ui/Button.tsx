@@ -10,6 +10,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
     loading?: boolean;
     fullWidth?: boolean;
     children: React.ReactNode;
+    'data-testid'?: string;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -22,6 +23,7 @@ const Button: React.FC<ButtonProps> = ({
     children,
     className = '',
     disabled,
+    'data-testid': dataTestId,
     ...props
 }) => {
     const { isDarkMode } = useTheme();
@@ -73,6 +75,7 @@ const Button: React.FC<ButtonProps> = ({
         <button
             className={classes}
             disabled={disabled || loading}
+            data-testid={dataTestId}
             {...props}
         >
             {/* Shimmer effect for primary buttons */}

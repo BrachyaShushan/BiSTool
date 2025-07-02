@@ -20,6 +20,7 @@ export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectE
     helperText?: string;
     options: SelectOption[];
     placeholder?: string;
+    'data-testid'?: string;
 }
 
 const Select: React.FC<SelectProps> = ({
@@ -34,6 +35,7 @@ const Select: React.FC<SelectProps> = ({
     options,
     placeholder,
     className = '',
+    'data-testid': dataTestId,
     ...props
 }) => {
     const { isDarkMode } = useTheme();
@@ -97,6 +99,7 @@ const Select: React.FC<SelectProps> = ({
 
                 <select
                     className={selectClasses}
+                    data-testid={dataTestId}
                     {...props}
                 >
                     {placeholder && (

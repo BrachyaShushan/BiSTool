@@ -1,6 +1,7 @@
 import React from "react";
 import { useProjectContext, useProjectSwitch } from "../../context/ProjectContext";
 import { FiFolder, FiPlus, FiGlobe, FiCode, FiZap, FiDatabase, FiUsers, FiArrowRight, FiCheckCircle, FiPlay, FiBookOpen, FiShield, FiTrendingUp } from "react-icons/fi";
+import { Button, Input } from "../ui";
 
 interface WelcomeScreenProps {
     onCreateProject: () => void;
@@ -151,13 +152,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onCreateProject }) => {
                                         Projects help you organize your API tests and configurations separately.
                                         Each project has its own storage space and variables.
                                     </p>
-                                    <button
+                                    <Button
+                                        data-testid="project-create"
                                         onClick={handleCreateProjectClick}
                                         className="px-6 py-3 font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
                                     >
                                         <FiPlus className="inline mr-2 w-4 h-4" />
                                         Create Project
-                                    </button>
+                                    </Button>
                                 </div>
                             ) : (
                                 <div className="space-y-3">

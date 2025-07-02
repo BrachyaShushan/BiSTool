@@ -7,7 +7,16 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:mobile": "playwright test --project=mobile-chrome",
+    "test:e2e:chrome": "playwright test --project=chromium",
+    "test:e2e:localStorage": "playwright test tests/localStorage.test.ts",
+    "test:e2e:workflow": "playwright test tests/app-workflow.test.ts",
+    "test:e2e:mobile-only": "playwright test tests/mobile.test.ts",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.55.0",
@@ -27,6 +36,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.53.2",
     "@tailwindcss/forms": "^0.5.10",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",

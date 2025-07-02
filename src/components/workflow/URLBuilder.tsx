@@ -544,6 +544,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder={INPUT_PLACEHOLDERS.domain}
                 fullWidth
+                data-testid="urlbuilder-domain"
               />
             </div>
 
@@ -586,6 +587,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
               variant={BUTTON_VARIANTS.addSegment.variant}
               icon={FiPlus}
               onClick={handleSegmentAdd}
+              data-testid="urlbuilder-add-segment"
             >
               {LABELS.addSegment}
             </Button>
@@ -642,6 +644,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                           }}
                           placeholder={INPUT_PLACEHOLDERS.dynamicSegment}
                           fullWidth
+                          data-testid={`urlbuilder-segment-paramName-${index}`}
                         />
                       ) : (
                         <Input
@@ -657,6 +660,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                           }}
                           placeholder={INPUT_PLACEHOLDERS.staticSegment}
                           fullWidth
+                          data-testid={`urlbuilder-segment-value-${index}`}
                         />
                       )}
                     </div>
@@ -676,6 +680,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                         }}
                         placeholder={INPUT_PLACEHOLDERS.description}
                         fullWidth
+                        data-testid={`urlbuilder-segment-description-${index}`}
                       />
                     </div>
 
@@ -687,6 +692,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                         size={BUTTON_VARIANTS.removeSegment.size}
                         onClick={() => handleSegmentRemove(index)}
                         title="Remove segment"
+                        data-testid={`urlbuilder-remove-segment-${index}`}
                       />
                     </div>
                   </div>
@@ -717,6 +723,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                 variant={BUTTON_VARIANTS.copyUrl.variant}
                 onClick={copyToClipboard}
                 title="Copy URL"
+                data-testid="urlbuilder-copy-url"
               />
             </div>
           </div>
@@ -795,6 +802,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
             icon={FiArrowRight}
             iconPosition="right"
             onClick={handleSubmit}
+            data-testid="urlbuilder-submit"
           >
             Continue to Request Configuration
           </Button>

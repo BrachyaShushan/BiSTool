@@ -137,6 +137,7 @@ const Modal: React.FC<ModalProps> = ({
                 onClick={onClose}
                 className={`p-2 rounded-xl transition-all duration-200 group close-button hover:scale-110 ${'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                 title="Close modal"
+                data-testid="modal-close"
               >
                 <FiX size={20} className="transition-transform duration-200 group-hover:rotate-90" />
               </button>
@@ -158,6 +159,7 @@ const Modal: React.FC<ModalProps> = ({
                   <button
                     onClick={onClose}
                     className={`flex items-center px-6 py-3 space-x-2 text-sm font-semibold rounded-xl shadow-lg transition-all duration-200 transform group hover:scale-105 ${'text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 border border-gray-200 dark:border-gray-500'}`}
+                    data-testid="modal-close"
                   >
                     <FiXCircle className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
                     <span>{cancelButtonText}</span>

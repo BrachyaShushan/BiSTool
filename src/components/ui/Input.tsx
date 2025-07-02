@@ -12,6 +12,7 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
     fullWidth?: boolean;
     label?: string;
     helperText?: string;
+    'data-testid'?: string;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -25,6 +26,7 @@ const Input: React.FC<InputProps> = ({
     label,
     helperText,
     className = '',
+    'data-testid': dataTestId,
     ...props
 }) => {
     const { isDarkMode } = useTheme();
@@ -92,6 +94,7 @@ const Input: React.FC<InputProps> = ({
 
                 <input
                     className={inputClasses}
+                    data-testid={dataTestId}
                     {...props}
                 />
 

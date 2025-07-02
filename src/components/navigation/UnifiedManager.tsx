@@ -647,11 +647,12 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                     {/* Action Button */}
                                     <div className="flex items-center space-x-3">
                                         <button
-                                            onClick={() => handleSessionAction("new")}
+                                            onClick={() => handleSessionAction('new')}
                                             className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden ${isDarkMode
                                                 ? "text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25"
                                                 : "text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25"
                                                 }`}
+                                            data-testid="session-create"
                                         >
                                             <div className="absolute inset-0 bg-gradient-to-r transition-transform duration-700 transform -translate-x-full -skew-x-12 from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
                                             <FiPlus className="relative z-10 w-4 h-4" />
@@ -1091,6 +1092,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                                 : "text-gray-700 bg-gray-100 border border-gray-300 hover:bg-gray-200"
                                                 }`}
                                             title="Return to Welcome Screen"
+                                            data-testid="project-welcome"
                                         >
                                             <span className="text-sm">🏠</span>
                                             <span>Welcome</span>
@@ -1101,6 +1103,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                                 ? "text-white bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-700 hover:via-violet-700 hover:to-indigo-700 shadow-purple-500/25"
                                                 : "text-white bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-700 hover:via-violet-700 hover:to-indigo-700 shadow-purple-500/25"
                                                 }`}
+                                            data-testid="project-create"
                                         >
                                             <div className="absolute inset-0 bg-gradient-to-r transition-transform duration-700 transform -translate-x-full -skew-x-12 from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
                                             <FiPlus className="relative z-10 w-4 h-4" />
@@ -1166,6 +1169,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                                     ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-400"
                                                     : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
                                                     }`}
+                                                data-testid={`project-option-${project.name}`}
                                             >
                                                 <div className="flex justify-between items-center">
                                                     <div className="flex flex-1 items-center space-x-3 min-w-0">
@@ -1220,6 +1224,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                                                     : "text-gray-700 bg-gray-200 hover:bg-gray-300 hover:text-green-600"
                                                                     }`}
                                                                 title="Switch to Project"
+                                                                data-testid={`project-select-${project.name}`}
                                                             >
                                                                 <FiCheck className="w-4 h-4" />
                                                             </button>
@@ -1277,6 +1282,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                         ? "text-white bg-gray-700 border-gray-600"
                         : "text-gray-900 bg-white border-gray-300"
                         }`}
+                    data-testid="session-name-input"
                 />
                 <input
                     type="text"
@@ -1299,6 +1305,12 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                         {error}
                     </p>
                 )}
+                <button
+                    onClick={handleSessionModalSubmit}
+                    data-testid="session-save"
+                >
+                    Save
+                </button>
             </Modal>
 
             {/* Variable Modal */}
@@ -1381,6 +1393,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                 ? "text-white bg-gray-700 border-gray-600"
                                 : "text-gray-900 bg-white border-gray-300"
                                 }`}
+                            data-testid="project-name-input"
                         />
                     </div>
                     <div>
@@ -1396,9 +1409,16 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                                 ? "text-white bg-gray-700 border-gray-600"
                                 : "text-gray-900 bg-white border-gray-300"
                                 }`}
+                            data-testid="project-description-input"
                         />
                     </div>
                 </div>
+                <button
+                    onClick={handleCreateProject}
+                    data-testid="project-save"
+                >
+                    Save
+                </button>
             </Modal>
 
             {/* Edit Project Modal */}
