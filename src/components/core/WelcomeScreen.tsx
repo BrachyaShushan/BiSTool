@@ -1,20 +1,13 @@
 import React from "react";
 import { useProjectContext, useProjectSwitch } from "../../context/ProjectContext";
 import { FiFolder, FiPlus, FiGlobe, FiCode, FiZap, FiDatabase, FiUsers, FiArrowRight, FiCheckCircle, FiPlay, FiBookOpen, FiShield, FiTrendingUp } from "react-icons/fi";
-import { Button, Input } from "../ui";
+import { Button } from "../ui";
+import { useAppContext } from "../../context/AppContext";
 
-interface WelcomeScreenProps {
-    onCreateProject: () => void;
-}
-
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onCreateProject }) => {
+const WelcomeScreen: React.FC = () => {
     const { projects } = useProjectContext();
     const { switchToProject } = useProjectSwitch();
-
-    const handleCreateProjectClick = () => {
-        onCreateProject();
-    };
-
+    const { setShowUnifiedManager } = useAppContext();
     const handleProjectSwitch = async (projectId: string) => {
         const success = await switchToProject(projectId);
         if (success) {
@@ -22,6 +15,10 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onCreateProject }) => {
         } else {
             console.error(`WelcomeScreen: Project switch failed`);
         }
+    };
+
+    const handleCreateProjectClick = () => {
+        setShowUnifiedManager(true);
     };
 
     const features = [

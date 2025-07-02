@@ -35,7 +35,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const intendedActiveSessionId = useRef<string | null>(null);
-
+  const [showUnifiedManager, setShowUnifiedManager] = useState(false);
   // Get current project name from ProjectContext
   const projectContext = useProjectContext();
   const projectName = projectContext?.currentProject?.name || "Unnamed Project";
@@ -468,6 +468,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     updateSaveFrequency: saveManager.updateSaveFrequency,
     isUndoAvailable: saveManager.isUndoAvailable,
     isRedoAvailable: saveManager.isRedoAvailable,
+    setShowUnifiedManager,
+    showUnifiedManager,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

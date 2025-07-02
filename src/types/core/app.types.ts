@@ -266,6 +266,8 @@ export interface AppContextType {
   redo: () => void;
   isUndoAvailable: boolean;
   isRedoAvailable: boolean;
+  setShowUnifiedManager: (show: boolean) => void;
+  showUnifiedManager: boolean;
 }
 
 export interface ThemeContextType {
