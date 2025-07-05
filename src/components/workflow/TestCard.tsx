@@ -4,8 +4,6 @@ import {
     FiTrash2,
     FiPlay,
     FiCopy,
-    FiCheck,
-    FiX,
     FiTarget,
     FiCode,
     FiGlobe,
@@ -15,10 +13,19 @@ import {
     FiRefreshCw,
     FiEye,
     FiEyeOff,
-    FiClock,
     FiZap
 } from "react-icons/fi";
 import { TestCase } from "../../types/features/SavedManager";
+import {
+    Button,
+    Card,
+    Input,
+    IconButton,
+    TestStatusBadge,
+    Textarea,
+    Badge,
+    Toggle
+} from "../ui";
 
 interface TestCardProps {
     test: TestCase;
@@ -33,7 +40,7 @@ interface TestCardProps {
     generateAuthHeaders: () => Record<string, string>;
 }
 
-const statusCodeColor = {
+const statusCodeColors = {
     "200": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     "201": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     "204": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
@@ -210,10 +217,10 @@ const TestCard: React.FC<TestCardProps> = ({
     };
 
     return (
-        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+        <Card variant="elevated" padding="lg">
             {loading ? (
                 <div className="space-y-4 animate-pulse">
-                    <div className="flex justify-between items-center">
+                    <div className="flex items-center justify-between">
                         <div className="w-1/3 h-8 bg-gray-300 rounded dark:bg-gray-600"></div>
                         <div className="flex space-x-2">
                             <div className="w-20 h-8 bg-gray-300 rounded dark:bg-gray-600"></div>
@@ -227,103 +234,99 @@ const TestCard: React.FC<TestCardProps> = ({
             ) : (
                 <>
                     {/* Header Section */}
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center space-x-4">
-                            <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600">
                                 <FiTarget className="w-4 h-4 text-white" />
                             </div>
                             <div className="flex-1">
-                                <input
-                                    type="text"
+                                <Input
                                     value={test.name}
-                                    onChange={e => handleUpdateTest(test.id, { name: e.target.value })}
+                                    onChange={(e) => handleUpdateTest(test.id, { name: e.target.value })}
                                     placeholder="Enter test name..."
-                                    className="px-3 py-2 w-full text-lg font-semibold text-gray-900 bg-transparent rounded-lg border-none dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    variant="outlined"
+                                    className="text-lg font-semibold bg-transparent border-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
                         </div>
 
                         <div className="flex items-center space-x-2">
                             {/* Test Status Indicator */}
-                            <div className="flex items-center space-x-2">
-                                {test.lastResult === 'pass' && (
-                                    <div className="flex items-center px-3 py-1 space-x-1 text-green-800 bg-green-100 rounded-lg dark:bg-green-900 dark:text-green-200">
-                                        <FiCheck className="w-4 h-4" />
-                                        <span className="text-sm font-semibold">Passed</span>
-                                    </div>
-                                )}
-                                {test.lastResult === 'fail' && (
-                                    <div className="flex items-center px-3 py-1 space-x-1 text-red-800 bg-red-100 rounded-lg dark:bg-red-900 dark:text-red-200">
-                                        <FiX className="w-4 h-4" />
-                                        <span className="text-sm font-semibold">Failed</span>
-                                    </div>
-                                )}
-                                {!test.lastResult && (
-                                    <div className="flex items-center px-3 py-1 space-x-1 text-gray-600 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-gray-300">
-                                        <FiClock className="w-4 h-4" />
-                                        <span className="text-sm font-semibold">Not Run</span>
-                                    </div>
-                                )}
-                            </div>
+                            <TestStatusBadge
+                                status={loading ? 'running' : test.lastResult || null}
+                                size="md"
+                            />
 
                             {/* Action Buttons */}
-                            <button
+                            <IconButton
+                                variant="ghost"
+                                size="md"
+                                icon={showDetails ? FiEyeOff : FiEye}
                                 onClick={() => setShowDetails(!showDetails)}
-                                className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                                 title={showDetails ? "Hide details" : "Show details"}
-                            >
-                                {showDetails ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
-                            </button>
-                            <button
+                            />
+                            <IconButton
+                                variant="primary"
+                                size="md"
+                                icon={FiCopy}
                                 onClick={() => handleDuplicateTest(test.id)}
-                                className="p-2 text-blue-600 bg-blue-100 rounded-lg transition-all duration-200 group dark:bg-blue-900 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 hover:scale-105"
                                 title="Duplicate test"
-                            >
-                                <FiCopy className="w-4 h-4" />
-                            </button>
-                            <button
+                            />
+                            <IconButton
+                                variant="danger"
+                                size="md"
+                                icon={FiTrash2}
                                 onClick={() => handleRemoveTest(test.id)}
-                                className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 group dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 hover:scale-105"
                                 title="Remove test"
-                            >
-                                <FiTrash2 className="w-4 h-4" />
-                            </button>
+                            />
                         </div>
                     </div>
 
                     {/* Quick Info Row */}
                     <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3">
-                        <div className="flex items-center p-3 space-x-2 bg-gray-50 rounded-lg dark:bg-gray-700">
-                            <FiTarget className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Expected Status:</span>
-                            <input
-                                type="text"
-                                value={test.expectedStatus}
-                                onChange={e => handleUpdateTest(test.id, { expectedStatus: e.target.value })}
-                                className="px-2 py-1 text-sm text-gray-900 bg-white rounded border border-gray-300 transition-all duration-200 dark:text-white dark:bg-gray-600 dark:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                        </div>
+                        <Card variant="outlined" padding="sm">
+                            <div className="flex items-center space-x-2">
+                                <FiTarget className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Expected Status:</span>
+                                <Input
+                                    value={test.expectedStatus}
+                                    onChange={(e) => handleUpdateTest(test.id, { expectedStatus: e.target.value })}
+                                    size="sm"
+                                    className="w-20"
+                                />
+                            </div>
+                        </Card>
 
                         {test.serverStatusCode && test.serverStatusCode !== 0 && (
-                            <div className="flex items-center p-3 space-x-2 bg-gray-50 rounded-lg dark:bg-gray-700">
-                                <FiZap className="w-4 h-4 text-green-600 dark:text-green-400" />
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Server Status:</span>
-                                <span className={`px-2 py-1 text-sm font-semibold rounded ${statusCodeColor[test.serverStatusCode as unknown as keyof typeof statusCodeColor]}`}>
-                                    {test.serverStatusCode}
-                                </span>
-                            </div>
+                            <Card variant="outlined" padding="sm">
+                                <div className="flex items-center space-x-2">
+                                    <FiZap className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Server Status:</span>
+                                    <Badge
+                                        variant={test.serverStatusCode >= 200 && test.serverStatusCode < 300 ? 'success' : 'danger'}
+                                        size="sm"
+                                        className={statusCodeColors[test.serverStatusCode.toString() as keyof typeof statusCodeColors]}
+                                    >
+                                        {test.serverStatusCode}
+                                    </Badge>
+                                </div>
+                            </Card>
                         )}
 
-                        <div className="flex items-center p-3 space-x-2 bg-gray-50 rounded-lg dark:bg-gray-700">
-                            <FiShield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Use Token:</span>
-                            <input
-                                type="checkbox"
-                                checked={test.useToken !== false}
-                                onChange={e => handleUpdateTest(test.id, { useToken: e.target.checked })}
-                                className="w-4 h-4 text-purple-600 bg-white rounded border-gray-300 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-800"
-                            />
-                        </div>
+                        <Card variant="outlined" padding="sm">
+                            <div className="flex items-center space-x-2">
+                                <FiShield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                <Toggle
+                                    checked={test.useToken !== false}
+                                    onChange={(checked) => handleUpdateTest(test.id, { useToken: checked })}
+                                    label="Use Token"
+                                    colorScheme="purple"
+                                    size="sm"
+                                    position="left"
+                                    data-testid={`test-use-token-${test.id}`}
+                                />
+                            </div>
+                        </Card>
                     </div>
 
                     {/* Detailed Configuration */}
@@ -331,50 +334,48 @@ const TestCard: React.FC<TestCardProps> = ({
                         <div className="space-y-6">
                             {/* Path Variable Overrides */}
                             {urlData?.parsedSegments?.filter((seg: any) => seg.isDynamic).length > 0 && (
-                                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
+                                <Card variant="outlined" padding="md" className="border-blue-200 dark:border-blue-700">
                                     <div className="flex items-center mb-3 space-x-2">
                                         <FiGlobe className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                         <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300">Path Variable Overrides</h4>
                                     </div>
                                     <div className="grid gap-3 md:grid-cols-2">
                                         {urlData.parsedSegments.filter((seg: any) => seg.isDynamic).map((seg: any) => (
-                                            <div key={seg.paramName} className="space-y-1">
-                                                <label className="text-xs font-medium text-blue-600 dark:text-blue-400">{seg.paramName}</label>
-                                                <input
-                                                    type="text"
-                                                    value={test.pathOverrides?.[seg.paramName] ?? ''}
-                                                    onChange={e => handleUpdateTest(test.id, { pathOverrides: { ...test.pathOverrides, [seg.paramName]: e.target.value } })}
-                                                    placeholder={`Override ${seg.paramName}`}
-                                                    className="px-3 py-2 w-full text-sm text-gray-900 bg-white rounded-lg border border-blue-300 transition-all duration-200 dark:text-white dark:bg-gray-600 dark:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
+                                            <Input
+                                                key={seg.paramName}
+                                                label={seg.paramName}
+                                                value={test.pathOverrides?.[seg.paramName] ?? ''}
+                                                onChange={(e) => handleUpdateTest(test.id, { pathOverrides: { ...test.pathOverrides, [seg.paramName]: e.target.value } })}
+                                                placeholder={`Override ${seg.paramName}`}
+                                                size="sm"
+                                                fullWidth
+                                            />
                                         ))}
                                     </div>
-                                </div>
+                                </Card>
                             )}
 
                             {/* Query Param Overrides */}
                             {requestConfig?.queryParams?.length > 0 && (
-                                <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200 dark:from-green-900 dark:to-green-800 dark:border-green-700">
+                                <Card variant="outlined" padding="md" className="border-green-200 dark:border-green-700">
                                     <div className="flex items-center mb-3 space-x-2">
                                         <FiCode className="w-4 h-4 text-green-600 dark:text-green-400" />
                                         <h4 className="text-sm font-semibold text-green-700 dark:text-green-300">Query Parameter Overrides</h4>
                                     </div>
                                     <div className="grid gap-3 md:grid-cols-2">
                                         {requestConfig.queryParams.map((param: any) => (
-                                            <div key={param.key} className="space-y-1">
-                                                <label className="text-xs font-medium text-green-600 dark:text-green-400">{param.key}</label>
-                                                <input
-                                                    type="text"
-                                                    value={test.queryOverrides?.[param.key] ?? ''}
-                                                    onChange={e => handleUpdateTest(test.id, { queryOverrides: { ...test.queryOverrides, [param.key]: e.target.value } })}
-                                                    placeholder={`Override ${param.key}`}
-                                                    className="px-3 py-2 w-full text-sm text-gray-900 bg-white rounded-lg border border-green-300 transition-all duration-200 dark:text-white dark:bg-gray-600 dark:border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                                />
-                                            </div>
+                                            <Input
+                                                key={param.key}
+                                                label={param.key}
+                                                value={test.queryOverrides?.[param.key] ?? ''}
+                                                onChange={(e) => handleUpdateTest(test.id, { queryOverrides: { ...test.queryOverrides, [param.key]: e.target.value } })}
+                                                placeholder={`Override ${param.key}`}
+                                                size="sm"
+                                                fullWidth
+                                            />
                                         ))}
                                     </div>
-                                </div>
+                                </Card>
                             )}
 
                             {/* Body Override */}
@@ -390,7 +391,7 @@ const TestCard: React.FC<TestCardProps> = ({
 
                                 if (requestConfig?.bodyType === 'json') {
                                     return (
-                                        <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl border border-purple-200 dark:from-purple-900 dark:to-purple-800 dark:border-purple-700">
+                                        <Card variant="outlined" padding="md" className="border-purple-200 dark:border-purple-700">
                                             <div className="flex items-center mb-3 space-x-2">
                                                 <FiCode className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                                                 <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-300">Body Override (JSON)</h4>
@@ -410,39 +411,39 @@ const TestCard: React.FC<TestCardProps> = ({
                                                     automaticLayout: true,
                                                 }}
                                             />
-                                        </div>
+                                        </Card>
                                     );
                                 } else if (requestConfig?.bodyType === 'form') {
                                     return (
-                                        <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl border border-orange-200 dark:from-orange-900 dark:to-orange-800 dark:border-orange-700">
+                                        <Card variant="outlined" padding="md" className="border-orange-200 dark:border-orange-700">
                                             <div className="flex items-center mb-3 space-x-2">
                                                 <FiDatabase className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                                                 <h4 className="text-sm font-semibold text-orange-700 dark:text-orange-300">Body Override (Form Data)</h4>
                                             </div>
-                                            <textarea
+                                            <Textarea
                                                 value={test.bodyOverride ?? ''}
-                                                onChange={e => handleUpdateTest(test.id, { bodyOverride: e.target.value })}
+                                                onChange={(e) => handleUpdateTest(test.id, { bodyOverride: e.target.value })}
                                                 placeholder="Enter form data (e.g., key1=value1&key2=value2)"
-                                                className="px-3 py-2 w-full text-sm text-gray-900 bg-white rounded-lg border border-orange-300 transition-all duration-200 resize-none dark:text-white dark:bg-gray-600 dark:border-orange-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                                                 rows={3}
+                                                fullWidth
                                             />
-                                        </div>
+                                        </Card>
                                     );
                                 } else if (requestConfig?.bodyType === 'text') {
                                     return (
-                                        <div className="p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-xl border border-indigo-200 dark:from-indigo-900 dark:to-indigo-800 dark:border-indigo-700">
+                                        <Card variant="outlined" padding="md" className="border-indigo-200 dark:border-indigo-700">
                                             <div className="flex items-center mb-3 space-x-2">
                                                 <FiFileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                                                 <h4 className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">Body Override (Text)</h4>
                                             </div>
-                                            <textarea
+                                            <Textarea
                                                 value={test.bodyOverride ?? ''}
-                                                onChange={e => handleUpdateTest(test.id, { bodyOverride: e.target.value })}
+                                                onChange={(e) => handleUpdateTest(test.id, { bodyOverride: e.target.value })}
                                                 placeholder="Enter text body"
-                                                className="px-3 py-2 w-full text-sm text-gray-900 bg-white rounded-lg border border-indigo-300 transition-all duration-200 resize-none dark:text-white dark:bg-gray-600 dark:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                                 rows={3}
+                                                fullWidth
                                             />
-                                        </div>
+                                        </Card>
                                     );
                                 }
 
@@ -450,21 +451,21 @@ const TestCard: React.FC<TestCardProps> = ({
                             })()}
 
                             {/* Expected Response */}
-                            <div className="p-4 bg-gradient-to-r from-teal-50 to-teal-100 rounded-xl border border-teal-200 dark:from-teal-900 dark:to-teal-800 dark:border-teal-700">
-                                <div className="flex justify-between items-center mb-3">
+                            <Card variant="outlined" padding="md" className="border-teal-200 dark:border-teal-700">
+                                <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center space-x-2">
                                         <FiTarget className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                                         <h4 className="text-sm font-semibold text-teal-700 dark:text-teal-300">Expected Response (JSON)</h4>
                                     </div>
-                                    <label className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={!!test.expectedPartialResponse}
-                                            onChange={e => handleUpdateTest(test.id, { expectedPartialResponse: e.target.checked ? test.expectedResponse ?? '' : '' })}
-                                            className="w-4 h-4 text-teal-600 bg-white rounded border-teal-300 focus:ring-teal-500 dark:border-teal-600 dark:bg-gray-800"
-                                        />
-                                        <span className="text-xs font-medium text-teal-600 dark:text-teal-400">Partial match</span>
-                                    </label>
+                                    <Toggle
+                                        checked={!!test.expectedPartialResponse}
+                                        onChange={(checked) => handleUpdateTest(test.id, { expectedPartialResponse: checked ? test.expectedResponse ?? '' : '' })}
+                                        label="Partial match"
+                                        colorScheme="teal"
+                                        size="sm"
+                                        position="left"
+                                        data-testid={`test-partial-match-${test.id}`}
+                                    />
                                 </div>
                                 <Editor
                                     height="120px"
@@ -481,11 +482,11 @@ const TestCard: React.FC<TestCardProps> = ({
                                         automaticLayout: true,
                                     }}
                                 />
-                            </div>
+                            </Card>
 
                             {/* Server Response */}
                             {test.serverResponse && test.serverResponse.trim() !== '' && (
-                                <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <Card variant="outlined" padding="md" className="border-gray-200 dark:border-gray-600">
                                     <div className="flex items-center mb-3 space-x-2">
                                         <FiCode className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                                         <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Server Response (JSON)</h4>
@@ -511,49 +512,34 @@ const TestCard: React.FC<TestCardProps> = ({
                                             automaticLayout: true,
                                         }}
                                     />
-                                </div>
+                                </Card>
                             )}
                         </div>
                     )}
 
                     {/* Run Button */}
-                    <div className="flex justify-between items-center pt-4 mt-6 border-t border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center justify-between pt-4 mt-6 border-t border-gray-200 dark:border-gray-600">
                         <div className="flex items-center space-x-2">
-                            {test.lastResult === 'pass' && (
-                                <div className="flex items-center px-3 py-1 space-x-1 text-green-800 bg-green-100 rounded-lg dark:bg-green-900 dark:text-green-200">
-                                    <FiCheck className="w-4 h-4" />
-                                    <span className="text-sm font-semibold">Test Passed</span>
-                                </div>
-                            )}
-                            {test.lastResult === 'fail' && (
-                                <div className="flex items-center px-3 py-1 space-x-1 text-red-800 bg-red-100 rounded-lg dark:bg-red-900 dark:text-red-200">
-                                    <FiX className="w-4 h-4" />
-                                    <span className="text-sm font-semibold">Test Failed</span>
-                                </div>
-                            )}
+                            <TestStatusBadge
+                                status={loading ? 'running' : test.lastResult || null}
+                                size="md"
+                            />
                         </div>
 
-                        <button
+                        <Button
+                            variant="primary"
+                            size="lg"
+                            icon={loading ? FiRefreshCw : FiPlay}
                             onClick={handleRunTest}
                             disabled={loading}
-                            className="flex items-center px-6 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                            loading={loading}
                         >
-                            {loading ? (
-                                <>
-                                    <FiRefreshCw className="w-4 h-4 animate-spin" />
-                                    <span>Running...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <FiPlay className="w-4 h-4" />
-                                    <span>Run Test</span>
-                                </>
-                            )}
-                        </button>
+                            {loading ? 'Running...' : 'Run Test'}
+                        </Button>
                     </div>
                 </>
             )}
-        </div>
+        </Card>
     );
 };
 

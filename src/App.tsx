@@ -12,6 +12,10 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { AIConfigProvider } from "./context/AIConfigContext";
 import { Section } from "./types/core";
 import Header from "./layout/Header";
+import MonacoEditorDemo from "./components/ui/MonacoEditorDemo";
+import UIComponentsDemo from "./components/ui/UIComponentsDemo";
+import UnifiedManager from "./components/navigation/UnifiedManager";
+
 const AppContent: React.FC = () => {
     const {
         yamlOutput,
@@ -21,6 +25,8 @@ const AppContent: React.FC = () => {
         handleYAMLGenerated,
         setActiveSection,
         handleImportSessions,
+        showUnifiedManager,
+        setShowUnifiedManager,
     } = useAppContext();
     const { currentProject } = useProjectContext();
 
@@ -36,6 +42,10 @@ const AppContent: React.FC = () => {
                 return <AITestGenerator yamlData={yamlOutput} />;
             case "import":
                 return <SessionImporter onImportSessions={handleImportSessions} />;
+            case "monaco":
+                return <MonacoEditorDemo />;
+            case "ui":
+                return <UIComponentsDemo />;
             case "url":
             default:
                 return <URLBuilder onSubmit={handleURLBuilderSubmit} />;
@@ -49,6 +59,8 @@ const AppContent: React.FC = () => {
         { id: "yaml", label: "YAML Generator" },
         { id: "ai", label: "AI Test Generator" },
         { id: "import", label: "Session Importer" },
+        { id: "monaco", label: "Monaco Editor" },
+        { id: "ui", label: "UI Components" },
     ];
 
 
@@ -66,7 +78,7 @@ const AppContent: React.FC = () => {
                         <Header />
 
                         {/* Navigation */}
-                        <nav className="overflow-hidden mt-6 bg-white rounded-xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+                        <nav className="mt-6 overflow-hidden bg-white border border-gray-200 shadow-lg rounded-xl dark:bg-gray-800 dark:border-gray-700">
                             <div className="flex p-2 space-x-1">
                                 {sections.map((section) => (
                                     <button
@@ -89,7 +101,14 @@ const AppContent: React.FC = () => {
                 </div >
             )}
 
-
+            {/* Unified Manager Modal - Available globally */}
+            {showUnifiedManager && (
+                <UnifiedManager
+                    isOpen={showUnifiedManager}
+                    onClose={() => setShowUnifiedManager(false)}
+                    initialTab="projects"
+                />
+            )}
         </>
     );
 };

@@ -11,6 +11,7 @@ const VariablesManager = () => {
         deleteGlobalVariable,
         updateGlobalVariable,
         updateSessionVariable,
+        deleteSessionVariable,
     } = useAppContext();
     const [showVariableModal, setShowVariableModal] = useState<boolean>(false);
     const [modalType, setModalType] = useState<ModalType | null>(null);
@@ -20,13 +21,23 @@ const VariablesManager = () => {
         isGlobal: false,
     });
     const valueInputRef = useRef<HTMLInputElement>(null);
+    const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
     const handleCopy = (text: string, key: string) => {
         navigator.clipboard.writeText(text);
         setCopiedKey(key);
-        setTimeout(() => setCopiedKey(null), 2000);
+
+        // Clear any existing timeout
+        if (copyTimeoutRef.current) {
+            clearTimeout(copyTimeoutRef.current);
+        }
+
+        // Set new timeout with reference
+        copyTimeoutRef.current = setTimeout(() => {
+            setCopiedKey(null);
+        }, 2000);
     };
 
     // Variable management functions
@@ -66,6 +77,9 @@ const VariablesManager = () => {
     // Cleanup on unmount
     useEffect(() => {
         return () => {
+            if (copyTimeoutRef.current) {
+                clearTimeout(copyTimeoutRef.current);
+            }
             setShowVariableModal(false);
         };
     }, []);
@@ -270,6 +284,13 @@ const VariablesManager = () => {
                                                     title="Edit variable"
                                                 >
                                                     <FiEdit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteSessionVariable(key)}
+                                                    className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 hover:scale-105"
+                                                    title="Delete variable"
+                                                >
+                                                    <FiTrash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </div>

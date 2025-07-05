@@ -6,7 +6,7 @@ export interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave?: () => void;
-    title: string;
+    title: string | React.ReactNode;
     children: React.ReactNode;
     showSaveButton?: boolean;
     showCancelButton?: boolean;
@@ -102,7 +102,7 @@ const Modal: React.FC<ModalProps> = ({
 
     return (
         <div
-            className="flex fixed inset-0 z-50 justify-center items-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{
                 background: 'rgba(0, 0, 0, 0.6)',
                 backdropFilter: 'blur(8px)',
@@ -121,24 +121,30 @@ const Modal: React.FC<ModalProps> = ({
                 }}
             >
                 {/* Modal Container */}
-                <div className="overflow-hidden relative bg-white rounded-2xl border border-gray-200 shadow-2xl dark:bg-gray-800 dark:border-gray-700">
+                <div className="relative overflow-hidden bg-white border border-gray-200 shadow-2xl rounded-2xl dark:bg-gray-800 dark:border-gray-700">
                     {/* Header Section */}
-                    <div className="relative px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
+                    <div className="relative px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
                         {/* Background Pattern */}
                         <div className="absolute inset-0 opacity-5 dark:opacity-10">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 rounded-full translate-x-12 -translate-y-12"></div>
-                            <div className="absolute bottom-0 left-0 w-16 h-16 bg-indigo-500 rounded-full -translate-x-8 translate-y-8"></div>
+                            <div className="absolute top-0 right-0 w-24 h-24 translate-x-12 -translate-y-12 bg-blue-500 rounded-full"></div>
+                            <div className="absolute bottom-0 left-0 w-16 h-16 -translate-x-8 translate-y-8 bg-indigo-500 rounded-full"></div>
                         </div>
 
-                        <div className="flex relative justify-between items-center">
-                            <div className="flex items-center space-x-3">
-                                <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg">
-                                    <div className="w-4 h-4 bg-white rounded-sm"></div>
+                        <div className="relative flex items-center justify-between">
+                            {typeof title === 'string' ? (
+                                <div className="flex items-center space-x-3">
+                                    <div className="p-2 rounded-lg shadow-lg bg-gradient-to-br from-blue-500 to-indigo-600">
+                                        <div className="w-4 h-4 bg-white rounded-sm"></div>
+                                    </div>
+                                    <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-800 to-gray-600 dark:from-white dark:to-gray-300">
+                                        {title}
+                                    </h2>
                                 </div>
-                                <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-800 to-gray-600 dark:from-white dark:to-gray-300">
+                            ) : (
+                                <div className="flex items-center">
                                     {title}
-                                </h2>
-                            </div>
+                                </div>
+                            )}
 
                             {/* Using IconButton component */}
                             <IconButton
@@ -161,7 +167,7 @@ const Modal: React.FC<ModalProps> = ({
 
                     {/* Footer Section */}
                     {(showSaveButton || showCancelButton) && (
-                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 dark:bg-gray-700/50 dark:border-gray-600">
+                        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 dark:bg-gray-700/50 dark:border-gray-600">
                             <div className="flex justify-end space-x-3">
                                 {showCancelButton && (
                                     <Button

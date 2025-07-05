@@ -19,6 +19,14 @@ import {
 } from "react-icons/fi";
 import { v4 as uuidv4 } from 'uuid';
 import TestCard from "./TestCard";
+import {
+    Button,
+    Card,
+    StatCard,
+    TestStatusBadge,
+    SectionHeader,
+    Badge
+} from "../ui";
 
 const TestManager: React.FC = () => {
     const {
@@ -46,7 +54,6 @@ const TestManager: React.FC = () => {
 
     // Add Test handler
     const handleAddTest = () => {
-
         if (!activeSession) {
             console.error('No active session available');
             return;
@@ -279,43 +286,27 @@ const TestManager: React.FC = () => {
         return (
             <div className="space-y-6">
                 {/* Header Section */}
-                <div className="overflow-hidden relative p-6 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl border border-emerald-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
-                    {/* Background Pattern */}
-                    <div className="absolute inset-0 opacity-5 dark:opacity-10">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500 rounded-full translate-x-16 -translate-y-16"></div>
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-teal-500 rounded-full -translate-x-12 translate-y-12"></div>
-                    </div>
-
-                    <div className="flex relative justify-between items-center">
-                        <div className="flex items-center space-x-4">
-                            <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg">
-                                <FiCode className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400">
-                                    Test Manager
-                                </h2>
-                                <p className="text-gray-600 dark:text-gray-300">
-                                    Create, configure, and execute comprehensive API tests
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center space-x-3">
-                            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl dark:from-blue-900 dark:to-blue-800">
-                                <FiTarget className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Test Suite</span>
-                            </div>
-                            <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-green-100 to-green-200 rounded-xl dark:from-green-900 dark:to-green-800">
-                                <FiActivity className="w-4 h-4 text-green-600 dark:text-green-400" />
-                                <span className="text-sm font-semibold text-green-700 dark:text-green-300">Live Testing</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <SectionHeader
+                    icon={FiCode}
+                    title="Test Manager"
+                    description="Create, configure, and execute comprehensive API tests"
+                    color="emerald"
+                    badges={
+                        <>
+                            <Badge variant="primary" size="sm">
+                                <FiTarget className="w-3 h-3 mr-1" />
+                                Test Suite
+                            </Badge>
+                            <Badge variant="success" size="sm">
+                                <FiActivity className="w-3 h-3 mr-1" />
+                                Live Testing
+                            </Badge>
+                        </>
+                    }
+                />
 
                 {/* No Active Session Warning */}
-                <div className="p-8 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+                <Card variant="elevated" padding="xl">
                     <div className="text-center">
                         <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
                             <FiCode className="w-8 h-8 text-white" />
@@ -328,24 +319,21 @@ const TestManager: React.FC = () => {
                             Please go to the Session Manager to create a session first.
                         </p>
                         <div className="flex justify-center space-x-4">
-                            <button
+                            <Button
+                                variant="secondary"
                                 onClick={() => window.history.back()}
-                                className="px-6 py-3 font-medium text-gray-700 bg-white border border-gray-300 rounded-lg transition-all duration-200 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
                             >
                                 Go Back
-                            </button>
-                            <button
-                                onClick={() => {
-                                    // Open session manager modal on sessions tab
-                                    openSessionManager({ tab: 'sessions' });
-                                }}
-                                className="px-6 py-3 font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg"
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={() => openSessionManager({ tab: 'sessions' })}
                             >
                                 Create Session
-                            </button>
+                            </Button>
                         </div>
                     </div>
-                </div>
+                </Card>
             </div>
         );
     }
@@ -353,75 +341,55 @@ const TestManager: React.FC = () => {
     return (
         <div className="space-y-6">
             {/* Header Section */}
-            <div className="overflow-hidden relative p-6 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 rounded-2xl border border-emerald-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
-                {/* Background Pattern */}
-                <div className="absolute inset-0 opacity-5 dark:opacity-10">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500 rounded-full translate-x-16 -translate-y-16"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-teal-500 rounded-full -translate-x-12 translate-y-12"></div>
-                </div>
-
-                <div className="flex relative justify-between items-center">
-                    <div className="flex items-center space-x-4">
-                        <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg">
-                            <FiCode className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400">
-                                Test Manager
-                            </h2>
-                            <p className="text-gray-600 dark:text-gray-300">
-                                Create, configure, and execute comprehensive API tests
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                        <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl dark:from-blue-900 dark:to-blue-800">
-                            <FiTarget className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Test Suite</span>
-                        </div>
-                        <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-green-100 to-green-200 rounded-xl dark:from-green-900 dark:to-green-800">
-                            <FiActivity className="w-4 h-4 text-green-600 dark:text-green-400" />
-                            <span className="text-sm font-semibold text-green-700 dark:text-green-300">Live Testing</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <SectionHeader
+                icon={FiCode}
+                title="Test Manager"
+                description="Create, configure, and execute comprehensive API tests"
+                color="emerald"
+                badges={
+                    <>
+                        <Badge variant="primary" size="sm">
+                            <FiTarget className="w-3 h-3 mr-1" />
+                            Test Suite
+                        </Badge>
+                        <Badge variant="success" size="sm">
+                            <FiActivity className="w-3 h-3 mr-1" />
+                            Live Testing
+                        </Badge>
+                    </>
+                }
+            />
 
             {/* Test Statistics Dashboard */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
-                    <div className="flex items-center space-x-2">
-                        <FiBarChart className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Total Tests</span>
-                    </div>
-                    <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">{testStats.total}</p>
-                </div>
-                <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200 dark:from-green-900 dark:to-green-800 dark:border-green-700">
-                    <div className="flex items-center space-x-2">
-                        <FiCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
-                        <span className="text-sm font-semibold text-green-700 dark:text-green-300">Passed</span>
-                    </div>
-                    <p className="text-2xl font-bold text-green-800 dark:text-green-200">{testStats.passed}</p>
-                </div>
-                <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200 dark:from-red-900 dark:to-red-800 dark:border-red-700">
-                    <div className="flex items-center space-x-2">
-                        <FiX className="w-4 h-4 text-red-600 dark:text-red-400" />
-                        <span className="text-sm font-semibold text-red-700 dark:text-red-300">Failed</span>
-                    </div>
-                    <p className="text-2xl font-bold text-red-800 dark:text-red-200">{testStats.failed}</p>
-                </div>
-                <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl border border-orange-200 dark:from-orange-900 dark:to-orange-800 dark:border-orange-700">
-                    <div className="flex items-center space-x-2">
-                        <FiTrendingUp className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                        <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">Success Rate</span>
-                    </div>
-                    <p className="text-2xl font-bold text-orange-800 dark:text-orange-200">{testStats.successRate}%</p>
-                </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <StatCard
+                    icon={FiBarChart}
+                    label="Total Tests"
+                    value={testStats.total}
+                    color="blue"
+                />
+                <StatCard
+                    icon={FiCheck}
+                    label="Passed"
+                    value={testStats.passed}
+                    color="green"
+                />
+                <StatCard
+                    icon={FiX}
+                    label="Failed"
+                    value={testStats.failed}
+                    color="red"
+                />
+                <StatCard
+                    icon={FiTrendingUp}
+                    label="Success Rate"
+                    value={`${testStats.successRate}%`}
+                    color="orange"
+                />
             </div>
 
             {/* Action Buttons */}
-            <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl border border-gray-200 shadow-lg dark:from-gray-800 dark:to-gray-900 dark:border-gray-700">
+            <Card variant="gradient" padding="lg">
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center space-x-3">
                         <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg">
@@ -434,69 +402,57 @@ const TestManager: React.FC = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                         {testStats.notRun > 0 && (
-                            <div className="flex items-center px-3 py-1 space-x-1 text-amber-800 bg-amber-100 rounded-lg dark:bg-amber-900 dark:text-amber-200">
-                                <FiClock className="w-4 h-4" />
-                                <span className="text-sm font-semibold">{testStats.notRun} tests not run</span>
-                            </div>
+                            <Badge variant="warning" size="sm">
+                                <FiClock className="w-3 h-3 mr-1" />
+                                {testStats.notRun} tests not run
+                            </Badge>
                         )}
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    {/* Add Test Button */}
-                    <button
+                    <Button
+                        variant="success"
+                        size="lg"
+                        icon={FiPlus}
                         onClick={handleAddTest}
-                        className="flex overflow-hidden relative flex-col items-center p-4 space-y-2 font-semibold text-white bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl border transition-all duration-300 group hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/25 border-emerald-400/20"
+                        fullWidth
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent transition-transform duration-700 -translate-x-full via-white/10 group-hover:translate-x-full"></div>
-                        <div className="relative p-2 rounded-lg backdrop-blur-sm bg-white/20">
-                            <FiPlus className="w-6 h-6" />
-                        </div>
-                        <span className="relative text-sm font-semibold">Add Test</span>
-                        <span className="relative text-xs opacity-80">Create new test case</span>
-                    </button>
+                        Add Test
+                    </Button>
 
-                    {/* Run All Tests Button */}
-                    <button
+                    <Button
+                        variant="primary"
+                        size="lg"
+                        icon={FiPlay}
                         onClick={handleRunAll}
                         disabled={tests.length === 0}
-                        className="flex overflow-hidden relative flex-col items-center p-4 space-y-2 font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl border transition-all duration-300 group hover:scale-105 hover:shadow-xl hover:shadow-blue-500/25 border-blue-400/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+                        fullWidth
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent transition-transform duration-700 -translate-x-full via-white/10 group-hover:translate-x-full"></div>
-                        <div className="relative p-2 rounded-lg backdrop-blur-sm bg-white/20">
-                            <FiPlay className="w-6 h-6" />
-                        </div>
-                        <span className="relative text-sm font-semibold">Run All Tests</span>
-                        <span className="relative text-xs opacity-80">{tests.length} test{tests.length !== 1 ? 's' : ''}</span>
-                    </button>
+                        Run All Tests
+                    </Button>
 
-                    {/* Run Failed Tests Button */}
-                    <button
+                    <Button
+                        variant="danger"
+                        size="lg"
+                        icon={FiRefreshCw}
                         onClick={handleRunAllFailed}
                         disabled={testStats.failed === 0}
-                        className="flex overflow-hidden relative flex-col items-center p-4 space-y-2 font-semibold text-white bg-gradient-to-br from-red-500 to-red-600 rounded-xl border transition-all duration-300 group hover:scale-105 hover:shadow-xl hover:shadow-red-500/25 border-red-400/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+                        fullWidth
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent transition-transform duration-700 -translate-x-full via-white/10 group-hover:translate-x-full"></div>
-                        <div className="relative p-2 rounded-lg backdrop-blur-sm bg-white/20">
-                            <FiRefreshCw className="w-6 h-6" />
-                        </div>
-                        <span className="relative text-sm font-semibold">Run Failed Tests</span>
-                        <span className="relative text-xs opacity-80">{testStats.failed} failed</span>
-                    </button>
+                        Run Failed Tests
+                    </Button>
 
-                    {/* Continue to YAML Button */}
-                    <button
+                    <Button
+                        variant="outline"
+                        size="lg"
+                        icon={FiArrowRight}
                         onClick={handleContinue}
                         disabled={testStats.failed > 0 && tests.length > 0}
-                        className="flex overflow-hidden relative flex-col items-center p-4 space-y-2 font-semibold text-white bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl border transition-all duration-300 group hover:scale-105 hover:shadow-xl hover:shadow-purple-500/25 border-purple-400/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+                        fullWidth
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent transition-transform duration-700 -translate-x-full via-white/10 group-hover:translate-x-full"></div>
-                        <div className="relative p-2 rounded-lg backdrop-blur-sm bg-white/20">
-                            <FiArrowRight className="w-6 h-6" />
-                        </div>
-                        <span className="relative text-sm font-semibold">Continue</span>
-                        <span className="relative text-xs opacity-80">Generate YAML</span>
-                    </button>
+                        Continue to YAML
+                    </Button>
                 </div>
 
                 {/* Quick Stats Row */}
@@ -504,16 +460,16 @@ const TestManager: React.FC = () => {
                     <div className="flex justify-between items-center text-sm">
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-gray-600 dark:text-gray-400">Passed: {testStats.passed}</span>
+                                <TestStatusBadge status="pass" size="sm" />
+                                <span className="text-gray-600 dark:text-gray-400">: {testStats.passed}</span>
                             </div>
                             <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                <span className="text-gray-600 dark:text-gray-400">Failed: {testStats.failed}</span>
+                                <TestStatusBadge status="fail" size="sm" />
+                                <span className="text-gray-600 dark:text-gray-400">: {testStats.failed}</span>
                             </div>
                             <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                                <span className="text-gray-600 dark:text-gray-400">Not Run: {testStats.notRun}</span>
+                                <TestStatusBadge status={null} size="sm" />
+                                <span className="text-gray-600 dark:text-gray-400">: {testStats.notRun}</span>
                             </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -524,23 +480,25 @@ const TestManager: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </Card>
 
             {/* Test Cards */}
             <div className="space-y-4">
                 {tests.length === 0 ? (
-                    <div className="p-8 text-center bg-gray-50 rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600 dark:bg-gray-700">
-                        <FiCode className="mx-auto mb-4 w-12 h-12 text-gray-400" />
-                        <p className="mb-4 text-gray-500 dark:text-gray-400">No tests created yet</p>
-                        <p className="mb-4 text-sm text-gray-400 dark:text-gray-500">Create your first test to start validating your API endpoints</p>
-                        <button
-                            onClick={handleAddTest}
-                            className="flex items-center px-4 py-2 mx-auto space-x-2 font-semibold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
-                        >
-                            <FiPlus className="w-4 h-4" />
-                            <span>Create First Test</span>
-                        </button>
-                    </div>
+                    <Card variant="outlined" padding="xl">
+                        <div className="text-center">
+                            <FiCode className="mx-auto mb-4 w-12 h-12 text-gray-400" />
+                            <p className="mb-4 text-gray-500 dark:text-gray-400">No tests created yet</p>
+                            <p className="mb-4 text-sm text-gray-400 dark:text-gray-500">Create your first test to start validating your API endpoints</p>
+                            <Button
+                                variant="primary"
+                                icon={FiPlus}
+                                onClick={handleAddTest}
+                            >
+                                Create First Test
+                            </Button>
+                        </div>
+                    </Card>
                 ) : (
                     tests.map((test: TestCase) => (
                         <TestCard

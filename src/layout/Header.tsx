@@ -5,7 +5,6 @@ import { useProjectContext } from "../context/ProjectContext";
 import { FiFolder, FiSettings, FiKey, FiMenu, FiX, FiSun, FiMoon, FiArrowRight } from "react-icons/fi";
 import SaveControls from "../components/ui/SaveControls";
 import { useCallback, useEffect, useState } from "react";
-import UnifiedManager from "../components/navigation/UnifiedManager";
 
 const Header = () => {
     const {
@@ -282,14 +281,6 @@ const Header = () => {
                     </div>
                 </div>
             </header>
-            {/* Unified Manager Modal - Only render when modal is open */}
-            {showUnifiedManager && (
-                <UnifiedManager
-                    isOpen={showUnifiedManager}
-                    onClose={() => setShowUnifiedManager(false)}
-                    initialTab={sessionManagerTab}
-                />
-            )}
         </>
     )
 }

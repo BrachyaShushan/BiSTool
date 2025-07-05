@@ -90,26 +90,26 @@ const WelcomeScreen: React.FC = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
             {/* Background Pattern */}
-            <div className="overflow-hidden absolute inset-0">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full opacity-5 translate-x-48 -translate-y-48"></div>
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500 rounded-full opacity-5 -translate-x-48 translate-y-48"></div>
-                <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-purple-500 rounded-full opacity-5 -translate-x-32 -translate-y-32"></div>
+            <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute top-0 right-0 translate-x-48 -translate-y-48 bg-blue-500 rounded-full w-96 h-96 opacity-5"></div>
+                <div className="absolute bottom-0 left-0 -translate-x-48 translate-y-48 bg-indigo-500 rounded-full w-96 h-96 opacity-5"></div>
+                <div className="absolute w-64 h-64 -translate-x-32 -translate-y-32 bg-purple-500 rounded-full top-1/2 left-1/2 opacity-5"></div>
             </div>
 
             <div className="relative px-4 py-12 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 {/* Header Section */}
                 <div className="mb-16 text-center">
-                    <div className="inline-flex justify-center items-center p-4 mb-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-2xl">
+                    <div className="inline-flex items-center justify-center p-4 mb-6 shadow-2xl bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl">
                         <FiFolder className="w-12 h-12 text-white" />
                     </div>
                     <h1 className="mb-4 text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
                         Welcome to BiSTool
                     </h1>
-                    <p className="mx-auto mb-8 max-w-3xl text-xl text-gray-600 dark:text-gray-300">
+                    <p className="max-w-3xl mx-auto mb-8 text-xl text-gray-600 dark:text-gray-300">
                         Your comprehensive API testing and YAML generation platform.
                         Build, test, and manage your API workflows with ease.
                     </p>
-                    <div className="flex justify-center items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center justify-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                         <div className="flex items-center space-x-2">
                             <FiCheckCircle className="w-4 h-4 text-green-500" />
                             <span>Professional API Testing</span>
@@ -131,17 +131,17 @@ const WelcomeScreen: React.FC = () => {
                 <div className="grid gap-8 lg:grid-cols-3">
                     {/* Left Column - Project Management */}
                     <div className="lg:col-span-1">
-                        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-xl dark:bg-gray-800 dark:border-gray-700">
+                        <div className="p-6 bg-white border border-gray-200 shadow-xl rounded-2xl dark:bg-gray-800 dark:border-gray-700">
                             <div className="flex items-center mb-6 space-x-3">
-                                <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
+                                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600">
                                     <FiFolder className="w-5 h-5 text-white" />
                                 </div>
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Project Management</h2>
                             </div>
 
                             {projects.length === 0 ? (
-                                <div className="p-6 text-center rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600">
-                                    <FiPlus className="mx-auto mb-4 w-12 h-12 text-gray-400" />
+                                <div className="p-6 text-center border-2 border-gray-300 border-dashed rounded-xl dark:border-gray-600">
+                                    <FiPlus className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                                     <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
                                         Create Your First Project
                                     </h3>
@@ -152,9 +152,9 @@ const WelcomeScreen: React.FC = () => {
                                     <Button
                                         data-testid="project-create"
                                         onClick={handleCreateProjectClick}
-                                        className="px-6 py-3 font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+                                        className="px-6 py-3 font-semibold text-white transition-all duration-200 shadow-lg bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl group hover:scale-105 hover:shadow-xl"
                                     >
-                                        <FiPlus className="inline mr-2 w-4 h-4" />
+                                        <FiPlus className="inline w-4 h-4 mr-2" />
                                         Create Project
                                     </Button>
                                 </div>
@@ -166,10 +166,10 @@ const WelcomeScreen: React.FC = () => {
                                     {projects.map((project: any) => (
                                         <button
                                             key={project.id}
-                                            className="p-4 w-full bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer group dark:bg-gray-700 dark:border-gray-600 hover:scale-105 hover:shadow-md"
+                                            className="w-full p-4 transition-all duration-200 border border-gray-200 cursor-pointer bg-gray-50 rounded-xl group dark:bg-gray-700 dark:border-gray-600 hover:scale-105 hover:shadow-md"
                                             onClick={() => handleProjectSwitch(project.id)}
                                         >
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex items-center justify-between">
                                                 <div className="flex items-center space-x-3">
                                                     <FiFolder className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                                     <div className="text-left">
@@ -195,9 +195,9 @@ const WelcomeScreen: React.FC = () => {
                     {/* Right Column - Features and Guide */}
                     <div className="space-y-8 lg:col-span-2">
                         {/* Getting Started Guide */}
-                        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-xl dark:bg-gray-800 dark:border-gray-700">
+                        <div className="p-6 bg-white border border-gray-200 shadow-xl rounded-2xl dark:bg-gray-800 dark:border-gray-700">
                             <div className="flex items-center mb-6 space-x-3">
-                                <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
+                                <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-green-600">
                                     <FiPlay className="w-5 h-5 text-white" />
                                 </div>
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Getting Started Guide</h2>
@@ -206,7 +206,7 @@ const WelcomeScreen: React.FC = () => {
                             <div className="grid gap-4 md:grid-cols-2">
                                 {steps.map((step) => (
                                     <div key={step.number} className="flex items-start p-4 space-x-4 bg-gray-50 rounded-xl dark:bg-gray-700">
-                                        <div className="flex flex-shrink-0 justify-center items-center w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
+                                        <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600">
                                             <span className="text-sm font-bold text-white">{step.number}</span>
                                         </div>
                                         <div>
@@ -223,9 +223,9 @@ const WelcomeScreen: React.FC = () => {
                         </div>
 
                         {/* Features Grid */}
-                        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-xl dark:bg-gray-800 dark:border-gray-700">
+                        <div className="p-6 bg-white border border-gray-200 shadow-xl rounded-2xl dark:bg-gray-800 dark:border-gray-700">
                             <div className="flex items-center mb-6 space-x-3">
-                                <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+                                <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600">
                                     <FiTrendingUp className="w-5 h-5 text-white" />
                                 </div>
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Key Features</h2>
@@ -233,7 +233,7 @@ const WelcomeScreen: React.FC = () => {
 
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 {features.map((feature) => (
-                                    <div key={feature.title} className="p-4 bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 group dark:bg-gray-700 dark:border-gray-600 hover:scale-105 hover:shadow-md">
+                                    <div key={feature.title} className="p-4 transition-all duration-200 border border-gray-200 bg-gray-50 rounded-xl group dark:bg-gray-700 dark:border-gray-600 hover:scale-105 hover:shadow-md">
                                         <div className={`inline-flex items-center justify-center p-3 mb-3 bg-gradient-to-br ${feature.color} rounded-lg`}>
                                             <feature.icon className="w-6 h-6 text-white" />
                                         </div>
@@ -249,9 +249,9 @@ const WelcomeScreen: React.FC = () => {
                         </div>
 
                         {/* Quick Tips */}
-                        <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 dark:from-blue-900/20 dark:to-indigo-900/20 dark:border-blue-700">
+                        <div className="p-6 border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl dark:from-blue-900/20 dark:to-indigo-900/20 dark:border-blue-700">
                             <div className="flex items-center mb-4 space-x-3">
-                                <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
+                                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600">
                                     <FiBookOpen className="w-5 h-5 text-white" />
                                 </div>
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Quick Tips</h2>
@@ -259,25 +259,25 @@ const WelcomeScreen: React.FC = () => {
 
                             <div className="grid gap-3 md:grid-cols-2">
                                 <div className="flex items-start space-x-3">
-                                    <div className="flex-shrink-0 mt-2 w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <div className="flex-shrink-0 w-2 h-2 mt-2 bg-blue-500 rounded-full"></div>
                                     <p className="text-sm text-gray-700 dark:text-gray-300">
                                         Use variables to make your URLs and requests dynamic
                                     </p>
                                 </div>
                                 <div className="flex items-start space-x-3">
-                                    <div className="flex-shrink-0 mt-2 w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <div className="flex-shrink-0 w-2 h-2 mt-2 bg-blue-500 rounded-full"></div>
                                     <p className="text-sm text-gray-700 dark:text-gray-300">
                                         Organize sessions by categories for better management
                                     </p>
                                 </div>
                                 <div className="flex items-start space-x-3">
-                                    <div className="flex-shrink-0 mt-2 w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <div className="flex-shrink-0 w-2 h-2 mt-2 bg-blue-500 rounded-full"></div>
                                     <p className="text-sm text-gray-700 dark:text-gray-300">
                                         Generate YAML configurations for CI/CD integration
                                     </p>
                                 </div>
                                 <div className="flex items-start space-x-3">
-                                    <div className="flex-shrink-0 mt-2 w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <div className="flex-shrink-0 w-2 h-2 mt-2 bg-blue-500 rounded-full"></div>
                                     <p className="text-sm text-gray-700 dark:text-gray-300">
                                         Leverage AI to create comprehensive test scenarios
                                     </p>

@@ -33,6 +33,7 @@ import {
 } from 'react-icons/fi';
 import { aiProviderRegistry, validateAIConfig } from "../../utils/aiProviders";
 import AIConfigPanel from "./AIConfigPanel";
+import { Toggle } from "../ui";
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
@@ -54,6 +55,26 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const editorRef = useRef<EditorRef["current"]>(null);
   const [lastYamlData, setLastYamlData] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<{ id: string; name: string } | null>(null);
+
+  // Refs for timeout management to prevent memory leaks
+  const copyPromptTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const copyCodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (copyPromptTimeoutRef.current) {
+        clearTimeout(copyPromptTimeoutRef.current);
+      }
+      if (copyCodeTimeoutRef.current) {
+        clearTimeout(copyCodeTimeoutRef.current);
+      }
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Check if there's an active session
   if (!activeSession) {
@@ -691,7 +712,16 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
     try {
       await navigator.clipboard.writeText(promptGenerator());
       setCopiedPrompt(true);
-      setTimeout(() => setCopiedPrompt(false), 2000);
+
+      // Clear any existing timeout
+      if (copyPromptTimeoutRef.current) {
+        clearTimeout(copyPromptTimeoutRef.current);
+      }
+
+      // Set new timeout with reference
+      copyPromptTimeoutRef.current = setTimeout(() => {
+        setCopiedPrompt(false);
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy prompt:', err);
     }
@@ -701,7 +731,16 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
     try {
       await navigator.clipboard.writeText(generatedTest);
       setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 2000);
+
+      // Clear any existing timeout
+      if (copyCodeTimeoutRef.current) {
+        clearTimeout(copyCodeTimeoutRef.current);
+      }
+
+      // Set new timeout with reference
+      copyCodeTimeoutRef.current = setTimeout(() => {
+        setCopiedCode(false);
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy code:', err);
     }
@@ -730,8 +769,16 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
         lastGenerated: new Date().toISOString(),
       };
       await handleSaveSession(activeSession.name, updatedSession);
-      // Show success feedback
-      setTimeout(() => setIsSaving(false), 2000);
+
+      // Clear any existing timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // Show success feedback with timeout reference
+      saveTimeoutRef.current = setTimeout(() => {
+        setIsSaving(false);
+      }, 2000);
     } catch (error) {
       setError('Failed to save generated test');
       setIsSaving(false);
@@ -957,23 +1004,15 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
             {/* Options Row */}
             <div className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
               <div className="flex items-center space-x-4">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="use-oop"
-                    checked={useOOP}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setUseOOP(e.target.checked)
-                    }
-                    className="w-4 h-4 text-indigo-600 bg-white rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800"
-                  />
-                  <label
-                    htmlFor="use-oop"
-                    className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >
-                    Use Object-Oriented Programming style
-                  </label>
-                </div>
+                <Toggle
+                  checked={useOOP}
+                  onChange={(checked) => setUseOOP(checked)}
+                  label="Use Object-Oriented Programming style"
+                  colorScheme="purple"
+                  size="md"
+                  position="left"
+                  data-testid="use-oop-toggle"
+                />
               </div>
 
               <button

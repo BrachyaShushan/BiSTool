@@ -1,6 +1,14 @@
 import { ExtendedSession } from "../features/SavedManager";
 
-export type SectionId = "url" | "request" | "tests" | "yaml" | "ai" | "import";
+export type SectionId =
+  | "url"
+  | "request"
+  | "tests"
+  | "yaml"
+  | "ai"
+  | "import"
+  | "monaco"
+  | "ui";
 
 export interface Section {
   id: SectionId;

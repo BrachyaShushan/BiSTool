@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import {
     FiPlus,
     FiSave,
-    FiTrash2,
-    FiEdit2,
     FiDownload,
-    FiCheck,
-    FiAlertCircle,
     FiSettings,
-    FiSearch
+    FiCode,
+    FiCopy,
+    FiPlay,
+    FiUsers,
+    FiActivity,
+    FiClock,
+    FiTrendingUp
 } from 'react-icons/fi';
 import {
     Button,
@@ -20,13 +22,19 @@ import {
     IconButton,
     StatusIndicator,
     Divider,
-    Tooltip
+    Tooltip,
+    StatCard,
+    TestStatusBadge,
+    SectionHeader,
+    MonacoEditor
 } from './index';
 
 const UIComponentsDemo: React.FC = () => {
     const [inputValue, setInputValue] = useState('');
     const [selectValue, setSelectValue] = useState('');
     const [textareaValue, setTextareaValue] = useState('');
+    const [code, setCode] = useState('{\n  "name": "BiSTool",\n  "version": "1.0.0",\n  "description": "Professional API testing tool"\n}');
+    const [jsCode, setJsCode] = useState('// Welcome to Monaco Editor\nconst greeting = "Hello, World!";\n\nfunction sayHello() {\n    console.log(greeting);\n    return greeting;\n}\n\nsayHello();');
 
     const selectOptions = [
         { value: 'option1', label: 'Option 1' },
@@ -35,281 +43,357 @@ const UIComponentsDemo: React.FC = () => {
     ];
 
     return (
-        <div className="p-8 space-y-8">
-            <div className="text-center">
-                <h1 className="text-3xl font-bold mb-4">UI Components Library</h1>
+        <div className="p-6 space-y-8">
+            <div className="space-y-4">
+                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">UI Components Demo</h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                    A comprehensive collection of reusable UI components for BiSTool
+                    Showcase of all available UI components in the BiSTool design system.
                 </p>
             </div>
 
-            {/* Buttons Section */}
-            <Card variant="elevated" padding="lg">
-                <h2 className="text-2xl font-bold mb-6">Buttons</h2>
+            <Divider />
 
-                <div className="space-y-6">
-                    {/* Button Variants */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Variants</h3>
-                        <div className="flex flex-wrap gap-4">
-                            <Button variant="primary" icon={FiPlus}>Primary</Button>
-                            <Button variant="secondary" icon={FiSave}>Secondary</Button>
-                            <Button variant="success" icon={FiCheck}>Success</Button>
-                            <Button variant="danger" icon={FiTrash2}>Danger</Button>
-                            <Button variant="warning" icon={FiAlertCircle}>Warning</Button>
-                            <Button variant="ghost" icon={FiSettings}>Ghost</Button>
-                            <Button variant="outline" icon={FiDownload}>Outline</Button>
-                        </div>
-                    </div>
+            {/* Monaco Editor Section */}
+            <div className="space-y-6">
+                <SectionHeader
+                    title="Monaco Editor"
+                    description="Professional code editor with expert-level design"
+                    icon={FiCode}
+                />
 
-                    {/* Button Sizes */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Sizes</h3>
-                        <div className="flex flex-wrap items-center gap-4">
-                            <Button size="sm" variant="primary" icon={FiPlus}>Small</Button>
-                            <Button size="md" variant="primary" icon={FiPlus}>Medium</Button>
-                            <Button size="lg" variant="primary" icon={FiPlus}>Large</Button>
-                            <Button size="xl" variant="primary" icon={FiPlus}>Extra Large</Button>
-                        </div>
-                    </div>
-
-                    {/* Button States */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">States</h3>
-                        <div className="flex flex-wrap gap-4">
-                            <Button variant="primary" loading>Loading</Button>
-                            <Button variant="primary" disabled>Disabled</Button>
-                            <Button variant="primary" icon={FiPlus} iconPosition="right">Icon Right</Button>
-                        </div>
-                    </div>
-                </div>
-            </Card>
-
-            {/* Form Components Section */}
-            <Card variant="elevated" padding="lg">
-                <h2 className="text-2xl font-bold mb-6">Form Components</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Input Examples */}
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                    {/* JSON Editor */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Inputs</h3>
-                        <Input
-                            label="Default Input"
-                            placeholder="Enter text..."
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            fullWidth
-                        />
-                        <Input
-                            label="Input with Icon"
-                            icon={FiSearch}
-                            placeholder="Search..."
-                            fullWidth
-                        />
-                        <Input
-                            label="Error Input"
-                            error
-                            helperText="This field is required"
-                            fullWidth
-                        />
-                        <Input
-                            label="Success Input"
-                            success
-                            helperText="Great job!"
-                            fullWidth
-                        />
-                    </div>
-
-                    {/* Select Examples */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Selects</h3>
-                        <Select
-                            label="Default Select"
-                            options={selectOptions}
-                            value={selectValue}
-                            onChange={(e) => setSelectValue(e.target.value)}
-                            placeholder="Choose an option"
-                            fullWidth
-                        />
-                        <Select
-                            label="Select with Icon"
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">JSON Editor</h3>
+                        <MonacoEditor
+                            value={code}
+                            onChange={(value) => setCode(value || '')}
+                            language="json"
+                            height="300px"
+                            variant="elevated"
+                            colorTheme="bistool"
+                            label="Configuration File"
+                            description="Edit your API configuration"
                             icon={FiSettings}
-                            options={selectOptions}
-                            placeholder="Choose an option"
-                            fullWidth
+                            filename="config.json"
+                            allowCopy={true}
+                            allowDownload={true}
+                            allowFullscreen={true}
+                            allowSettings={true}
+                        />
+                    </div>
+
+                    {/* JavaScript Editor */}
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">JavaScript Editor</h3>
+                        <MonacoEditor
+                            value={jsCode}
+                            onChange={(value) => setJsCode(value || '')}
+                            language="javascript"
+                            height="300px"
+                            variant="outlined"
+                            colorTheme="ocean"
+                            label="Script Editor"
+                            description="Write and test your JavaScript code"
+                            icon={FiPlay}
+                            filename="script.js"
+                            customActions={[
+                                {
+                                    icon: FiPlay,
+                                    label: 'Run Code',
+                                    action: () => alert('Running code...'),
+                                    variant: 'primary'
+                                },
+                                {
+                                    icon: FiSave,
+                                    label: 'Save',
+                                    action: () => alert('Saving code...'),
+                                    variant: 'default'
+                                }
+                            ]}
                         />
                     </div>
                 </div>
 
-                {/* Textarea */}
-                <div className="mt-6">
-                    <h3 className="text-lg font-semibold mb-4">Textarea</h3>
-                    <Textarea
-                        label="Description"
-                        placeholder="Enter description..."
-                        value={textareaValue}
-                        onChange={(e) => setTextareaValue(e.target.value)}
-                        rows={4}
-                        fullWidth
+                {/* Theme Showcase */}
+                <div className="col-span-1 space-y-4 xl:col-span-2">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Color Themes Showcase</h3>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <MonacoEditor
+                            value='{\n  "theme": "sunset",\n  "vibrant": true\n}'
+                            language="json"
+                            height="160px"
+                            variant="compact"
+                            colorTheme="sunset"
+                            label="Sunset Theme"
+                            showToolbar={false}
+                            readOnly={true}
+                            fontSize={12}
+                        />
+                        <MonacoEditor
+                            value='{\n  "theme": "forest",\n  "natural": true\n}'
+                            language="json"
+                            height="160px"
+                            variant="compact"
+                            colorTheme="forest"
+                            label="Forest Theme"
+                            showToolbar={false}
+                            readOnly={true}
+                            fontSize={12}
+                        />
+                        <MonacoEditor
+                            value='{\n  "theme": "professional",\n  "clean": true\n}'
+                            language="json"
+                            height="160px"
+                            variant="compact"
+                            colorTheme="professional"
+                            label="Professional Theme"
+                            showToolbar={false}
+                            readOnly={true}
+                            fontSize={12}
+                        />
+                    </div>
+                </div>
+
+                {/* Loading State Demo */}
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Loading State</h3>
+                    <MonacoEditor
+                        value=""
+                        language="json"
+                        height="200px"
+                        variant="default"
+                        colorTheme="minimal"
+                        label="Loading Example"
+                        description="Shows premium loading animation"
+                        loading={true}
                     />
                 </div>
-            </Card>
+            </div>
 
-            {/* Cards Section */}
-            <Card variant="elevated" padding="lg">
-                <h2 className="text-2xl font-bold mb-6">Cards</h2>
+            <Divider />
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card variant="default" padding="md" interactive>
-                        <h3 className="font-semibold mb-2">Default Card</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                            This is a default card with interactive hover effects.
-                        </p>
-                    </Card>
-
-                    <Card variant="elevated" padding="md">
-                        <h3 className="font-semibold mb-2">Elevated Card</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                            This card has enhanced shadows and elevation.
-                        </p>
-                    </Card>
-
-                    <Card variant="outlined" padding="md">
-                        <h3 className="font-semibold mb-2">Outlined Card</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                            This card uses an outlined border style.
-                        </p>
-                    </Card>
-                </div>
-            </Card>
-
-            {/* Badges and Status Section */}
-            <Card variant="elevated" padding="lg">
-                <h2 className="text-2xl font-bold mb-6">Badges & Status</h2>
+            {/* Rest of existing components... */}
+            <div className="space-y-6">
+                <SectionHeader
+                    title="Buttons"
+                    description="Various button styles and states"
+                    icon={FiCode}
+                />
 
                 <div className="space-y-6">
-                    {/* Badges */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Badges</h3>
+                    {/* Solid Buttons */}
+                    <div className="space-y-2">
+                        <h4 className="font-medium text-gray-700 text-md dark:text-gray-300">Solid Buttons</h4>
                         <div className="flex flex-wrap gap-4">
-                            <Badge variant="default">Default</Badge>
-                            <Badge variant="primary">Primary</Badge>
-                            <Badge variant="success">Success</Badge>
-                            <Badge variant="warning">Warning</Badge>
-                            <Badge variant="danger">Danger</Badge>
-                            <Badge variant="info">Info</Badge>
-                            <Badge variant="success" dot>With Dot</Badge>
+                            <Button variant="primary">Primary</Button>
+                            <Button variant="secondary">Secondary</Button>
+                            <Button variant="success">Success</Button>
+                            <Button variant="danger">Danger</Button>
+                            <Button variant="warning">Warning</Button>
+                            <Button variant="ghost">Ghost</Button>
+                            <Button variant="outline">Outline</Button>
                         </div>
                     </div>
 
-                    {/* Status Indicators */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Status Indicators</h3>
-                        <div className="flex flex-wrap gap-6">
-                            <StatusIndicator status="idle" showLabel />
-                            <StatusIndicator status="loading" showLabel />
-                            <StatusIndicator status="success" showLabel />
-                            <StatusIndicator status="error" showLabel />
-                            <StatusIndicator status="warning" showLabel />
-                            <StatusIndicator status="info" showLabel />
+                    {/* Gradient Buttons */}
+                    <div className="space-y-2">
+                        <h4 className="font-medium text-gray-700 text-md dark:text-gray-300">Gradient Buttons</h4>
+                        <div className="flex flex-wrap gap-4">
+                            <Button variant="primary" gradient>Primary</Button>
+                            <Button variant="secondary" gradient>Secondary</Button>
+                            <Button variant="success" gradient>Success</Button>
+                            <Button variant="danger" gradient>Danger</Button>
+                            <Button variant="warning" gradient>Warning</Button>
+                            <Button variant="ghost" gradient>Ghost</Button>
+                            <Button variant="outline" gradient>Outline</Button>
+                        </div>
+                    </div>
+
+                    {/* States */}
+                    <div className="space-y-2">
+                        <h4 className="font-medium text-gray-700 text-md dark:text-gray-300">Button States</h4>
+                        <div className="flex flex-wrap gap-4">
+                            <Button variant="primary" gradient loading>Loading...</Button>
+                            <Button variant="success" gradient disabled>Disabled</Button>
+                            <Button variant="danger" gradient icon={FiPlus}>With Icon</Button>
+                            <Button variant="warning" gradient icon={FiSave} iconPosition="right">Icon Right</Button>
                         </div>
                     </div>
                 </div>
-            </Card>
+            </div>
 
-            {/* Icon Buttons Section */}
-            <Card variant="elevated" padding="lg">
-                <h2 className="text-2xl font-bold mb-6">Icon Buttons</h2>
+            <Divider />
 
-                <div className="space-y-6">
-                    {/* Icon Button Variants */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Variants</h3>
-                        <div className="flex flex-wrap gap-4">
-                            <IconButton variant="default" icon={FiEdit2} />
-                            <IconButton variant="primary" icon={FiPlus} />
-                            <IconButton variant="success" icon={FiCheck} />
-                            <IconButton variant="danger" icon={FiTrash2} />
-                            <IconButton variant="warning" icon={FiAlertCircle} />
-                            <IconButton variant="outline" icon={FiDownload} />
-                        </div>
+            <div className="space-y-6">
+                <SectionHeader
+                    title="Cards"
+                    description="Container components with different variants"
+                    icon={FiCopy}
+                />
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <Card variant="default">
+                        <h3 className="mb-2 text-lg font-semibold">Default Card</h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                            This is a default card with standard styling.
+                        </p>
+                    </Card>
+
+                    <Card variant="elevated">
+                        <h3 className="mb-2 text-lg font-semibold">Elevated Card</h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                            This card has enhanced shadow and elevation.
+                        </p>
+                    </Card>
+
+                    <Card variant="outlined">
+                        <h3 className="mb-2 text-lg font-semibold">Outlined Card</h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                            This card features a prominent border.
+                        </p>
+                    </Card>
+                </div>
+            </div>
+
+            <Divider />
+
+            <div className="space-y-6">
+                <SectionHeader
+                    title="Form Controls"
+                    description="Input fields and form elements"
+                    icon={FiCode}
+                />
+
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div className="space-y-4">
+                        <Input
+                            label="Text Input"
+                            placeholder="Enter some text..."
+                            value={inputValue}
+                            icon={FiCode}
+                            onChange={(e) => setInputValue(e.target.value)}
+                        />
+
+                        <Select
+                            label="Select Option"
+                            placeholder="Choose an option..."
+                            options={selectOptions}
+                            value={selectValue}
+                            onChange={(value: any) => setSelectValue(value.value)}
+                        />
                     </div>
 
-                    {/* Icon Button Sizes */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Sizes</h3>
-                        <div className="flex flex-wrap items-center gap-4">
-                            <IconButton size="sm" variant="primary" icon={FiSettings} />
-                            <IconButton size="md" variant="primary" icon={FiSettings} />
-                            <IconButton size="lg" variant="primary" icon={FiSettings} />
-                            <IconButton size="xl" variant="primary" icon={FiSettings} />
-                        </div>
-                    </div>
-
-                    {/* Icon Button States */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">States</h3>
-                        <div className="flex flex-wrap gap-4">
-                            <IconButton variant="primary" icon={FiSettings} loading />
-                            <IconButton variant="primary" icon={FiSettings} disabled />
-                        </div>
+                    <div className="space-y-4">
+                        <Textarea
+                            label="Textarea"
+                            placeholder="Enter multiple lines of text..."
+                            rows={4}
+                            value={textareaValue}
+                            onChange={(e) => setTextareaValue(e.target.value)}
+                        />
                     </div>
                 </div>
-            </Card>
+            </div>
 
-            {/* Tooltips Section */}
-            <Card variant="elevated" padding="lg">
-                <h2 className="text-2xl font-bold mb-6">Tooltips</h2>
+            <Divider />
+
+            <div className="space-y-6">
+                <SectionHeader
+                    title="Status & Indicators"
+                    description="Visual feedback components"
+                    icon={FiPlay}
+                />
+
+                <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                        <Badge variant="default">Default</Badge>
+                        <Badge variant="primary">Primary</Badge>
+                        <Badge variant="success">Success</Badge>
+                        <Badge variant="warning">Warning</Badge>
+                        <Badge variant="danger">Danger</Badge>
+                        <Badge variant="info">Info</Badge>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4">
+                        <StatusIndicator status="success" label="Success" />
+                        <StatusIndicator status="error" label="Error" />
+                        <StatusIndicator status="loading" label="Loading" />
+                        <StatusIndicator status="warning" label="Warning" />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        <TestStatusBadge status="pass" />
+                        <TestStatusBadge status="fail" />
+                        <TestStatusBadge status="pending" />
+                        <TestStatusBadge status="running" />
+                    </div>
+                </div>
+            </div>
+
+            <Divider />
+
+            <div className="space-y-6">
+                <SectionHeader
+                    title="Interactive Elements"
+                    description="Buttons and interactive components"
+                    icon={FiSettings}
+                />
 
                 <div className="flex flex-wrap gap-4">
-                    <Tooltip content="This is a tooltip on top" position="top">
-                        <Button variant="outline">Hover me (Top)</Button>
+                    <Tooltip content="Copy to clipboard">
+                        <IconButton icon={FiCopy} variant="ghost" size="sm" />
                     </Tooltip>
 
-                    <Tooltip content="This is a tooltip on bottom" position="bottom">
-                        <Button variant="outline">Hover me (Bottom)</Button>
+                    <Tooltip content="Download file">
+                        <IconButton icon={FiDownload} variant="outline" size="md" />
                     </Tooltip>
 
-                    <Tooltip content="This is a tooltip on left" position="left">
-                        <Button variant="outline">Hover me (Left)</Button>
-                    </Tooltip>
-
-                    <Tooltip content="This is a tooltip on right" position="right">
-                        <Button variant="outline">Hover me (Right)</Button>
+                    <Tooltip content="Settings">
+                        <IconButton icon={FiSettings} variant="primary" size="lg" />
                     </Tooltip>
                 </div>
-            </Card>
+            </div>
 
-            {/* Dividers Section */}
-            <Card variant="elevated" padding="lg">
-                <h2 className="text-2xl font-bold mb-6">Dividers</h2>
+            <Divider />
 
-                <div className="space-y-6">
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Horizontal Dividers</h3>
-                        <div className="space-y-4">
-                            <p>Content above</p>
-                            <Divider variant="solid" />
-                            <p>Content below</p>
-                            <Divider variant="dashed" />
-                            <p>More content</p>
-                            <Divider variant="dotted" />
-                            <p>Final content</p>
-                        </div>
-                    </div>
+            <div className="space-y-6">
+                <SectionHeader
+                    title="Statistics Cards"
+                    description="Data visualization components"
+                    icon={FiPlay}
+                />
 
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Vertical Dividers</h3>
-                        <div className="flex items-center space-x-4">
-                            <span>Left</span>
-                            <Divider orientation="vertical" variant="solid" />
-                            <span>Center</span>
-                            <Divider orientation="vertical" variant="dashed" />
-                            <span>Right</span>
-                        </div>
-                    </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <StatCard
+                        icon={FiTrendingUp}
+                        label="Total Tests"
+                        value="1,234"
+                        color="blue"
+                    />
+
+                    <StatCard
+                        icon={FiActivity}
+                        label="Success Rate"
+                        value="94.5%"
+                        color="green"
+                    />
+
+                    <StatCard
+                        icon={FiClock}
+                        label="Response Time"
+                        value="245ms"
+                        color="orange"
+                    />
+
+                    <StatCard
+                        icon={FiUsers}
+                        label="Active Users"
+                        value="5,678"
+                        color="purple"
+                    />
                 </div>
-            </Card>
+            </div>
         </div>
     );
 };

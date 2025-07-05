@@ -105,9 +105,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
           intendedActiveSessionId.current
         );
 
-        // Load shared variables
+        // Load shared variables - but prioritize session variables if active session exists
         const loadedSharedVariables = variableStorage.loadSharedVariables();
-        appState.setSharedVariables(loadedSharedVariables);
+        if (loadedActiveSession && loadedActiveSession.sharedVariables) {
+          // Convert session variables to Variable[] format and use them instead
+          const sessionVariables = Object.entries(loadedActiveSession.sharedVariables || {}).map(
+            ([key, value]) => ({ key, value })
+          );
+          appState.setSharedVariables(sessionVariables);
+        } else {
+          // No active session, use stored shared variables
+          appState.setSharedVariables(loadedSharedVariables);
+        }
 
         // Load token config
         const loadedTokenConfig = tokenConfigStorage.loadTokenConfig();
@@ -123,7 +132,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
             savedSessions: loadedSavedSessions
           },
           variables: {
-            shared: loadedSharedVariables,
+            shared: loadedActiveSession && loadedActiveSession.sharedVariables
+              ? Object.entries(loadedActiveSession.sharedVariables || {}).map(([key, value]) => ({ key, value }))
+              : loadedSharedVariables,
             global: loadedAppState.globalVariables
           }
         });
@@ -186,8 +197,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         ([key, value]) => ({ key, value })
       );
       appState.setSharedVariables(sessionVariables);
+
+      // Explicitly save the session variables to storage to ensure persistence
+      variableStorage.saveSharedVariables(sessionVariables);
     }
-  }, [sessionManager.activeSession?.id, hasLoaded]);
+  }, [sessionManager.activeSession?.id, hasLoaded, variableStorage]);
 
   // Variable management functions
   const updateSharedVariable = useCallback((key: string, value: string) => {
@@ -228,8 +242,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         },
       };
       sessionManager.loadSession(updatedSession);
+
+      // Also update shared variables to keep them in sync
+      const sessionVariables = Object.entries(updatedSession.sharedVariables || {}).map(
+        ([key, value]) => ({ key, value })
+      );
+      appState.setSharedVariables(sessionVariables);
     }
-  }, [sessionManager.activeSession]);
+  }, [sessionManager.activeSession, appState]);
 
   const deleteSessionVariable = useCallback((key: string) => {
     if (sessionManager.activeSession) {
@@ -241,8 +261,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
       };
       delete updatedSession.sharedVariables[key];
       sessionManager.loadSession(updatedSession);
+
+      // Also update shared variables to keep them in sync
+      const sessionVariables = Object.entries(updatedSession.sharedVariables || {}).map(
+        ([key, value]) => ({ key, value })
+      );
+      appState.setSharedVariables(sessionVariables);
     }
-  }, [sessionManager.activeSession]);
+  }, [sessionManager.activeSession, appState]);
 
   // Session management functions
   const handleNewSession = useCallback(() => {
@@ -266,7 +292,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
       ([key, value]) => ({ key, value })
     );
     appState.setSharedVariables(sessionVariables);
-  }, []);
+
+    // Explicitly save the session variables to storage to ensure persistence
+    variableStorage.saveSharedVariables(sessionVariables);
+  }, [variableStorage]);
 
   const handleSaveSession = useCallback((name: string, sessionData?: ExtendedSession) => {
     if (sessionData) {

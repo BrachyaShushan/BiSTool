@@ -179,8 +179,8 @@ const SessionsManager = () => {
                 }`}
             onClick={() => handleLoadSession(session)}
         >
-            <div className="flex justify-between items-start">
-                <div className="flex flex-1 items-start space-x-3 min-w-0">
+            <div className="flex items-start justify-between">
+                <div className="flex items-start flex-1 min-w-0 space-x-3">
                     {/* Method Icon */}
                     <div className={`p-2 rounded-lg flex-shrink-0 ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color || "text-gray-600 dark:text-gray-400"
                         }`}>
@@ -243,7 +243,7 @@ const SessionsManager = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-shrink-0 items-center ml-4 space-x-1">
+                <div className="flex items-center flex-shrink-0 ml-4 space-x-1">
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -362,18 +362,18 @@ const SessionsManager = () => {
         <>
             <div className="space-y-6">
                 {/* Professional Header Section */}
-                <div className="overflow-hidden relative p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl border border-blue-100 shadow-sm dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                <div className="relative p-6 overflow-hidden border border-blue-100 shadow-sm bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                     {/* Background Pattern */}
                     <div className="absolute inset-0 opacity-5 dark:opacity-10">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full translate-x-16 -translate-y-16"></div>
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 rounded-full -translate-x-12 translate-y-12"></div>
+                        <div className="absolute top-0 right-0 w-32 h-32 translate-x-16 -translate-y-16 bg-blue-500 rounded-full"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 -translate-x-12 translate-y-12 bg-indigo-500 rounded-full"></div>
                     </div>
 
-                    <div className="flex relative flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         {/* Title and Stats */}
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-3">
-                                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                                <div className="p-3 shadow-lg bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
                                     <FiFolder className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
@@ -409,7 +409,7 @@ const SessionsManager = () => {
                                 className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25`}
                                 data-testid="session-create"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r transition-transform duration-700 transform -translate-x-full -skew-x-12 from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
+                                <div className="absolute inset-0 transition-transform duration-700 transform -translate-x-full -skew-x-12 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
                                 <FiPlus className="relative z-10 w-4 h-4" />
                                 <span className="relative z-10">New Session</span>
                             </button>
@@ -440,7 +440,7 @@ const SessionsManager = () => {
                 </div>
 
                 {/* Controls Section */}
-                <div className="p-5 bg-white rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+                <div className="p-5 bg-white border border-gray-200 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         {/* View Controls */}
                         <div className="flex items-center space-x-4">
@@ -603,7 +603,7 @@ const SessionsManager = () => {
                     {importStep === 'options' ? (
                         <div className="space-y-6">
                             {/* Import Summary */}
-                            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-600">
+                            <div className="p-4 border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl dark:from-gray-800 dark:to-gray-700 dark:border-gray-600">
                                 <div className="flex items-center space-x-3">
                                     <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900">
                                         <FiUpload className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -727,8 +727,8 @@ const SessionsManager = () => {
                     ) : (
                         <div className="space-y-6">
                             {/* Selection Summary */}
-                            <div className="p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl border border-purple-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-600">
-                                <div className="flex justify-between items-center">
+                            <div className="p-4 border border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl dark:from-gray-800 dark:to-gray-700 dark:border-gray-600">
+                                <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-3">
                                         <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900">
                                             <FiCheckSquare className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -759,7 +759,7 @@ const SessionsManager = () => {
 
                             {/* Sessions Section */}
                             <div className="space-y-4">
-                                <div className="flex justify-between items-center">
+                                <div className="flex items-center justify-between">
                                     <h4 className={`text-lg font-semibold flex items-center space-x-2 dark:text-gray-200 text-gray-800`}>
                                         <FiFolder className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                         <span>Sessions</span>
@@ -783,7 +783,7 @@ const SessionsManager = () => {
                                     </div>
                                 </div>
 
-                                <div className="overflow-y-auto p-3 space-y-2 max-h-60 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <div className="p-3 space-y-2 overflow-y-auto border border-gray-200 rounded-lg max-h-60 dark:border-gray-600">
                                     {(importData?.savedSessions || []).map((s: any) => {
                                         const isSelected = selectedImportSessions.includes(s.id);
                                         const alreadyExists = savedSessions.some(currentSession => currentSession.id === s.id);
@@ -837,7 +837,7 @@ const SessionsManager = () => {
 
                             {/* Variables Section */}
                             <div className="space-y-4">
-                                <div className="flex justify-between items-center">
+                                <div className="flex items-center justify-between">
                                     <h4 className={`text-lg font-semibold flex items-center space-x-2 dark:text-gray-200 text-gray-800`}>
                                         <FiKey className="w-5 h-5 text-green-600 dark:text-green-400" />
                                         <span>Global Variables</span>
@@ -861,7 +861,7 @@ const SessionsManager = () => {
                                     </div>
                                 </div>
 
-                                <div className="overflow-y-auto p-3 space-y-2 max-h-60 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <div className="p-3 space-y-2 overflow-y-auto border border-gray-200 rounded-lg max-h-60 dark:border-gray-600">
                                     {Object.entries(importData?.globalVariables || {}).map(([k, _]) => {
                                         const isSelected = selectedImportVariables.includes(k);
                                         const alreadyExists = globalVariables[k] !== undefined;
@@ -915,7 +915,7 @@ const SessionsManager = () => {
                         </div>
                     )}
                     {error && (
-                        <div className="p-3 mt-4 bg-red-50 rounded-lg border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+                        <div className="p-3 mt-4 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/20 dark:border-red-800">
                             <p className={`text-sm dark:text-red-300 text-red-600`}>
                                 {error}
                             </p>

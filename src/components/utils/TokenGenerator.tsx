@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { useTheme } from "../../context/ThemeContext";
 import Modal from "../core/Modal";
+import Tooltip from "../ui/Tooltip";
 import {
     FiClock, FiCheckCircle, FiAlertCircle, FiEye, FiCopy,
     FiUpload, FiShield, FiGlobe, FiDatabase, FiCode, FiLock,
@@ -25,6 +26,27 @@ const TokenGenerator: React.FC = () => {
     const [error, setError] = useState<string>('');
     // State for auto-detect
     const [isAutoDetecting, setIsAutoDetecting] = useState(false);
+
+    // Refs for memory leak prevention
+    const isMountedRef = useRef(true);
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            isMountedRef.current = false;
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, []);
+
+    // Safe state setter that only updates if component is mounted
+    const safeSetState = useCallback((setter: Function, value: any) => {
+        if (isMountedRef.current) {
+            setter(value);
+        }
+    }, []);
 
     const decodeString = useCallback((encodedString: string): string | null => {
         try {
@@ -185,9 +207,12 @@ const TokenGenerator: React.FC = () => {
     }, []);
 
     const generateToken = useCallback(async (): Promise<void> => {
-        setIsGenerating(true);
-        setError('');
-        setSuccessMessage("");
+        // Create new AbortController for this request
+        abortControllerRef.current = new AbortController();
+
+        safeSetState(setIsGenerating, true);
+        safeSetState(setError, '');
+        safeSetState(setSuccessMessage, "");
 
         try {
             if (!globalVariables['username'] || !globalVariables['password']) {
@@ -228,6 +253,7 @@ const TokenGenerator: React.FC = () => {
                     'Content-Type': contentType,
                 },
                 body: requestBody,
+                signal: abortControllerRef.current.signal,
             });
 
             // Capture response information for debugging
@@ -238,7 +264,9 @@ const TokenGenerator: React.FC = () => {
             const setCookieHeader = response.headers.get('set-cookie');
 
             // Wait a moment for cookies to be set by the browser
-            await new Promise(resolve => setTimeout(resolve, 100));
+            if (isMountedRef.current) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
 
             // Get all cookies from document.cookie
             const allCookies = document.cookie.split(';').map(cookie => {
@@ -281,7 +309,9 @@ const TokenGenerator: React.FC = () => {
                     extractionSource = 'Set-Cookie header';
                 } else {
                     // Wait longer for cookies to be set by the browser
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    if (isMountedRef.current) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
 
                     token = extractTokenFromCookies(tokenConfig.extractionMethods.cookieNames);
                     if (token) {
@@ -316,8 +346,8 @@ const TokenGenerator: React.FC = () => {
 
             updateGlobalVariable(tokenConfig.tokenName, token);
             updateGlobalVariable("tokenName", tokenConfig.tokenName);
-            setSuccessMessage(`Token extracted from ${extractionSource} successfully!`);
-            setIsModalOpen(false);
+            safeSetState(setSuccessMessage, `Token extracted from ${extractionSource} successfully!`);
+            safeSetState(setIsModalOpen, false);
 
             // Handle refresh token extraction
             if (tokenConfig.refreshToken) {
@@ -344,17 +374,20 @@ const TokenGenerator: React.FC = () => {
             }
 
             // Store response information in responseInfo state
-            setResponseInfo({
+            safeSetState(setResponseInfo, {
                 cookies: allCookies,
                 headers: allHeaders,
                 responseText: responseText,
                 setCookieHeader: setCookieHeader
             });
         } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+                return; // Request was aborted, don't update state
+            }
             console.error("Token generation error:", error);
-            setError(error instanceof Error ? error.message : "Failed to generate token");
+            safeSetState(setError, error instanceof Error ? error.message : "Failed to generate token");
         } finally {
-            setIsGenerating(false);
+            safeSetState(setIsGenerating, false);
         }
     }, [globalVariables, tokenConfig, replaceVariables, updateGlobalVariable, extractTokenFromJson, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromSetCookieHeader, getCookieValue, extractTokenFromResponseText]);
 
@@ -370,7 +403,7 @@ const TokenGenerator: React.FC = () => {
         }
 
         try {
-            const payload = JSON.parse(decodeString(token.split(".")[1] as string) ?? "{}");
+            const payload = JSON.parse(decodeString(token.split(".")[1] as string) ?? "{ }");
             const now = Math.floor(Date.now() / 1000);
             const exp = payload.exp;
             const duration = (exp - now) / 60;
@@ -445,9 +478,12 @@ const TokenGenerator: React.FC = () => {
 
     // Auto-detect extraction method
     const autoDetectExtractionMethod = useCallback(async () => {
-        setIsAutoDetecting(true);
-        setError("");
-        setSuccessMessage("");
+        // Create new AbortController for this request
+        abortControllerRef.current = new AbortController();
+
+        safeSetState(setIsAutoDetecting, true);
+        safeSetState(setError, "");
+        safeSetState(setSuccessMessage, "");
         try {
             if (!globalVariables['username'] || !globalVariables['password']) {
                 throw new Error("Please set username and password in global variables");
@@ -478,8 +514,12 @@ const TokenGenerator: React.FC = () => {
                     'Content-Type': contentType,
                 },
                 body: requestBody,
+                signal: abortControllerRef.current.signal,
             });
-            await new Promise(resolve => setTimeout(resolve, 100));
+
+            if (isMountedRef.current) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
             let responseText = await response.text();
             let jsonData: any = null;
             try { jsonData = JSON.parse(responseText); } catch { }
@@ -488,109 +528,122 @@ const TokenGenerator: React.FC = () => {
             if (jsonData) {
                 token = extractTokenFromJson(jsonData, tokenConfig.extractionMethods.jsonPaths);
                 if (token) {
-                    setTokenConfig(prev => {
-                        const updated = {
-                            ...prev,
-                            extractionMethods: {
-                                ...prev.extractionMethods,
-                                json: true,
-                                cookies: false,
-                                headers: false,
-                            }
-                        };
-                        return updated;
-                    });
-                    setSuccessMessage('Auto-detected: JSON extraction');
-                    updateGlobalVariable(tokenConfig.tokenName, token);
-                    setIsAutoDetecting(false);
+                    if (isMountedRef.current) {
+                        setTokenConfig(prev => {
+                            const updated = {
+                                ...prev,
+                                extractionMethods: {
+                                    ...prev.extractionMethods,
+                                    json: true,
+                                    cookies: false,
+                                    headers: false,
+                                }
+                            };
+                            return updated;
+                        });
+                        safeSetState(setSuccessMessage, 'Auto-detected: JSON extraction');
+                        updateGlobalVariable(tokenConfig.tokenName, token);
+                        safeSetState(setIsAutoDetecting, false);
+                    }
                     return;
                 }
             }
             // Try Set-Cookie header
             token = extractTokenFromSetCookieHeader(response, tokenConfig.extractionMethods.cookieNames);
             if (token) {
-                setTokenConfig(prev => {
-                    const updated = {
-                        ...prev,
-                        extractionMethods: {
-                            ...prev.extractionMethods,
-                            json: false,
-                            cookies: true,
-                            headers: false,
-                        }
-                    };
-                    return updated;
-                });
-                setSuccessMessage('Auto-detected: Cookie extraction');
-                updateGlobalVariable(tokenConfig.tokenName, token);
-                setIsAutoDetecting(false);
+                if (isMountedRef.current) {
+                    setTokenConfig(prev => {
+                        const updated = {
+                            ...prev,
+                            extractionMethods: {
+                                ...prev.extractionMethods,
+                                json: false,
+                                cookies: true,
+                                headers: false,
+                            }
+                        };
+                        return updated;
+                    });
+                    safeSetState(setSuccessMessage, 'Auto-detected: Cookie extraction');
+                    updateGlobalVariable(tokenConfig.tokenName, token);
+                    safeSetState(setIsAutoDetecting, false);
+                }
                 return;
             }
             // Try browser cookies
             token = extractTokenFromCookies(tokenConfig.extractionMethods.cookieNames);
             if (token) {
-                setTokenConfig(prev => {
-                    const updated = {
-                        ...prev,
-                        extractionMethods: {
-                            ...prev.extractionMethods,
-                            json: false,
-                            cookies: true,
-                            headers: false,
-                        }
-                    };
-                    return updated;
-                });
-                setSuccessMessage('Auto-detected: Cookie extraction');
-                updateGlobalVariable(tokenConfig.tokenName, token);
-                setIsAutoDetecting(false);
+                if (isMountedRef.current) {
+                    setTokenConfig(prev => {
+                        const updated = {
+                            ...prev,
+                            extractionMethods: {
+                                ...prev.extractionMethods,
+                                json: false,
+                                cookies: true,
+                                headers: false,
+                            }
+                        };
+                        return updated;
+                    });
+                    safeSetState(setSuccessMessage, 'Auto-detected: Cookie extraction');
+                    updateGlobalVariable(tokenConfig.tokenName, token);
+                    safeSetState(setIsAutoDetecting, false);
+                }
                 return;
             }
             // Try headers
             token = extractTokenFromHeaders(response, tokenConfig.extractionMethods.headerNames);
             if (token) {
-                setTokenConfig(prev => {
-                    const updated = {
-                        ...prev,
-                        extractionMethods: {
-                            ...prev.extractionMethods,
-                            json: false,
-                            cookies: false,
-                            headers: true,
-                        }
-                    };
-                    return updated;
-                });
-                setSuccessMessage('Auto-detected: Header extraction');
-                updateGlobalVariable(tokenConfig.tokenName, token);
-                setIsAutoDetecting(false);
+                if (isMountedRef.current) {
+                    setTokenConfig(prev => {
+                        const updated = {
+                            ...prev,
+                            extractionMethods: {
+                                ...prev.extractionMethods,
+                                json: false,
+                                cookies: false,
+                                headers: true,
+                            }
+                        };
+                        return updated;
+                    });
+                    safeSetState(setSuccessMessage, 'Auto-detected: Header extraction');
+                    updateGlobalVariable(tokenConfig.tokenName, token);
+                    safeSetState(setIsAutoDetecting, false);
+                }
                 return;
             }
             // Try response text
             token = extractTokenFromResponseText(responseText);
             if (token) {
-                setTokenConfig(prev => {
-                    const updated = {
-                        ...prev,
-                        extractionMethods: {
-                            ...prev.extractionMethods,
-                            json: false,
-                            cookies: false,
-                            headers: false,
-                        }
-                    };
-                    return updated;
-                });
-                setSuccessMessage('Auto-detected: Regex/Text extraction');
-                updateGlobalVariable(tokenConfig.tokenName, token);
-                setIsAutoDetecting(false);
+                if (isMountedRef.current) {
+                    setTokenConfig(prev => {
+                        const updated = {
+                            ...prev,
+                            extractionMethods: {
+                                ...prev.extractionMethods,
+                                json: false,
+                                cookies: false,
+                                headers: false,
+                            }
+                        };
+                        return updated;
+                    });
+                    safeSetState(setSuccessMessage, 'Auto-detected: Regex/Text extraction');
+                    updateGlobalVariable(tokenConfig.tokenName, token);
+                    safeSetState(setIsAutoDetecting, false);
+                }
                 return;
             }
-            setError('Auto-detect failed: No token found.');
+            safeSetState(setError, 'Auto-detect failed: No token found.');
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Auto-detect failed.');
+            if (err instanceof Error && err.name === 'AbortError') {
+                return; // Request was aborted, don't update state
+            }
+            safeSetState(setError, err instanceof Error ? err.message : 'Auto-detect failed.');
         } finally {
-            setIsAutoDetecting(false);
+            safeSetState(setIsAutoDetecting, false);
         }
     }, [globalVariables, tokenConfig, replaceVariables, extractTokenFromJson, extractTokenFromSetCookieHeader, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromResponseText, updateGlobalVariable, setTokenConfig]);
 
@@ -605,7 +658,7 @@ const TokenGenerator: React.FC = () => {
                         : "text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25"
                         }`}
                 >
-                    <div className="absolute inset-0 bg-gradient-to-r transition-transform duration-700 transform -translate-x-full -skew-x-12 from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
+                    <div className="absolute inset-0 transition-transform duration-700 transform -translate-x-full -skew-x-12 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
                     <FiKey className="relative z-10 w-5 h-5" />
                     <span className="relative z-10">Token Generator</span>
                     {tokenDuration > 0 && (
@@ -641,7 +694,7 @@ const TokenGenerator: React.FC = () => {
                 onSave={generateToken}
                 title={
                     <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
+                        <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600">
                             <FiKey className="w-6 h-6 text-white" />
                         </div>
                         <div>
@@ -654,7 +707,7 @@ const TokenGenerator: React.FC = () => {
                 showSaveButton={true}
             >
                 {/* Tab Navigation */}
-                <div className="flex overflow-x-auto mb-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex mb-6 overflow-x-auto border-b border-gray-200 dark:border-gray-700">
                     {[
                         { id: 'auth', label: 'Authentication', icon: FiLock, description: 'Configure auth type and credentials' },
                         { id: 'extraction', label: 'Extraction', icon: FiDatabase, description: 'Token extraction methods' },
@@ -684,7 +737,7 @@ const TokenGenerator: React.FC = () => {
                     {activeTab === 'auth' && (
                         <div className="space-y-6">
                             {/* Authentication Type Selection */}
-                            <div className="p-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl border border-indigo-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border border-indigo-200 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-6 space-x-3">
                                     <div className="p-3 bg-indigo-100 rounded-xl dark:bg-indigo-900">
                                         <FiLock className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
@@ -756,42 +809,120 @@ const TokenGenerator: React.FC = () => {
                                             gray: isSelected ? 'ring-2 ring-gray-500 bg-gray-50 dark:bg-gray-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-900/10'
                                         };
 
-                                        return (
-                                            <button
-                                                key={authType.id}
-                                                onClick={() => setTokenConfig(prev => ({ ...prev, authType: authType.id as any }))}
-                                                className={`p-6 rounded-xl border transition-all duration-300 transform hover:scale-[1.02] text-left ${colorClasses[authType.color as keyof typeof colorClasses]}`}
-                                            >
-                                                <div className="flex items-start space-x-4">
-                                                    <div className="text-3xl">{authType.icon}</div>
-                                                    <div className="flex-1">
-                                                        <h4 className="mb-1 font-bold text-gray-900 dark:text-gray-100">
-                                                            {authType.label}
-                                                        </h4>
-                                                        <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                                                            {authType.description}
-                                                        </p>
-                                                        <div className="space-y-1">
-                                                            {authType.features.map((feature, index) => (
-                                                                <div key={index} className="flex items-center space-x-2">
-                                                                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-                                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{feature}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
+                                        // Detailed tooltip content for each auth type
+                                        const tooltipContent = {
+                                            bearer: (
+                                                <div>
+                                                    <div className="mb-1 font-semibold">Bearer Token Authentication</div>
+                                                    <div className="space-y-1 text-xs">
+                                                        <div>• Login with username/password</div>
+                                                        <div>• Token auto-extracted from response</div>
+                                                        <div>• Sent as: Authorization: Bearer &lt;token&gt;</div>
+                                                        <div>• Supports auto-refresh & JSON/Form</div>
                                                     </div>
-                                                    {isSelected && (
-                                                        <FiCheckCircle className="w-5 h-5 text-green-500" />
-                                                    )}
                                                 </div>
-                                            </button>
+                                            ),
+                                            basic: (
+                                                <div>
+                                                    <div className="mb-1 font-semibold">Basic Authentication</div>
+                                                    <div className="space-y-1 text-xs">
+                                                        <div>• Username & password Base64 encoded</div>
+                                                        <div>• Sent as: Authorization: Basic &lt;encoded&gt;</div>
+                                                        <div>• Simple setup, widely supported</div>
+                                                        <div>• Best for simple APIs</div>
+                                                    </div>
+                                                </div>
+                                            ),
+                                            oauth2: (
+                                                <div>
+                                                    <div className="mb-1 font-semibold">OAuth 2.0</div>
+                                                    <div className="space-y-1 text-xs">
+                                                        <div>• Industry standard authorization</div>
+                                                        <div>• Multiple flows (Password, Client, etc.)</div>
+                                                        <div>• Refresh tokens & scopes support</div>
+                                                        <div>• Secure token exchange</div>
+                                                    </div>
+                                                </div>
+                                            ),
+                                            api_key: (
+                                                <div>
+                                                    <div className="mb-1 font-semibold">API Key Authentication</div>
+                                                    <div className="space-y-1 text-xs">
+                                                        <div>• Static API key authentication</div>
+                                                        <div>• Can be sent in: Header/Query/Cookie</div>
+                                                        <div>• No login required</div>
+                                                        <div>• Fastest setup for simple APIs</div>
+                                                    </div>
+                                                </div>
+                                            ),
+                                            session: (
+                                                <div>
+                                                    <div className="mb-1 font-semibold">Session Authentication</div>
+                                                    <div className="space-y-1 text-xs">
+                                                        <div>• Uses session cookies</div>
+                                                        <div>• Server-side session management</div>
+                                                        <div>• Keep-alive functionality</div>
+                                                        <div>• Common in web applications</div>
+                                                    </div>
+                                                </div>
+                                            ),
+                                            custom: (
+                                                <div>
+                                                    <div className="mb-1 font-semibold">Custom Authentication</div>
+                                                    <div className="space-y-1 text-xs">
+                                                        <div>• Flexible for proprietary methods</div>
+                                                        <div>• Configure custom headers</div>
+                                                        <div>• Custom request formats</div>
+                                                        <div>• Advanced token extraction</div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        };
+
+                                        return (
+                                            <Tooltip
+                                                key={authType.id}
+                                                content={tooltipContent[authType.id as keyof typeof tooltipContent]}
+                                                position="top"
+                                                delay={300}
+                                                multiline={true}
+                                                className="block"
+                                            >
+                                                <button
+                                                    onClick={() => setTokenConfig(prev => ({ ...prev, authType: authType.id as any }))}
+                                                    className={`w-full p-6 rounded-xl border transition-all duration-300 transform hover:scale-[1.02] text-left ${colorClasses[authType.color as keyof typeof colorClasses]}`}
+                                                >
+                                                    <div className="flex items-start space-x-4">
+                                                        <div className="text-3xl">{authType.icon}</div>
+                                                        <div className="flex-1">
+                                                            <h4 className="mb-1 font-bold text-gray-900 dark:text-gray-100">
+                                                                {authType.label}
+                                                            </h4>
+                                                            <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+                                                                {authType.description}
+                                                            </p>
+                                                            <div className="space-y-1">
+                                                                {authType.features.map((feature, index) => (
+                                                                    <div key={index} className="flex items-center space-x-2">
+                                                                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                                                                        <span className="text-xs text-gray-500 dark:text-gray-400">{feature}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                        {isSelected && (
+                                                            <FiCheckCircle className="w-5 h-5 text-green-500" />
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            </Tooltip>
                                         );
                                     })}
                                 </div>
                             </div>
 
                             {/* Basic Configuration */}
-                            <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl border border-blue-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
                                     <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900">
                                         <FiGlobe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -872,7 +1003,7 @@ const TokenGenerator: React.FC = () => {
 
                             {/* OAuth2 Configuration */}
                             {tokenConfig.authType === 'oauth2' && (
-                                <div className="p-6 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-xl border border-purple-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="p-6 border border-purple-200 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                     <div className="flex items-center mb-4 space-x-3">
                                         <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900">
                                             <FiLock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -1009,7 +1140,7 @@ const TokenGenerator: React.FC = () => {
 
                             {/* API Key Configuration */}
                             {tokenConfig.authType === 'api_key' && (
-                                <div className="p-6 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-xl border border-orange-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="p-6 border border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                     <div className="flex items-center mb-4 space-x-3">
                                         <div className="p-2 bg-orange-100 rounded-lg dark:bg-orange-900">
                                             <FiKey className="w-5 h-5 text-orange-600 dark:text-orange-400" />
@@ -1105,7 +1236,7 @@ const TokenGenerator: React.FC = () => {
 
                             {/* Session Configuration */}
                             {tokenConfig.authType === 'session' && (
-                                <div className="p-6 bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 rounded-xl border border-teal-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="p-6 border border-teal-200 bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                     <div className="flex items-center mb-4 space-x-3">
                                         <div className="p-2 bg-teal-100 rounded-lg dark:bg-teal-900">
                                             <FiUsers className="w-5 h-5 text-teal-600 dark:text-teal-400" />
@@ -1205,7 +1336,7 @@ const TokenGenerator: React.FC = () => {
                     {activeTab === 'extraction' && (
                         <div className="space-y-6">
                             {/* Request Body Configuration */}
-                            <div className="p-6 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-xl border border-orange-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
                                     <div className="p-2 bg-orange-100 rounded-lg dark:bg-orange-900">
                                         <FiUpload className="w-5 h-5 text-orange-600 dark:text-orange-400" />
@@ -1283,7 +1414,7 @@ const TokenGenerator: React.FC = () => {
                                                                 }`}></div>
                                                         </div>
 
-                                                        <div className="flex relative z-10 flex-col items-center space-y-2 text-center">
+                                                        <div className="relative z-10 flex flex-col items-center space-y-2 text-center">
                                                             <div className={`text-2xl transition-transform duration-300 ${isSelected ? 'scale-110' : 'group-hover:scale-105'
                                                                 }`}>
                                                                 {option.icon}
@@ -1316,7 +1447,7 @@ const TokenGenerator: React.FC = () => {
                                         </div>
 
                                         {/* Content Type Preview */}
-                                        <div className="p-3 mt-4 bg-gray-50 rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <div className="p-3 mt-4 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                             <h5 className={`text-xs font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                                                 Request Body Preview:
                                             </h5>
@@ -1377,7 +1508,7 @@ const TokenGenerator: React.FC = () => {
                             </div>
 
                             {/* Token Extraction Methods */}
-                            <div className="p-6 bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 rounded-xl border border-indigo-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border border-indigo-200 bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
                                     <div className="p-2 bg-indigo-100 rounded-lg dark:bg-indigo-900">
                                         <FiDatabase className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -1387,7 +1518,7 @@ const TokenGenerator: React.FC = () => {
 
                                 <div className="space-y-4">
                                     {/* JSON Extraction */}
-                                    <div className="p-4 bg-white rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                                    <div className="p-4 bg-white border border-gray-200 rounded-lg dark:bg-gray-700 dark:border-gray-600">
                                         <div className="flex items-center">
                                             <div className="flex items-center h-6">
                                                 <input
@@ -1440,7 +1571,7 @@ const TokenGenerator: React.FC = () => {
                                     </div>
 
                                     {/* Cookie Extraction */}
-                                    <div className="p-4 bg-white rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                                    <div className="p-4 bg-white border border-gray-200 rounded-lg dark:bg-gray-700 dark:border-gray-600">
                                         <div className="flex items-center">
                                             <div className="flex items-center h-6">
                                                 <input
@@ -1493,7 +1624,7 @@ const TokenGenerator: React.FC = () => {
                                     </div>
 
                                     {/* Header Extraction */}
-                                    <div className="p-4 bg-white rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                                    <div className="p-4 bg-white border border-gray-200 rounded-lg dark:bg-gray-700 dark:border-gray-600">
                                         <div className="flex items-center">
                                             <div className="flex items-center h-6">
                                                 <input
@@ -1563,9 +1694,9 @@ const TokenGenerator: React.FC = () => {
                     {activeTab === 'preview' && (
                         <div className="space-y-6">
                             {/* Request Preview */}
-                            <div className="p-6 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl border border-emerald-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl border-emerald-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
-                                    <div className="p-2 bg-emerald-100 rounded-lg dark:bg-emerald-900">
+                                    <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900">
                                         <FiEye className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                                     </div>
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Request Preview</h3>
@@ -1608,7 +1739,7 @@ const TokenGenerator: React.FC = () => {
                             </div>
 
                             {/* Token Status */}
-                            <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl border border-blue-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
                                     <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900">
                                         <FiClock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -1617,7 +1748,7 @@ const TokenGenerator: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex items-center justify-between">
                                         <span className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                                             Current Token
                                         </span>
@@ -1644,7 +1775,7 @@ const TokenGenerator: React.FC = () => {
                                     </div>
 
                                     {tokenDuration > 0 && (
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex items-center justify-between">
                                             <span className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                                                 Expires In
                                             </span>
@@ -1677,7 +1808,7 @@ const TokenGenerator: React.FC = () => {
                         <div className="space-y-6">
                             {/* Response Information */}
                             {responseInfo && (
-                                <div className="p-6 bg-gradient-to-br from-gray-50 rounded-xl border border-gray-200 via-slate-50 to-zinc-50 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="p-6 border border-gray-200 bg-gradient-to-br from-gray-50 rounded-xl via-slate-50 to-zinc-50 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                     <div className="flex items-center mb-4 space-x-3">
                                         <div className="p-2 bg-gray-100 rounded-lg dark:bg-gray-900">
                                             <FiCode className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -1750,8 +1881,8 @@ const TokenGenerator: React.FC = () => {
                             )}
 
                             {/* Settings Management */}
-                            <div className="p-6 bg-gradient-to-br via-gray-50 rounded-xl border from-slate-50 to-zinc-50 border-slate-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
-                                <div className="flex justify-between items-center">
+                            <div className="p-6 border bg-gradient-to-br via-gray-50 rounded-xl from-slate-50 to-zinc-50 border-slate-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-2">
                                         <FiCheckCircle className="w-4 h-4 text-green-500" />
                                         <span className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
@@ -1865,9 +1996,9 @@ const TokenGenerator: React.FC = () => {
                     {activeTab === 'validation' && (
                         <div className="space-y-6">
                             {/* Token Validation */}
-                            <div className="p-6 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl border border-emerald-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl border-emerald-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
-                                    <div className="p-2 bg-emerald-100 rounded-lg dark:bg-emerald-900">
+                                    <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900">
                                         <FiUserCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                                     </div>
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Token Validation</h3>
@@ -1942,7 +2073,7 @@ const TokenGenerator: React.FC = () => {
                             </div>
 
                             {/* Auto Refresh Configuration */}
-                            <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl border border-blue-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
                                     <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900">
                                         <FiRefreshCw className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -2030,7 +2161,7 @@ const TokenGenerator: React.FC = () => {
                     {activeTab === 'security' && (
                         <div className="space-y-6">
                             {/* Token Encryption */}
-                            <div className="p-6 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-xl border border-purple-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border border-purple-200 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
                                     <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900">
                                         <FiLock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -2086,7 +2217,7 @@ const TokenGenerator: React.FC = () => {
                             </div>
 
                             {/* Token Hashing */}
-                            <div className="p-6 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-xl border border-orange-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
                                     <div className="p-2 bg-orange-100 rounded-lg dark:bg-orange-900">
                                         <FiHash className="w-5 h-5 text-orange-600 dark:text-orange-400" />
@@ -2141,7 +2272,7 @@ const TokenGenerator: React.FC = () => {
                             </div>
 
                             {/* Logging Security */}
-                            <div className="p-6 bg-gradient-to-br from-red-50 via-pink-50 to-rose-50 rounded-xl border border-red-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                            <div className="p-6 border border-red-200 bg-gradient-to-br from-red-50 via-pink-50 to-rose-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                                 <div className="flex items-center mb-4 space-x-3">
                                     <div className="p-2 bg-red-100 rounded-lg dark:bg-red-900">
                                         <FiShield className="w-5 h-5 text-red-600 dark:text-red-400" />
@@ -2179,7 +2310,7 @@ const TokenGenerator: React.FC = () => {
 
                 {/* Status Messages */}
                 {error && (
-                    <div className="p-4 mt-6 bg-red-50 rounded-xl border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+                    <div className="p-4 mt-6 border border-red-200 bg-red-50 rounded-xl dark:bg-red-900/20 dark:border-red-800">
                         <div className="flex items-center space-x-2">
                             <FiAlertCircle className="w-5 h-5 text-red-500" />
                             <p className={`text-sm font-medium ${isDarkMode ? "text-red-300" : "text-red-700"}`}>
@@ -2190,7 +2321,7 @@ const TokenGenerator: React.FC = () => {
                 )}
 
                 {successMessage && (
-                    <div className="p-4 mt-6 bg-green-50 rounded-xl border border-green-200 dark:bg-green-900/20 dark:border-green-800">
+                    <div className="p-4 mt-6 border border-green-200 bg-green-50 rounded-xl dark:bg-green-900/20 dark:border-green-800">
                         <div className="flex items-center space-x-2">
                             <FiCheckCircle className="w-5 h-5 text-green-500" />
                             <p className={`text-sm font-medium ${isDarkMode ? "text-green-300" : "text-green-700"}`}>
