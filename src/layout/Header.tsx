@@ -21,7 +21,6 @@ const Header = () => {
         tokenConfig,
         regenerateToken,
         setShowUnifiedManager,
-        showUnifiedManager,
     } = useAppContext();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [isTokenLoading, setIsTokenLoading] = useState(false);
@@ -29,7 +28,6 @@ const Header = () => {
     const [tokenDuration, setTokenDuration] = useState<number | null>(null);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
     const { currentProject, clearCurrentProject } = useProjectContext();
-    const [sessionManagerTab, setSessionManagerTab] = useState<'sessions' | 'variables' | 'projects'>('sessions');
 
     // Token regeneration logic (reuse from TokenGenerator)
     const handleRegenerateToken = async () => {
@@ -87,21 +85,6 @@ const Header = () => {
         return () => clearInterval(interval);
     }, [checkTokenExpiration]);
 
-    // Listen for session manager open events
-    useEffect(() => {
-        const handleOpenSessionManager = (event: CustomEvent) => {
-            const options = event.detail || { tab: 'sessions' };
-            setSessionManagerTab(options.tab || 'sessions');
-            setShowUnifiedManager(true);
-        };
-
-        window.addEventListener('openSessionManager', handleOpenSessionManager as EventListener);
-
-        return () => {
-            window.removeEventListener('openSessionManager', handleOpenSessionManager as EventListener);
-        };
-    }, []);
-
     return (
         <>
             <header className={`sticky top-0 z-40 transition-all duration-300 dark:bg-gray-900 dark:border-gray-700 bg-white border-gray-200 border-b shadow-sm`}>
@@ -113,7 +96,7 @@ const Header = () => {
                             className="flex items-center space-x-3 transition-all duration-200 group hover:scale-105"
                             title="Return to Welcome Screen"
                         >
-                            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                            <div className="p-3 shadow-lg bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
                                 <h1 className="text-2xl font-bold text-white">B</h1>
                             </div>
                             <div className="flex flex-col">
@@ -138,7 +121,7 @@ const Header = () => {
                         {/* Sessions of Current Category */}
                         {activeSession?.category && (
                             <div className={`flex gap-2 p-3 bg-white rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-md opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
-                                <div className="flex items-center space-x-2 flex-shrink-0">
+                                <div className="flex items-center flex-shrink-0 space-x-2">
                                     <span className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                                         {activeSession.category}
                                     </span>
@@ -154,7 +137,7 @@ const Header = () => {
                                                     container.scrollBy({ left: -200, behavior: 'smooth' });
                                                 }
                                             }}
-                                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1 bg-white dark:bg-gray-700 rounded-full shadow-md border border-gray-200 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+                                            className="absolute left-0 z-10 p-1 transition-all duration-200 -translate-y-1/2 bg-white border border-gray-200 rounded-full shadow-md opacity-0 top-1/2 dark:bg-gray-700 dark:border-gray-600 group-hover:opacity-100 hover:scale-110"
                                             title="Scroll left"
                                         >
                                             <FiArrowRight className="w-2.5 h-2.5 text-gray-600 rotate-180 dark:text-gray-300" />
@@ -168,7 +151,7 @@ const Header = () => {
                                                     container.scrollBy({ left: 200, behavior: 'smooth' });
                                                 }
                                             }}
-                                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-1 bg-white dark:bg-gray-700 rounded-full shadow-md border border-gray-200 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+                                            className="absolute right-0 z-10 p-1 transition-all duration-200 -translate-y-1/2 bg-white border border-gray-200 rounded-full shadow-md opacity-0 top-1/2 dark:bg-gray-700 dark:border-gray-600 group-hover:opacity-100 hover:scale-110"
                                             title="Scroll right"
                                         >
                                             <FiArrowRight className="w-2.5 h-2.5 text-gray-600 dark:text-gray-300" />
@@ -177,7 +160,7 @@ const Header = () => {
                                         {/* Scrollable Content */}
                                         <div
                                             id="sessions-scroll"
-                                            className="flex overflow-x-auto items-center px-4 gap-1 scrollbar-hide scroll-smooth"
+                                            className="flex items-center gap-1 px-4 overflow-x-auto scrollbar-hide scroll-smooth"
                                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                                         >
                                             {savedSessions
@@ -202,7 +185,7 @@ const Header = () => {
                                 )}
                             </div>
                         )}
-                        <div className="flex gap-2 justify-end items-center">
+                        <div className="flex items-center justify-end gap-2">
                             {/* Collapsible Header Content */}
                             <div className={`flex items-center space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
                                 {/* Action Buttons */}

@@ -97,8 +97,8 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
   const tokenExists = globalVariables["tokenName"];
   const editorRef = useRef<any>(null);
   const yamlEditorRef = useRef<any>(null);
-  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const expandTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const copyTimeoutRef = useRef<number | null>(null);
+  const expandTimeoutRef = useRef<number | null>(null);
   const [outputViewMode, setOutputViewMode] = useState<'yaml' | 'json'>('yaml');
   const [lastJsonResponse, setLastJsonResponse] = useState<any>(null);
   const [lastYamlOutput, setLastYamlOutput] = useState<string>("");
@@ -609,7 +609,7 @@ ${generateRequestBody()}
         }
 
         // Set new timeout with reference
-        copyTimeoutRef.current = setTimeout(() => {
+        copyTimeoutRef.current = window.setTimeout(() => {
           setCopySuccess(false);
         }, 2000);
       })
@@ -788,7 +788,7 @@ ${generateRequestBody()}
     }
 
     // Force editor to resize after state change
-    expandTimeoutRef.current = setTimeout(() => {
+    expandTimeoutRef.current = window.setTimeout(() => {
       if (yamlEditorRef.current) {
         yamlEditorRef.current.layout();
       }

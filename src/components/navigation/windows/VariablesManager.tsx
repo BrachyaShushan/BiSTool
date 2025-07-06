@@ -21,7 +21,7 @@ const VariablesManager = () => {
         isGlobal: false,
     });
     const valueInputRef = useRef<HTMLInputElement>(null);
-    const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const copyTimeoutRef = useRef<number | null>(null);
 
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -35,7 +35,7 @@ const VariablesManager = () => {
         }
 
         // Set new timeout with reference
-        copyTimeoutRef.current = setTimeout(() => {
+        copyTimeoutRef.current = window.setTimeout(() => {
             setCopiedKey(null);
         }, 2000);
     };
@@ -89,18 +89,18 @@ const VariablesManager = () => {
 
             <div className="space-y-6">
                 {/* Professional Header Section */}
-                <div className="overflow-hidden relative p-6 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl border border-green-100 shadow-sm dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                <div className="relative p-6 overflow-hidden border border-green-100 shadow-sm bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
                     {/* Background Pattern */}
                     <div className="absolute inset-0 opacity-5 dark:opacity-10">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-green-500 rounded-full translate-x-16 -translate-y-16"></div>
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500 rounded-full -translate-x-12 translate-y-12"></div>
+                        <div className="absolute top-0 right-0 w-32 h-32 translate-x-16 -translate-y-16 bg-green-500 rounded-full"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 -translate-x-12 translate-y-12 rounded-full bg-emerald-500"></div>
                     </div>
 
-                    <div className="flex relative flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         {/* Title and Stats */}
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-3">
-                                <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
+                                <div className="p-3 shadow-lg bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl">
                                     <FiKey className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
@@ -135,7 +135,7 @@ const VariablesManager = () => {
                                 onClick={() => handleVariableAction("new", null, true)}
                                 className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden dark:text-white dark:bg-gradient-to-r dark:from-green-600 dark:via-emerald-600 dark:to-teal-600 dark:hover:from-green-700 dark:hover:via-emerald-700 dark:hover:to-teal-700 dark:shadow-green-500/25 text-white bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 shadow-green-500/25`}
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r transition-transform duration-700 transform -translate-x-full -skew-x-12 from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
+                                <div className="absolute inset-0 transition-transform duration-700 transform -translate-x-full -skew-x-12 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
                                 <FiGlobe className="relative z-10 w-4 h-4" />
                                 <span className="relative z-10">Global Variable</span>
                             </button>
@@ -144,7 +144,7 @@ const VariablesManager = () => {
                                     onClick={() => handleVariableAction("new", null, false)}
                                     className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden dark:text-white dark:bg-gradient-to-r dark:from-blue-600 dark:via-indigo-600 dark:to-purple-600 dark:hover:from-blue-700 dark:hover:via-indigo-700 dark:hover:to-purple-700 dark:shadow-blue-500/25 text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25`}
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-r transition-transform duration-700 transform -translate-x-full -skew-x-12 from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
+                                    <div className="absolute inset-0 transition-transform duration-700 transform -translate-x-full -skew-x-12 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
                                     <FiFolder className="relative z-10 w-4 h-4" />
                                     <span className="relative z-10">Session Variable</span>
                                 </button>
@@ -154,8 +154,8 @@ const VariablesManager = () => {
                 </div>
 
                 {/* Global Variables Section */}
-                <div className="p-5 bg-white rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-                    <div className="flex justify-between items-center mb-4">
+                <div className="p-5 bg-white border border-gray-200 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-4">
                         <h4 className={`text-lg font-semibold flex items-center space-x-2 dark:text-gray-200 text-gray-800`}>
                             <FiGlobe className="w-5 h-5 text-green-600 dark:text-green-400" />
                             <span>Global Variables</span>
@@ -170,8 +170,8 @@ const VariablesManager = () => {
                                 const isDefaultVariable = ['username', 'password', 'base_url'].includes(key);
                                 return (
                                     <div key={key} className={`p-4 rounded-lg border transition-all duration-200 hover:shadow-md dark:bg-gray-700 dark:border-gray-600 bg-gray-50 border-gray-200 hover:border-gray-300`}>
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex flex-1 items-center space-x-3 min-w-0">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center flex-1 min-w-0 space-x-3">
                                                 <div className={`p-2 rounded-lg ${isDefaultVariable
                                                     ? "bg-blue-100 dark:bg-blue-900"
                                                     : "bg-green-100 dark:bg-green-900"
@@ -210,14 +210,14 @@ const VariablesManager = () => {
                                                 </button>
                                                 <button
                                                     onClick={() => handleVariableAction("edit", [key, value], true)}
-                                                    className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 hover:scale-105"
+                                                    className="p-2 text-gray-600 transition-all duration-200 rounded-lg dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 hover:scale-105"
                                                     title="Edit variable"
                                                 >
                                                     <FiEdit2 className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => deleteGlobalVariable(key)}
-                                                    className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 hover:scale-105"
+                                                    className="p-2 text-gray-600 transition-all duration-200 rounded-lg dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 hover:scale-105"
                                                     title="Delete variable"
                                                 >
                                                     <FiTrash2 className="w-4 h-4" />
@@ -229,7 +229,7 @@ const VariablesManager = () => {
                             })
                         ) : (
                             <div className={`p-8 text-center rounded-lg border-2 border-dashed dark:text-gray-400 dark:border-gray-600 text-gray-500 border-gray-300`}>
-                                <FiKey className="mx-auto mb-3 w-12 h-12 opacity-50" />
+                                <FiKey className="w-12 h-12 mx-auto mb-3 opacity-50" />
                                 <p className="text-sm font-medium">No global variables yet</p>
                                 <p className="mt-1 text-xs">Create your first global variable to get started</p>
                             </div>
@@ -239,8 +239,8 @@ const VariablesManager = () => {
 
                 {/* Session Variables Section */}
                 {activeSession && (
-                    <div className="p-5 bg-white rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
-                        <div className="flex justify-between items-center mb-4">
+                    <div className="p-5 bg-white border border-gray-200 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
+                        <div className="flex items-center justify-between mb-4">
                             <h4 className={`text-lg font-semibold flex items-center space-x-2 dark:text-gray-200 text-gray-800`}>
                                 <FiFolder className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                 <span>Session Variables</span>
@@ -253,8 +253,8 @@ const VariablesManager = () => {
                             {Object.entries(activeSession.sharedVariables || {}).length > 0 ? (
                                 Object.entries(activeSession.sharedVariables || {}).map(([key, value]) => (
                                     <div key={key} className={`p-4 rounded-lg border transition-all duration-200 hover:shadow-md dark:bg-gray-700 dark:border-gray-600 dark:hover:border-gray-500 bg-gray-50 border-gray-200 hover:border-gray-300`}>
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex flex-1 items-center space-x-3 min-w-0">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center flex-1 min-w-0 space-x-3">
                                                 <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900">
                                                     <FiFolder className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                                 </div>
@@ -280,14 +280,14 @@ const VariablesManager = () => {
                                                 </button>
                                                 <button
                                                     onClick={() => handleVariableAction("edit", [key, value], false)}
-                                                    className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 hover:scale-105"
+                                                    className="p-2 text-gray-600 transition-all duration-200 rounded-lg dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 hover:scale-105"
                                                     title="Edit variable"
                                                 >
                                                     <FiEdit2 className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => deleteSessionVariable(key)}
-                                                    className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 hover:scale-105"
+                                                    className="p-2 text-gray-600 transition-all duration-200 rounded-lg dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 hover:scale-105"
                                                     title="Delete variable"
                                                 >
                                                     <FiTrash2 className="w-4 h-4" />
@@ -298,7 +298,7 @@ const VariablesManager = () => {
                                 ))
                             ) : (
                                 <div className={`p-8 text-center rounded-lg border-2 border-dashed dark:text-gray-400 dark:border-gray-600 text-gray-500 border-gray-300`}>
-                                    <FiFolder className="mx-auto mb-3 w-12 h-12 opacity-50" />
+                                    <FiFolder className="w-12 h-12 mx-auto mb-3 opacity-50" />
                                     <p className="text-sm font-medium">No session variables yet</p>
                                     <p className="mt-1 text-xs">Create variables specific to this session</p>
                                 </div>

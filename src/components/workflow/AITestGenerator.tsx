@@ -57,9 +57,9 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const [selectedModel, setSelectedModel] = useState<{ id: string; name: string } | null>(null);
 
   // Refs for timeout management to prevent memory leaks
-  const copyPromptTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const copyCodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const copyPromptTimeoutRef = useRef<number | null>(null);
+  const copyCodeTimeoutRef = useRef<number | null>(null);
+  const saveTimeoutRef = useRef<number | null>(null);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -81,16 +81,16 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
     return (
       <div className="space-y-6">
         {/* Header Section */}
-        <div className="overflow-hidden relative p-6 bg-gradient-to-r from-purple-50 via-pink-50 to-indigo-50 rounded-2xl border border-purple-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+        <div className="relative p-6 overflow-hidden border border-purple-100 shadow-lg bg-gradient-to-r from-purple-50 via-pink-50 to-indigo-50 rounded-2xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-5 dark:opacity-10">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500 rounded-full translate-x-16 -translate-y-16"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500 rounded-full -translate-x-12 translate-y-12"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 translate-x-16 -translate-y-16 bg-purple-500 rounded-full"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 -translate-x-12 translate-y-12 bg-pink-500 rounded-full"></div>
           </div>
 
-          <div className="flex relative justify-between items-center">
+          <div className="relative flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
+              <div className="p-3 shadow-lg bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl">
                 <FiPlay className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -119,22 +119,22 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
         </div>
 
         {/* No Active Session Warning */}
-        <div className="p-8 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+        <div className="p-8 bg-white border border-gray-200 shadow-lg rounded-2xl dark:bg-gray-800 dark:border-gray-700">
           <div className="text-center">
-            <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500">
               <FiPlay className="w-8 h-8 text-white" />
             </div>
             <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
               No Active Session
             </h3>
-            <p className="mb-6 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+            <p className="max-w-md mx-auto mb-6 text-gray-600 dark:text-gray-300">
               You need to create or select an active session before generating AI-powered tests.
               Please go to the Session Manager to create a session first.
             </p>
             <div className="flex justify-center space-x-4">
               <button
                 onClick={() => window.history.back()}
-                className="px-6 py-3 font-medium text-gray-700 bg-white border border-gray-300 rounded-lg transition-all duration-200 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
+                className="px-6 py-3 font-medium text-gray-700 transition-all duration-200 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
               >
                 Go Back
               </button>
@@ -143,7 +143,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
                   // Open session manager modal on sessions tab
                   openSessionManager({ tab: 'sessions' });
                 }}
-                className="px-6 py-3 font-medium text-white bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg"
+                className="px-6 py-3 font-medium text-white transition-all duration-200 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600 hover:scale-105 hover:shadow-lg"
               >
                 Create Session
               </button>
@@ -719,7 +719,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
       }
 
       // Set new timeout with reference
-      copyPromptTimeoutRef.current = setTimeout(() => {
+      copyPromptTimeoutRef.current = window.setTimeout(() => {
         setCopiedPrompt(false);
       }, 2000);
     } catch (err) {
@@ -738,7 +738,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
       }
 
       // Set new timeout with reference
-      copyCodeTimeoutRef.current = setTimeout(() => {
+      copyCodeTimeoutRef.current = window.setTimeout(() => {
         setCopiedCode(false);
       }, 2000);
     } catch (err) {
@@ -776,7 +776,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
       }
 
       // Show success feedback with timeout reference
-      saveTimeoutRef.current = setTimeout(() => {
+      saveTimeoutRef.current = window.setTimeout(() => {
         setIsSaving(false);
       }, 2000);
     } catch (error) {
@@ -881,16 +881,16 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="overflow-hidden relative p-6 bg-gradient-to-r from-purple-50 via-pink-50 to-indigo-50 rounded-2xl border border-purple-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+      <div className="relative p-6 overflow-hidden border border-purple-100 shadow-lg bg-gradient-to-r from-purple-50 via-pink-50 to-indigo-50 rounded-2xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5 dark:opacity-10">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500 rounded-full translate-x-16 -translate-y-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500 rounded-full -translate-x-12 translate-y-12"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 translate-x-16 -translate-y-16 bg-purple-500 rounded-full"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 -translate-x-12 translate-y-12 bg-pink-500 rounded-full"></div>
         </div>
 
-        <div className="flex relative justify-between items-center">
+        <div className="relative flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
+            <div className="p-3 shadow-lg bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl">
               <FiPlay className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -906,7 +906,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setShowAIConfig(true)}
-              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+              className="flex items-center px-4 py-2 space-x-2 font-semibold text-white transition-all duration-200 shadow-lg bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-xl group hover:scale-105 hover:shadow-xl"
             >
               <FiSettings className="w-4 h-4" />
               <span>AI Config</span>
@@ -949,7 +949,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
             {selectedModel && (
               <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-indigo-100 to-indigo-200 rounded-xl dark:from-indigo-900 dark:to-indigo-800">
                 <div
-                  className="flex justify-center items-center w-6 h-6 text-sm text-white rounded-md shadow-sm"
+                  className="flex items-center justify-center w-6 h-6 text-sm text-white rounded-md shadow-sm"
                   style={{ backgroundColor: getModelColor(selectedModel.id) }}
                 >
                   {getModelIcon(selectedModel.id)}
@@ -963,9 +963,9 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
         </div>
 
         {/* Configuration Section */}
-        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+        <div className="p-6 bg-white border border-gray-200 shadow-lg rounded-2xl dark:bg-gray-800 dark:border-gray-700">
           <div className="flex items-center mb-6 space-x-3">
-            <div className="p-2 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600">
               <FiSettings className="w-5 h-5 text-white" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">Test Configuration</h3>
@@ -974,13 +974,13 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
           <div className="space-y-6">
             {/* Requirements Input */}
             <div>
-              <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
                   Additional Test Requirements
                 </label>
                 <button
                   onClick={handleEditRequirements}
-                  className="flex items-center px-3 py-1 space-x-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg transition-colors hover:bg-gray-200 dark:text-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600"
+                  className="flex items-center px-3 py-1 space-x-1 text-sm font-medium text-gray-600 transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 dark:text-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600"
                 >
                   <FiEdit className="w-3 h-3" />
                   <span>{isEditing ? 'Done' : 'Edit'}</span>
@@ -1002,7 +1002,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
             </div>
 
             {/* Options Row */}
-            <div className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
+            <div className="flex items-center justify-between p-4 border border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
               <div className="flex items-center space-x-4">
                 <Toggle
                   checked={useOOP}
@@ -1017,7 +1017,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
 
               <button
                 onClick={handleCopyPrompt}
-                className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+                className="flex items-center px-4 py-2 space-x-2 font-semibold text-white transition-all duration-200 shadow-lg bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl group hover:scale-105 hover:shadow-xl"
               >
                 {copiedPrompt ? (
                   <>
@@ -1061,7 +1061,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
 
         {/* Error Display */}
         {error && (
-          <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200 dark:from-red-900 dark:to-red-800 dark:border-red-700">
+          <div className="p-4 border border-red-200 bg-gradient-to-r from-red-50 to-red-100 rounded-xl dark:from-red-900 dark:to-red-800 dark:border-red-700">
             <div className="flex items-center space-x-3">
               <FiAlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
               <div>
@@ -1074,10 +1074,10 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
 
         {/* Generated Code Section */}
         {generatedTest && (
-          <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
-            <div className="flex justify-between items-center mb-6">
+          <div className="p-6 bg-white border border-gray-200 shadow-lg rounded-2xl dark:bg-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-green-600">
                   <FiCode className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -1091,7 +1091,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setShowPreview(!showPreview)}
-                  className="p-2 text-gray-600 rounded-lg transition-all duration-200 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-2 text-gray-600 transition-all duration-200 rounded-lg dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                   title={showPreview ? "Hide preview" : "Show preview"}
                 >
                   {showPreview ? <FiEye className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
@@ -1118,7 +1118,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
                 </button>
                 <button
                   onClick={handleCopyCode}
-                  className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+                  className="flex items-center px-4 py-2 space-x-2 font-semibold text-white transition-all duration-200 shadow-lg bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl group hover:scale-105 hover:shadow-xl"
                 >
                   {copiedCode ? (
                     <>
@@ -1134,7 +1134,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
                 </button>
                 <button
                   onClick={downloadTestFile}
-                  className="flex items-center px-4 py-2 space-x-2 font-semibold text-white bg-gradient-to-r from-green-600 to-green-700 rounded-xl shadow-lg transition-all duration-200 group hover:scale-105 hover:shadow-xl"
+                  className="flex items-center px-4 py-2 space-x-2 font-semibold text-white transition-all duration-200 shadow-lg bg-gradient-to-r from-green-600 to-green-700 rounded-xl group hover:scale-105 hover:shadow-xl"
                 >
                   <FiDownload className="w-4 h-4" />
                   <span>Download</span>
@@ -1144,8 +1144,8 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
 
             {/* AI Response Metadata */}
             {aiResponse && (
-              <div className="p-4 mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
-                <div className="flex justify-between items-center">
+              <div className="p-4 mb-4 border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2">
                       <FiZap className="w-4 h-4 text-blue-600 dark:text-blue-400" />

@@ -115,7 +115,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
 }) => {
     const { isDarkMode } = useTheme();
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-    const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const copyTimeoutRef = useRef<number | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle');
     const [showSettings, setShowSettings] = useState(false);
@@ -481,7 +481,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
             }
 
             // Set new timeout with reference
-            copyTimeoutRef.current = setTimeout(() => {
+            copyTimeoutRef.current = window.setTimeout(() => {
                 setCopyStatus('idle');
             }, 2000);
         } catch (error) {
@@ -493,7 +493,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
             }
 
             // Set new timeout with reference
-            copyTimeoutRef.current = setTimeout(() => {
+            copyTimeoutRef.current = window.setTimeout(() => {
                 setCopyStatus('idle');
             }, 2000);
         }
