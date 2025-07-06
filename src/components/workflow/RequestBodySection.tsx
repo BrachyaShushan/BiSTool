@@ -1,9 +1,9 @@
-import React, { useRef, useCallback } from "react";
+import React, { useRef } from "react";
 import { FiZap, FiTrash2, FiPlus } from "react-icons/fi";
 import { useTheme } from "../../context/ThemeContext";
-import Editor, { OnMount } from "@monaco-editor/react";
+import { OnMount } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
-import { Button, Input, IconButton, Textarea, Toggle } from "../ui";
+import { Button, Input, IconButton, Textarea, Toggle, MonacoEditor } from "../ui";
 import { FormDataField } from "../../types";
 import {
     BODY_TYPE_OPTIONS,
@@ -24,8 +24,6 @@ export interface RequestBodySectionProps {
     className?: string;
     compact?: boolean;
     showHeader?: boolean;
-    jsonEditorHeight?: number;
-    onJsonEditorHeightChange?: (height: number) => void;
 }
 
 const RequestBodySection: React.FC<RequestBodySectionProps> = ({
@@ -40,8 +38,6 @@ const RequestBodySection: React.FC<RequestBodySectionProps> = ({
     className = "",
     compact = false,
     showHeader = true,
-    jsonEditorHeight = 200,
-    onJsonEditorHeightChange,
 }) => {
     const { isDarkMode } = useTheme();
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -87,27 +83,6 @@ const RequestBodySection: React.FC<RequestBodySectionProps> = ({
         onFormDataChange(newFormData);
     };
 
-    const handleJsonEditorMouseDown = useCallback((e: React.MouseEvent): void => {
-        if (!onJsonEditorHeightChange) return;
-
-        e.preventDefault();
-        const startY = e.clientY;
-        const startHeight = jsonEditorHeight;
-
-        function onMouseMove(e: MouseEvent): void {
-            const deltaY = e.clientY - startY;
-            const newHeight = Math.max(100, Math.min(500, startHeight + deltaY));
-            onJsonEditorHeightChange!(newHeight);
-        }
-
-        function onMouseUp(): void {
-            document.removeEventListener("mousemove", onMouseMove);
-            document.removeEventListener("mouseup", onMouseUp);
-        }
-
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp);
-    }, [jsonEditorHeight, onJsonEditorHeightChange]);
 
     const getBodyContent = (): React.ReactElement => {
         switch (bodyType) {
@@ -143,23 +118,18 @@ const RequestBodySection: React.FC<RequestBodySectionProps> = ({
                         <div
                             ref={jsonEditorContainerRef}
                             className="relative overflow-hidden border border-gray-200 shadow-sm rounded-xl dark:border-gray-600"
-                            style={{ height: `${jsonEditorHeight}px` }}
                         >
-                            <Editor
-                                height="100%"
-                                defaultLanguage="json"
+                            <MonacoEditor
+                                height="200px"
+                                language="json"
                                 value={jsonBody}
-                                theme={isDarkMode ? "vs-dark" : "vs"}
+                                theme={isDarkMode ? "dark" : "light"}
                                 onChange={handleEditorChange}
                                 onMount={handleEditorDidMount}
                                 options={EDITOR_OPTIONS}
                             />
-                            {onJsonEditorHeightChange && (
-                                <div
-                                    className="absolute bottom-0 left-0 right-0 h-2 transition-all duration-200 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 cursor-ns-resize hover:from-gray-300 hover:to-gray-400 dark:hover:from-gray-500 dark:hover:to-gray-600"
-                                    onMouseDown={handleJsonEditorMouseDown}
-                                />
-                            )}
+
+
                         </div>
                     </div>
                 );
@@ -291,8 +261,8 @@ const RequestBodySection: React.FC<RequestBodySectionProps> = ({
                         {BODY_TYPE_OPTIONS.map((option) => {
                             const isSelected = bodyType === option.id;
                             const colorClass = COLOR_CLASSES[option.color as keyof typeof COLOR_CLASSES];
-                            const selectedClass = isDarkMode ? colorClass.selected : colorClass.selected;
-                            const unselectedClass = isDarkMode ? colorClass.unselectedDark : colorClass.unselected;
+                            const selectedClass = colorClass.selected;
+                            const unselectedClass = colorClass.unselected;
 
                             return (
                                 <button

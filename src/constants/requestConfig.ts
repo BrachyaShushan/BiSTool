@@ -144,33 +144,25 @@ export const COLOR_CLASSES = {
     selected:
       "bg-gray-600 border-gray-500 text-white shadow-lg shadow-gray-500/25",
     unselected:
-      "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400",
-    unselectedDark:
-      "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500",
+      "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:border-gray-500",
   },
   purple: {
     selected:
       "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/25",
     unselected:
-      "bg-white border-gray-300 text-gray-700 hover:bg-purple-50 hover:border-purple-300",
-    unselectedDark:
-      "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-purple-500",
+      "bg-white border-gray-300 text-gray-700 hover:bg-purple-50 hover:border-purple-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:border-purple-500",
   },
   green: {
     selected:
       "bg-green-600 border-green-500 text-white shadow-lg shadow-green-500/25",
     unselected:
-      "bg-white border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-300",
-    unselectedDark:
-      "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-green-500",
+      "bg-white border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:border-green-500",
   },
   blue: {
     selected:
       "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/25",
     unselected:
-      "bg-white border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300",
-    unselectedDark:
-      "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-blue-500",
+      "bg-white border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:border-blue-500",
   },
 };
 

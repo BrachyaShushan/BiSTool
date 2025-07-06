@@ -101,7 +101,6 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   });
 
   const [textBody, setTextBody] = useState<string>("");
-  const [jsonEditorHeight, setJsonEditorHeight] = useState<number>(200);
 
   // Function to check if HTTP method supports a body
   const methodSupportsBody = (httpMethod: string): boolean => {
@@ -362,8 +361,8 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as "params" | "headers" | "body")}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === tab.id
-                      ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                    ? "bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                     }`}
                 >
                   <TabIcon className="w-4 h-4" />
@@ -407,8 +406,6 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
               onJsonBodyChange={setJsonBody}
               onFormDataChange={setFormData}
               onTextBodyChange={setTextBody}
-              jsonEditorHeight={jsonEditorHeight}
-              onJsonEditorHeightChange={setJsonEditorHeight}
             />
           )}
         </div>

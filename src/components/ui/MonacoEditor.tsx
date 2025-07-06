@@ -12,7 +12,7 @@ import {
     FiCheck,
     FiX
 } from 'react-icons/fi';
-import { Card } from './index';
+import { Card, Toggle } from './index';
 import { EDITOR_OPTIONS } from '../../constants/requestConfig';
 
 export interface MonacoEditorProps {
@@ -931,25 +931,12 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                         </div>
 
                                         {/* Line Numbers Toggle */}
-                                        <label className="flex items-center justify-between p-3 transition-all duration-200 border border-gray-200 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800/50 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 group">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="flex items-center justify-center w-6 h-6 text-xs font-bold text-white rounded bg-gradient-to-br from-emerald-500 to-emerald-600">
-                                                    #
-                                                </div>
-                                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Line Numbers</span>
-                                            </div>
-                                            <div className="relative">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={localOptions.showLineNumbers}
-                                                    onChange={(e) => setLocalOptions(prev => ({ ...prev, showLineNumbers: e.target.checked }))}
-                                                    className="sr-only"
-                                                />
-                                                <div className={`w-9 h-5 rounded-full transition-all duration-200 ${localOptions.showLineNumbers ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                                                    <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-200 mt-0.5 ${localOptions.showLineNumbers ? 'translate-x-4' : 'translate-x-0.5'}`}></div>
-                                                </div>
-                                            </div>
-                                        </label>
+                                        <Toggle
+                                            checked={localOptions.showLineNumbers}
+                                            onChange={(checked: boolean) => setLocalOptions(prev => ({ ...prev, showLineNumbers: checked }))}
+                                            label="Line Numbers"
+                                        />
+
                                     </div>
 
                                     {/* Right Column */}
@@ -971,46 +958,19 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                         </div>
 
                                         {/* Minimap Toggle */}
-                                        <label className="flex items-center justify-between p-3 transition-all duration-200 border border-gray-200 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800/50 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 group">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="flex items-center justify-center w-6 h-6 text-xs font-bold text-white rounded bg-gradient-to-br from-purple-500 to-purple-600">
-                                                    ▤
-                                                </div>
-                                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Minimap</span>
-                                            </div>
-                                            <div className="relative">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={localOptions.showMinimap}
-                                                    onChange={(e) => setLocalOptions(prev => ({ ...prev, showMinimap: e.target.checked }))}
-                                                    className="sr-only"
-                                                />
-                                                <div className={`w-9 h-5 rounded-full transition-all duration-200 ${localOptions.showMinimap ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                                                    <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-200 mt-0.5 ${localOptions.showMinimap ? 'translate-x-4' : 'translate-x-0.5'}`}></div>
-                                                </div>
-                                            </div>
-                                        </label>
+                                        <Toggle
+                                            checked={localOptions.showMinimap}
+                                            onChange={(checked: boolean) => setLocalOptions(prev => ({ ...prev, showMinimap: checked }))}
+                                            label="Minimap"
+                                        />
 
                                         {/* Transparent Background Toggle */}
-                                        <label className="flex items-center justify-between p-3 transition-all duration-200 border border-gray-200 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800/50 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 group">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="flex items-center justify-center w-6 h-6 text-xs font-bold text-white rounded bg-gradient-to-br from-cyan-500 to-cyan-600">
-                                                    ◐
-                                                </div>
-                                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Transparent</span>
-                                            </div>
-                                            <div className="relative">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={localOptions.transparentBackground}
-                                                    onChange={(e) => setLocalOptions(prev => ({ ...prev, transparentBackground: e.target.checked }))}
-                                                    className="sr-only"
-                                                />
-                                                <div className={`w-9 h-5 rounded-full transition-all duration-200 ${localOptions.transparentBackground ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                                                    <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-200 mt-0.5 ${localOptions.transparentBackground ? 'translate-x-4' : 'translate-x-0.5'}`}></div>
-                                                </div>
-                                            </div>
-                                        </label>
+                                        <Toggle
+                                            checked={localOptions.transparentBackground}
+                                            onChange={(checked: boolean) => setLocalOptions(prev => ({ ...prev, transparentBackground: checked }))}
+                                            label="Transparent Background"
+                                        />
+
                                     </div>
                                 </div>
 
