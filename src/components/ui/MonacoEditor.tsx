@@ -1,5 +1,5 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { Editor } from '@monaco-editor/react';
+import React, { useRef, useCallback, useEffect, useState, Suspense, lazy } from 'react';
+import { Editor, OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { useTheme } from '../../context/ThemeContext';
 import { IconType } from 'react-icons';
@@ -14,6 +14,9 @@ import {
 } from 'react-icons/fi';
 import { Card, Toggle } from './index';
 import { EDITOR_OPTIONS } from '../../constants/requestConfig';
+
+// Dynamically import Monaco Editor to reduce initial bundle size
+const MonacoEditorEditor = lazy(() => import('@monaco-editor/react').then(module => ({ default: module.Editor })));
 
 export interface MonacoEditorProps {
     value?: string;
@@ -561,8 +564,6 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         }
     };
 
-
-
     // Map our variant to Card's supported variants
     const cardVariant = variant === 'compact' ? 'default' : variant;
 
@@ -636,8 +637,6 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     };
 
     const themeClasses = getActiveThemeClasses();
-
-
 
     const editorContent = (
         <div className={`relative ${className}`}>
@@ -836,17 +835,25 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                             )}
 
                             <div className={localOptions.transparentBackground ? 'monaco-transparent' : ''}>
-                                <Editor
-                                    height={height}
-                                    width={width}
-                                    language={language}
-                                    value={value}
-                                    {...(onChange && { onChange })}
-                                    onMount={handleEditorDidMount}
-                                    theme={editorTheme}
-                                    options={combinedOptions}
-                                    loading={null}
-                                />
+                                <Suspense fallback={
+                                    <div
+                                        className="flex items-center justify-center border border-gray-300 rounded-md bg-gray-50"
+                                        style={{ height, width }}
+                                    >
+                                        <div className="text-gray-500">Loading editor...</div>
+                                    </div>
+                                }>
+                                    <MonacoEditorEditor
+                                        height={height}
+                                        width={width}
+                                        language={language}
+                                        value={value}
+                                        onChange={onChange}
+                                        onMount={handleEditorDidMount}
+                                        theme={editorTheme}
+                                        options={combinedOptions}
+                                    />
+                                </Suspense>
                             </div>
                         </div>
                     </Card>

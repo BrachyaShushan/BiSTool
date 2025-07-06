@@ -146,6 +146,7 @@ export const useVariableStorage = (
 
   const saveSharedVariables = useCallback(
     (variables: any[]) => {
+      console.log("useVariableStorage: Saving shared variables:", variables);
       debouncedSave(() => {
         storageManager.saveSharedVariables(variables, projectName);
       }, 200);
@@ -153,12 +154,103 @@ export const useVariableStorage = (
     [storageManager, debouncedSave, projectName]
   );
 
+  const saveGlobalVariables = useCallback(
+    (variables: Record<string, string>) => {
+      console.log("useVariableStorage: Saving global variables:", variables);
+      debouncedSave(() => {
+        storageManager.saveGlobalVariables(variables, projectName);
+      }, 200);
+    },
+    [storageManager, debouncedSave, projectName]
+  );
+
   return {
     saveSharedVariables,
+    saveGlobalVariables,
     loadSharedVariables: useCallback(() => {
-      if (!projectId) return [];
-      return storageManager.loadSharedVariables(projectName);
-    }, [storageManager, projectId, projectName]),
+      try {
+        // Try to get the current project ID from the storage manager
+        const currentProjectId = (storageManager as any).currentProjectId;
+        if (currentProjectId) {
+          const loaded = storageManager.loadSharedVariables(projectName);
+          console.log(
+            "useVariableStorage: Loaded shared variables from current project:",
+            loaded
+          );
+          return loaded;
+        } else {
+          // If no current project, try to find the most recent project
+          const root = storageManager.getStorageRoot();
+          if (root && root.projects && Object.keys(root.projects).length > 0) {
+            // Get the first available project
+            const projectIds = Object.keys(root.projects);
+            const projectId = projectIds[0];
+            if (projectId) {
+              const projectData = root.projects[projectId];
+              if (projectData && projectData.variables) {
+                console.log(
+                  "useVariableStorage: Loading shared variables from fallback project:",
+                  projectId
+                );
+                return projectData.variables.shared || [];
+              }
+            }
+          }
+        }
+        console.log(
+          "useVariableStorage: No shared variables found, returning empty array"
+        );
+        return [];
+      } catch (error) {
+        console.log(
+          "useVariableStorage: Could not load shared variables:",
+          error
+        );
+        return [];
+      }
+    }, [storageManager, projectName]),
+    loadGlobalVariables: useCallback(() => {
+      try {
+        // Try to get the current project ID from the storage manager
+        const currentProjectId = (storageManager as any).currentProjectId;
+        if (currentProjectId) {
+          const loaded = storageManager.loadGlobalVariables(projectName);
+          console.log(
+            "useVariableStorage: Loaded global variables from current project:",
+            loaded
+          );
+          return loaded;
+        } else {
+          // If no current project, try to find the most recent project
+          const root = storageManager.getStorageRoot();
+          if (root && root.projects && Object.keys(root.projects).length > 0) {
+            // Get the first available project
+            const projectIds = Object.keys(root.projects);
+            const projectId = projectIds[0];
+            if (projectId) {
+              const projectData = root.projects[projectId];
+              if (projectData && projectData.variables) {
+                console.log(
+                  "useVariableStorage: Loading global variables from fallback project:",
+                  projectId
+                );
+                return projectData.variables.global || {};
+              }
+            }
+          }
+        }
+        console.log(
+          "useVariableStorage: No global variables found, returning empty object"
+        );
+        return {};
+      } catch (error) {
+        console.log(
+          "useVariableStorage: Could not load global variables:",
+          error
+        );
+        return {};
+      }
+    }, [storageManager, projectName]),
   };
 };
 

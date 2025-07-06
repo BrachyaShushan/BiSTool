@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useAppContext } from "../../context/AppContext";
+import { useVariablesContext } from "../../context/VariablesContext";
 import { useTheme } from "../../context/ThemeContext";
+import { useAppContext } from "../../context/AppContext";
 import Modal from "../core/Modal";
 import Tooltip from "../ui/Tooltip";
 import {
@@ -10,7 +11,8 @@ import {
 } from 'react-icons/fi';
 
 const TokenGenerator: React.FC = () => {
-    const { globalVariables, updateGlobalVariable, tokenConfig, setTokenConfig } = useAppContext();
+    const { globalVariables, updateGlobalVariable } = useVariablesContext();
+    const { tokenConfig, setTokenConfig } = useAppContext();
     const { isDarkMode } = useTheme();
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -57,15 +59,6 @@ const TokenGenerator: React.FC = () => {
         }
     }, []);
 
-    const replaceVariables = useCallback(
-        (str: string): string => {
-            if (!str) return str;
-            return str.replace(/\{([^}]+)\}/g, (match, variableName) => {
-                return globalVariables?.[variableName] || match;
-            });
-        },
-        [globalVariables]
-    );
 
     const getCookieValue = useCallback((cookieName: string): string | null => {
         const cookies = document.cookie.split(';');
@@ -219,7 +212,7 @@ const TokenGenerator: React.FC = () => {
                 throw new Error("Please set username and password in global variables");
             }
 
-            const domain = replaceVariables(tokenConfig.domain);
+            const domain = tokenConfig.domain;
             if (!domain) {
                 throw new Error("Please set a valid domain");
             }
@@ -389,7 +382,7 @@ const TokenGenerator: React.FC = () => {
         } finally {
             safeSetState(setIsGenerating, false);
         }
-    }, [globalVariables, tokenConfig, replaceVariables, updateGlobalVariable, extractTokenFromJson, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromSetCookieHeader, getCookieValue, extractTokenFromResponseText]);
+    }, [globalVariables, tokenConfig, extractTokenFromJson, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromSetCookieHeader, getCookieValue, extractTokenFromResponseText]);
 
     const checkTokenExpiration = useCallback((): boolean => {
         if (!globalVariables) return false;
@@ -488,7 +481,7 @@ const TokenGenerator: React.FC = () => {
             if (!globalVariables['username'] || !globalVariables['password']) {
                 throw new Error("Please set username and password in global variables");
             }
-            const domain = replaceVariables(tokenConfig.domain);
+            const domain = tokenConfig.domain;
             if (!domain) {
                 throw new Error("Please set a valid domain");
             }
@@ -645,7 +638,7 @@ const TokenGenerator: React.FC = () => {
         } finally {
             safeSetState(setIsAutoDetecting, false);
         }
-    }, [globalVariables, tokenConfig, replaceVariables, extractTokenFromJson, extractTokenFromSetCookieHeader, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromResponseText, updateGlobalVariable, setTokenConfig]);
+    }, [globalVariables, tokenConfig, extractTokenFromJson, extractTokenFromSetCookieHeader, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromResponseText, updateGlobalVariable, setTokenConfig]);
 
     return (
         <>
@@ -1708,7 +1701,7 @@ const TokenGenerator: React.FC = () => {
                                             Request URL
                                         </h4>
                                         <div className={`p-3 rounded-lg border font-mono text-sm ${isDarkMode ? "text-gray-300 bg-gray-700 border-gray-600" : "text-gray-700 bg-gray-50 border-gray-300"}`}>
-                                            {replaceVariables(tokenConfig.domain)}{tokenConfig.path}
+                                            {tokenConfig.domain}{tokenConfig.path}
                                         </div>
                                     </div>
 

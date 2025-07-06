@@ -6,6 +6,7 @@ import {
   SectionId,
   TokenConfig,
 } from "../types";
+import { DEFAULT_GLOBAL_VARIABLES } from "../constants/variables";
 
 // New hierarchical storage structure
 export interface ProjectData {
@@ -28,7 +29,6 @@ export interface ProjectData {
     yamlOutput: string;
     activeSection: SectionId;
     segmentVariables: Record<string, string>;
-    globalVariables: Record<string, string>;
   };
   sessions: {
     activeSession: ExtendedSession | null;
@@ -242,14 +242,6 @@ export const createDefaultProjectData = (
         preserveSettings && existingProject
           ? existingProject.appState.segmentVariables
           : {},
-      globalVariables:
-        preserveSettings && existingProject
-          ? existingProject.appState.globalVariables
-          : {
-              username: "",
-              password: "",
-              base_url: "",
-            },
     },
     sessions: {
       activeSession:
@@ -269,11 +261,7 @@ export const createDefaultProjectData = (
       global:
         preserveSettings && existingProject
           ? existingProject.variables.global
-          : {
-              username: "",
-              password: "",
-              base_url: "",
-            },
+          : DEFAULT_GLOBAL_VARIABLES,
     },
     tokenConfig:
       preserveSettings && existingProject
@@ -304,6 +292,11 @@ export class StorageManager {
     this.currentProjectId = projectId;
   }
 
+  // Helper method to get storage root for external access
+  getStorageRoot(): BiSToolStorageRoot {
+    return getStorageRoot();
+  }
+
   // Get the current project data (or default)
   getCurrentProjectData(projectName: string): ProjectData {
     if (!this.currentProjectId) {
@@ -324,6 +317,24 @@ export class StorageManager {
     }
 
     const projectData = root.projects[this.currentProjectId]!;
+    return projectData;
+  }
+
+  // Get project data by ID without setting current project
+  getProjectData(projectId: string, projectName: string): ProjectData {
+    const root = getStorageRoot();
+
+    if (!root.projects[projectId]) {
+      // Create default if missing
+      root.projects[projectId] = createDefaultProjectData(
+        projectId,
+        projectName,
+        false // Don't preserve settings for new projects
+      );
+      setStorageRoot(root);
+    }
+
+    const projectData = root.projects[projectId]!;
     return projectData;
   }
 
@@ -427,6 +438,18 @@ export class StorageManager {
   }
   loadSharedVariables(projectName: string): Variable[] {
     return this.getCurrentProjectData(projectName).variables.shared;
+  }
+  saveGlobalVariables(
+    variables: Record<string, string>,
+    projectName: string
+  ): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.variables.global = variables;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+  loadGlobalVariables(projectName: string): Record<string, string> {
+    return this.getCurrentProjectData(projectName).variables.global;
   }
   saveTokenConfig(config: TokenConfig, projectName: string): void {
     this.updateTokenConfig(config, projectName);

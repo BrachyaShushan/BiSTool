@@ -7,10 +7,9 @@ import {
   parseSegmentsFromParsed,
   buildUrlFromSegments,
   createURLData,
-  getVariableValue as getVariableValueUtil,
-  getSessionSegmentVariables,
 } from "../utils/urlBuilderUtils";
 import { DEFAULT_VALUES } from "../constants/urlBuilder";
+import { useVariablesContext } from "../context/VariablesContext";
 
 // Define a key for localStorage persistence
 const LOCAL_STORAGE_KEY = "url_builder_state";
@@ -59,16 +58,11 @@ export const useURLBuilder = (
 ): UseURLBuilderReturn => {
   const { autoSave = true, persistToLocalStorage = true } = options;
 
-  const {
-    urlData,
-    setUrlData,
-    globalVariables,
-    sharedVariables,
-    activeSession,
-    handleSaveSession,
-    isLoading,
-  } = useAppContext();
-
+  const { urlData, setUrlData, activeSession, handleSaveSession, isLoading } =
+    useAppContext();
+  const { globalVariables } = useVariablesContext();
+  const { getVariableValue: getVariableValueFromContext } =
+    useVariablesContext();
   // Refs to track state changes and prevent infinite loops
   const initializedSessionId = useRef<string | null>(null);
   const lastSyncedData = useRef<string>("");
@@ -117,11 +111,6 @@ export const useURLBuilder = (
     urlData?.queryParams,
   ]);
 
-  // Helper functions
-  const getSessionSegmentVariablesCallback = useCallback(() => {
-    return getSessionSegmentVariables(activeSession?.urlData, urlData);
-  }, [activeSession?.urlData, urlData]);
-
   const loadPersistedState = useCallback(() => {
     if (activeSession || !persistToLocalStorage) return null;
 
@@ -148,16 +137,9 @@ export const useURLBuilder = (
 
   const getVariableValue = useCallback(
     (paramName: string, env: string) => {
-      const sessionVars = getSessionSegmentVariablesCallback();
-      return getVariableValueUtil(
-        paramName,
-        env,
-        sessionVars,
-        sharedVariables,
-        globalVariables
-      );
+      return getVariableValueFromContext(paramName, env);
     },
-    [globalVariables, sharedVariables, getSessionSegmentVariablesCallback]
+    [getVariableValueFromContext]
   );
 
   // Initialize state from data sources

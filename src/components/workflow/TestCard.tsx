@@ -26,18 +26,15 @@ import {
     Badge,
     Toggle
 } from "../ui";
+import { useVariablesContext } from "../../context/VariablesContext";
+import { useAppContext } from "../../context/AppContext";
+import { useTheme } from "../../context/ThemeContext";
 
 interface TestCardProps {
     test: TestCase;
-    urlData: any;
-    requestConfig: any;
-    globalVariables: any;
-    activeSession: any;
-    isDarkMode: boolean;
     handleUpdateTest: (id: string, update: Partial<TestCase>) => void;
     handleDuplicateTest: (id: string) => void;
     handleRemoveTest: (id: string) => void;
-    generateAuthHeaders: () => Record<string, string>;
 }
 
 const statusCodeColors = {
@@ -76,13 +73,15 @@ const isPartialMatch = (expected: string, actual: string) => {
     }
 };
 
-const evaluateUrl = (url: string, test: TestCase, activeSession: any, globalVariables: any) => {
+const evaluateUrl = (url: string, test: TestCase, sharedVariables: any, globalVariables: any) => {
     return url.replace(/\{([^}]+)\}/g, (match, varName) => {
         if (test.pathOverrides?.[varName] && test.pathOverrides[varName].trim() !== '') {
             return test.pathOverrides[varName];
         }
-        if (activeSession?.sharedVariables?.[varName]) {
-            return activeSession.sharedVariables[varName];
+        // Check shared variables from VariablesContext
+        const sharedVar = sharedVariables.find((v: any) => v.key === varName);
+        if (sharedVar) {
+            return sharedVar.value;
         }
         if (globalVariables?.[varName]) {
             return globalVariables[varName];
@@ -93,16 +92,13 @@ const evaluateUrl = (url: string, test: TestCase, activeSession: any, globalVari
 
 const TestCard: React.FC<TestCardProps> = ({
     test,
-    urlData,
-    requestConfig,
-    globalVariables,
-    activeSession,
-    isDarkMode,
     handleUpdateTest,
     handleDuplicateTest,
     handleRemoveTest,
-    generateAuthHeaders,
 }) => {
+    const { globalVariables, sharedVariables } = useVariablesContext();
+    const { urlData, requestConfig, generateAuthHeaders } = useAppContext();
+    const { isDarkMode } = useTheme();
     const [loading, setLoading] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
 
@@ -128,12 +124,12 @@ const TestCard: React.FC<TestCardProps> = ({
             });
         }
 
-        // Replace any remaining {variable} in the URL with test overrides, session/shared, or global variables
-        url = evaluateUrl(url, test, activeSession, globalVariables);
+        // Replace any remaining {variable} in the URL with test overrides, shared, or global variables
+        url = evaluateUrl(url, test, sharedVariables, globalVariables);
 
         // Query param overrides: only override if non-empty string
         let queryString = '';
-        if (requestConfig?.queryParams) {
+        if (requestConfig?.queryParams?.length) {
             const params = requestConfig.queryParams.map((param: any) => {
                 const overrideVal = test.queryOverrides?.[param.key];
                 const value = (overrideVal && overrideVal.trim() !== '') ? overrideVal : param.value;
@@ -145,7 +141,7 @@ const TestCard: React.FC<TestCardProps> = ({
 
         // Body override: only use if method supports body and non-empty string
         let body: string | undefined = undefined;
-        let headers: Record<string, string> = (requestConfig?.headers ?? []).reduce((acc: Record<string, string>, h: any) => {
+        let headers: Record<string, string> = (requestConfig?.headers || []).reduce((acc: Record<string, string>, h: any) => {
             acc[h.key] = h.value;
             return acc;
         }, {});
@@ -356,7 +352,7 @@ const TestCard: React.FC<TestCardProps> = ({
                             )}
 
                             {/* Query Param Overrides */}
-                            {requestConfig?.queryParams?.length > 0 && (
+                            {requestConfig?.queryParams && requestConfig.queryParams.length > 0 && (
                                 <Card variant="outlined" padding="md" className="border-green-200 dark:border-green-700">
                                     <div className="flex items-center mb-3 space-x-2">
                                         <FiCode className="w-4 h-4 text-green-600 dark:text-green-400" />

@@ -1,18 +1,20 @@
 import { FiKey, FiGlobe, FiFolder, FiCheck, FiEdit2, FiCopy, FiTrash2 } from "react-icons/fi";
-import { useAppContext } from "../../../context/AppContext";
+import { useVariablesContext } from '../../../context/VariablesContext';
 import { useEffect, useRef, useState } from "react";
 import { ExtendedVariable, ModalType } from "../../../types/features/SavedManager";
 import Modal from "../../core/Modal";
 
+
 const VariablesManager = () => {
     const {
         globalVariables,
-        activeSession,
-        deleteGlobalVariable,
+        sharedVariables,
         updateGlobalVariable,
-        updateSessionVariable,
-        deleteSessionVariable,
-    } = useAppContext();
+        deleteGlobalVariable,
+        updateSharedVariable,
+        deleteSharedVariable,
+    } = useVariablesContext();
+
     const [showVariableModal, setShowVariableModal] = useState<boolean>(false);
     const [modalType, setModalType] = useState<ModalType | null>(null);
     const [selectedVariable, setSelectedVariable] = useState<ExtendedVariable>({
@@ -24,6 +26,12 @@ const VariablesManager = () => {
     const copyTimeoutRef = useRef<number | null>(null);
 
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+    // Convert sharedVariables array to object for rendering
+    const sharedVarsObj = sharedVariables.reduce((acc, v) => {
+        acc[v.key] = v.value;
+        return acc;
+    }, {} as Record<string, string>);
 
     const handleCopy = (text: string, key: string) => {
         navigator.clipboard.writeText(text);
@@ -59,8 +67,8 @@ const VariablesManager = () => {
         if (selectedVariable.key.trim() && selectedVariable.value.trim()) {
             if (selectedVariable.isGlobal) {
                 updateGlobalVariable(selectedVariable.key, selectedVariable.value);
-            } else if (activeSession) {
-                updateSessionVariable(selectedVariable.key, selectedVariable.value);
+            } else {
+                updateSharedVariable(selectedVariable.key, selectedVariable.value);
             }
             setShowVariableModal(false);
             setSelectedVariable({ key: "", value: "", isGlobal: false });
@@ -114,9 +122,9 @@ const VariablesManager = () => {
                                             </span>
                                         </p>
                                         <p className={`text-sm dark:text-gray-400 text-gray-500`}>
-                                            {activeSession ? (
+                                            {Object.keys(sharedVarsObj).length > 0 ? (
                                                 <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-200">
-                                                    {Object.keys(activeSession.sharedVariables || {}).length} session variable{Object.keys(activeSession.sharedVariables || {}).length !== 1 ? 's' : ''}
+                                                    {Object.keys(sharedVarsObj).length} session variable{Object.keys(sharedVarsObj).length !== 1 ? 's' : ''}
                                                 </span>
                                             ) : (
                                                 <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-full dark:bg-gray-700 dark:text-gray-300">
@@ -139,16 +147,14 @@ const VariablesManager = () => {
                                 <FiGlobe className="relative z-10 w-4 h-4" />
                                 <span className="relative z-10">Global Variable</span>
                             </button>
-                            {activeSession && (
-                                <button
-                                    onClick={() => handleVariableAction("new", null, false)}
-                                    className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden dark:text-white dark:bg-gradient-to-r dark:from-blue-600 dark:via-indigo-600 dark:to-purple-600 dark:hover:from-blue-700 dark:hover:via-indigo-700 dark:hover:to-purple-700 dark:shadow-blue-500/25 text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25`}
-                                >
-                                    <div className="absolute inset-0 transition-transform duration-700 transform -translate-x-full -skew-x-12 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
-                                    <FiFolder className="relative z-10 w-4 h-4" />
-                                    <span className="relative z-10">Session Variable</span>
-                                </button>
-                            )}
+                            <button
+                                onClick={() => handleVariableAction("new", null, false)}
+                                className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden dark:text-white dark:bg-gradient-to-r dark:from-blue-600 dark:via-indigo-600 dark:to-purple-600 dark:hover:from-blue-700 dark:hover:via-indigo-700 dark:hover:to-purple-700 dark:shadow-blue-500/25 text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25`}
+                            >
+                                <div className="absolute inset-0 transition-transform duration-700 transform -translate-x-full -skew-x-12 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
+                                <FiFolder className="relative z-10 w-4 h-4" />
+                                <span className="relative z-10">Session Variable</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -238,74 +244,72 @@ const VariablesManager = () => {
                 </div>
 
                 {/* Session Variables Section */}
-                {activeSession && (
-                    <div className="p-5 bg-white border border-gray-200 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
-                        <div className="flex items-center justify-between mb-4">
-                            <h4 className={`text-lg font-semibold flex items-center space-x-2 dark:text-gray-200 text-gray-800`}>
-                                <FiFolder className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                <span>Session Variables</span>
-                                <span className={`px-2 py-1 text-xs font-semibold rounded-full dark:text-blue-200 dark:bg-blue-900 text-blue-800 bg-blue-100`}>
-                                    {Object.keys(activeSession.sharedVariables || {}).length}
-                                </span>
-                            </h4>
-                        </div>
-                        <div className="space-y-3">
-                            {Object.entries(activeSession.sharedVariables || {}).length > 0 ? (
-                                Object.entries(activeSession.sharedVariables || {}).map(([key, value]) => (
-                                    <div key={key} className={`p-4 rounded-lg border transition-all duration-200 hover:shadow-md dark:bg-gray-700 dark:border-gray-600 dark:hover:border-gray-500 bg-gray-50 border-gray-200 hover:border-gray-300`}>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center flex-1 min-w-0 space-x-3">
-                                                <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900">
-                                                    <FiFolder className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <span className={`font-semibold dark:text-white text-gray-900`}>
-                                                        {key}
-                                                    </span>
-                                                    <p className={`text-sm truncate mt-1 dark:text-gray-400 text-gray-600`}>
-                                                        {value}
-                                                    </p>
-                                                </div>
+                <div className="p-5 bg-white border border-gray-200 shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-4">
+                        <h4 className={`text-lg font-semibold flex items-center space-x-2 dark:text-gray-200 text-gray-800`}>
+                            <FiFolder className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            <span>Session Variables</span>
+                            <span className={`px-2 py-1 text-xs font-semibold rounded-full dark:text-blue-200 dark:bg-blue-900 text-blue-800 bg-blue-100`}>
+                                {Object.keys(sharedVarsObj).length}
+                            </span>
+                        </h4>
+                    </div>
+                    <div className="space-y-3">
+                        {Object.entries(sharedVarsObj).length > 0 ? (
+                            Object.entries(sharedVarsObj).map(([key, value]) => (
+                                <div key={key} className={`p-4 rounded-lg border transition-all duration-200 hover:shadow-md dark:bg-gray-700 dark:border-gray-600 dark:hover:border-gray-500 bg-gray-50 border-gray-200 hover:border-gray-300`}>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center flex-1 min-w-0 space-x-3">
+                                            <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900">
+                                                <FiFolder className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                             </div>
-                                            <div className="flex items-center ml-4 space-x-2">
-                                                <button
-                                                    onClick={() => handleCopy(value as string, `session-${key}`)}
-                                                    className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${copiedKey === `session-${key}`
-                                                        ? "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900"
-                                                        : "text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-100 dark:hover:bg-green-900"
-                                                        }`}
-                                                    title="Copy value"
-                                                >
-                                                    {copiedKey === `session-${key}` ? <FiCheck className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleVariableAction("edit", [key, value], false)}
-                                                    className="p-2 text-gray-600 transition-all duration-200 rounded-lg dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 hover:scale-105"
-                                                    title="Edit variable"
-                                                >
-                                                    <FiEdit2 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => deleteSessionVariable(key)}
-                                                    className="p-2 text-gray-600 transition-all duration-200 rounded-lg dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 hover:scale-105"
-                                                    title="Delete variable"
-                                                >
-                                                    <FiTrash2 className="w-4 h-4" />
-                                                </button>
+                                            <div className="flex-1 min-w-0">
+                                                <span className={`font-semibold dark:text-white text-gray-900`}>
+                                                    {key}
+                                                </span>
+                                                <p className={`text-sm truncate mt-1 dark:text-gray-400 text-gray-600`}>
+                                                    {value}
+                                                </p>
                                             </div>
                                         </div>
+                                        <div className="flex items-center ml-4 space-x-2">
+                                            <button
+                                                onClick={() => handleCopy(value as string, `session-${key}`)}
+                                                className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${copiedKey === `session-${key}`
+                                                    ? "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900"
+                                                    : "text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-100 dark:hover:bg-green-900"
+                                                    }`}
+                                                title="Copy value"
+                                            >
+                                                {copiedKey === `session-${key}` ? <FiCheck className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
+                                            </button>
+                                            <button
+                                                onClick={() => handleVariableAction("edit", [key, value], false)}
+                                                className="p-2 text-gray-600 transition-all duration-200 rounded-lg dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 hover:scale-105"
+                                                title="Edit variable"
+                                            >
+                                                <FiEdit2 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => deleteSharedVariable(key)}
+                                                className="p-2 text-gray-600 transition-all duration-200 rounded-lg dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 hover:scale-105"
+                                                title="Delete variable"
+                                            >
+                                                <FiTrash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
-                                ))
-                            ) : (
-                                <div className={`p-8 text-center rounded-lg border-2 border-dashed dark:text-gray-400 dark:border-gray-600 text-gray-500 border-gray-300`}>
-                                    <FiFolder className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                    <p className="text-sm font-medium">No session variables yet</p>
-                                    <p className="mt-1 text-xs">Create variables specific to this session</p>
                                 </div>
-                            )}
-                        </div>
+                            ))
+                        ) : (
+                            <div className={`p-8 text-center rounded-lg border-2 border-dashed dark:text-gray-400 dark:border-gray-600 text-gray-500 border-gray-300`}>
+                                <FiFolder className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                <p className="text-sm font-medium">No session variables yet</p>
+                                <p className="mt-1 text-xs">Create variables specific to this session</p>
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
             {/* Variable Modal */}
             <Modal

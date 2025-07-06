@@ -6,14 +6,13 @@ import Settings from "./windows/Settings";
 import SessionsManager from "./windows/SessionsManager";
 import ProjectsManager from "./windows/ProjectsManager";
 import VariablesManager from "./windows/VariablesManager";
-
+import { TabType } from "../../types/core/app.types";
 interface UnifiedManagerProps {
     isOpen: boolean;
     onClose: () => void;
-    initialTab?: 'sessions' | 'variables' | 'projects' | 'settings';
+    initialTab?: TabType;
 }
 
-type TabType = 'sessions' | 'variables' | 'projects' | 'settings';
 
 const UnifiedManager: React.FC<UnifiedManagerProps> = ({
     isOpen,

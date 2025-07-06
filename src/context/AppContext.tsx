@@ -4,22 +4,22 @@ import React, {
   useState,
   useEffect,
   useCallback,
-  useMemo,
   useRef,
 } from "react";
 import {
   AppContextType,
   URLData,
   RequestConfigData,
-  Variable,
+  TabType,
 } from "../types";
 import { ExtendedSession } from "../types/features/SavedManager";
-import { StorageManager } from "../utils/storage";
 import { useAppState } from "../hooks/useAppState";
 import { useSessionManager } from "../hooks/useSessionManager";
 import { useTokenManager } from "../hooks/useTokenManager";
-import { useAppStateStorage, useSessionStorage, useVariableStorage, useTokenConfigStorage } from "../hooks/useStorage";
+import { useVariablesContext } from "./VariablesContext";
 import { useSaveManager } from "../hooks/useSaveManager";
+import { useAppStateStorage, useSessionStorage, useTokenConfigStorage } from "../hooks/useStorage";
+import { useStorageContext } from "./StorageContext";
 import { useProjectContext } from "./ProjectContext";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -36,24 +36,22 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   const [hasLoaded, setHasLoaded] = useState(false);
   const intendedActiveSessionId = useRef<string | null>(null);
   const [showUnifiedManager, setShowUnifiedManager] = useState(false);
+  const [unifiedManagerTab, setUnifiedManagerTab] = useState<TabType>("projects");
   // Get current project name from ProjectContext
   const projectContext = useProjectContext();
   const projectName = projectContext?.currentProject?.name || "Unnamed Project";
 
-  // Initialize storage manager
-  const storageManager = useMemo(() => new StorageManager(), []);
-
-  // Set current project in storage manager when it changes
-  useEffect(() => {
-    if (currentProjectId) {
-      storageManager.setCurrentProject(currentProjectId);
-    }
-  }, [currentProjectId, storageManager]);
+  // Use the shared StorageManager from StorageContext
+  const { storageManager } = useStorageContext();
 
   // Initialize hooks
   const appState = useAppState();
   const sessionManager = useSessionManager();
-  const tokenManager = useTokenManager(appState.globalVariables);
+  const tokenManager = useTokenManager();
+  const {
+    updateGlobalVariable,
+    sharedVariables,
+  } = useVariablesContext();
 
   // Initialize save manager
   const saveManager = useSaveManager(storageManager, projectName, {
@@ -66,7 +64,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   // Initialize storage hooks with projectId and projectName
   const appStateStorage = useAppStateStorage(storageManager, appState.appState, currentProjectId, projectName);
   const sessionStorage = useSessionStorage(storageManager, currentProjectId, projectName);
-  const variableStorage = useVariableStorage(storageManager, currentProjectId, projectName);
   const tokenConfigStorage = useTokenConfigStorage(storageManager, currentProjectId, projectName);
 
   // Method color mapping
@@ -105,18 +102,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
           intendedActiveSessionId.current
         );
 
-        // Load shared variables - but prioritize session variables if active session exists
-        const loadedSharedVariables = variableStorage.loadSharedVariables();
-        if (loadedActiveSession && loadedActiveSession.sharedVariables) {
-          // Convert session variables to Variable[] format and use them instead
-          const sessionVariables = Object.entries(loadedActiveSession.sharedVariables || {}).map(
-            ([key, value]) => ({ key, value })
-          );
-          appState.setSharedVariables(sessionVariables);
-        } else {
-          // No active session, use stored shared variables
-          appState.setSharedVariables(loadedSharedVariables);
-        }
+        // Load shared variables - now handled by VariablesContext
 
         // Load token config
         const loadedTokenConfig = tokenConfigStorage.loadTokenConfig();
@@ -132,10 +118,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
             savedSessions: loadedSavedSessions
           },
           variables: {
-            shared: loadedActiveSession && loadedActiveSession.sharedVariables
-              ? Object.entries(loadedActiveSession.sharedVariables || {}).map(([key, value]) => ({ key, value }))
-              : loadedSharedVariables,
-            global: loadedAppState.globalVariables
+            shared: [],
+            global: {}
           }
         });
 
@@ -162,13 +146,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         savedSessions: sessionManager.savedSessions
       },
       variables: {
-        shared: appState.sharedVariables,
-        global: appState.globalVariables
+        shared: [],
+        global: {}
       }
     };
 
     saveManager.autoSaveChanges(currentState);
-  }, [appState.appState, sessionManager.activeSession, sessionManager.savedSessions, appState.sharedVariables, hasLoaded, saveManager]);
+  }, [appState.appState, sessionManager.activeSession, sessionManager.savedSessions, hasLoaded, saveManager]);
 
   // Auto-save when token config changes
   useEffect(() => {
@@ -188,87 +172,27 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
       if (session.yamlOutput !== undefined) sessionData.yamlOutput = session.yamlOutput;
       // Remove activeSection from session loading - it should be global, not per-session
       if (session.segmentVariables) sessionData.segmentVariables = session.segmentVariables;
-      if (appState.globalVariables) sessionData.globalVariables = appState.globalVariables;
 
       appState.loadAppState(sessionData);
 
-      // Load shared variables from session
-      const sessionVariables = Object.entries(session.sharedVariables || {}).map(
-        ([key, value]) => ({ key, value })
-      );
-      appState.setSharedVariables(sessionVariables);
-
-      // Explicitly save the session variables to storage to ensure persistence
-      variableStorage.saveSharedVariables(sessionVariables);
+      // Session variables are now handled by VariablesContext through the active session
     }
-  }, [sessionManager.activeSession?.id, hasLoaded, variableStorage]);
+  }, [sessionManager.activeSession?.id, hasLoaded]);
+
+  // Function to update session variables in the active session
+  const updateSessionVariables = useCallback((sessionVariables: Record<string, string>) => {
+    if (sessionManager.activeSession) {
+      const updatedSession = {
+        ...sessionManager.activeSession,
+        sharedVariables: sessionVariables
+      };
+      sessionManager.saveSession(updatedSession);
+      sessionManager.loadSession(updatedSession);
+    }
+  }, [sessionManager]);
 
   // Variable management functions
-  const updateSharedVariable = useCallback((key: string, value: string) => {
-    appState.setSharedVariables((prev: Variable[]) => {
-      const existingIndex = prev.findIndex((v: Variable) => v.key === key);
-      if (existingIndex >= 0) {
-        const updated = [...prev];
-        updated[existingIndex] = { key, value };
-        return updated;
-      }
-      return [...prev, { key, value }];
-    });
-  }, []);
-
-  const deleteSharedVariable = useCallback((key: string) => {
-    appState.setSharedVariables((prev: Variable[]) => prev.filter((v: Variable) => v.key !== key));
-  }, []);
-
-  const updateGlobalVariable = useCallback((key: string, value: string) => {
-    appState.setGlobalVariables((prev) => ({ ...prev, [key]: value }));
-  }, []);
-
-  const deleteGlobalVariable = useCallback((key: string) => {
-    appState.setGlobalVariables((prev) => {
-      const updated = { ...prev };
-      delete updated[key];
-      return updated;
-    });
-  }, []);
-
-  const updateSessionVariable = useCallback((key: string, value: string) => {
-    if (sessionManager.activeSession) {
-      const updatedSession = {
-        ...sessionManager.activeSession,
-        sharedVariables: {
-          ...sessionManager.activeSession.sharedVariables,
-          [key]: value,
-        },
-      };
-      sessionManager.loadSession(updatedSession);
-
-      // Also update shared variables to keep them in sync
-      const sessionVariables = Object.entries(updatedSession.sharedVariables || {}).map(
-        ([key, value]) => ({ key, value })
-      );
-      appState.setSharedVariables(sessionVariables);
-    }
-  }, [sessionManager.activeSession, appState]);
-
-  const deleteSessionVariable = useCallback((key: string) => {
-    if (sessionManager.activeSession) {
-      const updatedSession = {
-        ...sessionManager.activeSession,
-        sharedVariables: {
-          ...sessionManager.activeSession.sharedVariables,
-        },
-      };
-      delete updatedSession.sharedVariables[key];
-      sessionManager.loadSession(updatedSession);
-
-      // Also update shared variables to keep them in sync
-      const sessionVariables = Object.entries(updatedSession.sharedVariables || {}).map(
-        ([key, value]) => ({ key, value })
-      );
-      appState.setSharedVariables(sessionVariables);
-    }
-  }, [sessionManager.activeSession, appState]);
+  // Session variable management now handled by VariablesContext
 
   // Session management functions
   const handleNewSession = useCallback(() => {
@@ -287,15 +211,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     if (session.segmentVariables) sessionData.segmentVariables = session.segmentVariables;
     // DO NOT set globalVariables here!
     appState.loadAppState(sessionData);
-    // Load shared variables from session
-    const sessionVariables = Object.entries(session.sharedVariables || {}).map(
-      ([key, value]) => ({ key, value })
-    );
-    appState.setSharedVariables(sessionVariables);
-
-    // Explicitly save the session variables to storage to ensure persistence
-    variableStorage.saveSharedVariables(sessionVariables);
-  }, [variableStorage]);
+    // Shared variables are now handled by VariablesContext
+  }, []);
 
   const handleSaveSession = useCallback((name: string, sessionData?: ExtendedSession) => {
     if (sessionData) {
@@ -308,7 +225,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         yamlOutput: appState.yamlOutput,
         // Don't save activeSection with sessions - it should be global
         segmentVariables: appState.segmentVariables,
-        sharedVariables: appState.sharedVariables,
+        sharedVariables,
       });
       sessionManager.saveSession(newSession);
       sessionManager.loadSession(newSession);
@@ -321,11 +238,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
   const handleImportSessions = useCallback((sessions: any[]) => {
     sessionManager.importSessions(sessions);
-  }, []);
-
-  // Function to open session manager modal
-  const openSessionManager = useCallback((options?: { tab?: 'sessions' | 'variables' | 'projects' }) => {
-    sessionManager.openSessionManager(options);
   }, []);
 
   // Workflow handlers
@@ -380,12 +292,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         savedSessions: sessionManager.savedSessions
       },
       variables: {
-        shared: appState.sharedVariables,
-        global: appState.globalVariables
+        shared: [],
+        global: {}
       }
     };
     await saveManager.manualSave(currentState);
-  }, [appState.appState, sessionManager.activeSession, sessionManager.savedSessions, appState.sharedVariables, saveManager]);
+  }, [appState.appState, sessionManager.activeSession, sessionManager.savedSessions, saveManager]);
 
   const handleUndo = useCallback(() => {
     const restoredState = saveManager.undo();
@@ -399,9 +311,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         restoredState.sessions.activeSession?.id || null
       );
 
-      // Update variables
-      appState.setSharedVariables(restoredState.variables.shared);
-      appState.setGlobalVariables(restoredState.variables.global);
+      // Update variables - now handled by VariablesContext
     }
   }, [saveManager, appState, sessionManager]);
 
@@ -417,16 +327,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         restoredState.sessions.activeSession?.id || null
       );
 
-      // Update variables
-      appState.setSharedVariables(restoredState.variables.shared);
-      appState.setGlobalVariables(restoredState.variables.global);
+      // Update variables - now handled by VariablesContext
     }
   }, [saveManager, appState, sessionManager]);
 
   const handleAutoSaveToggle = useCallback((enabled: boolean) => {
     saveManager.toggleAutoSave(enabled);
   }, [saveManager]);
-
+  const openUnifiedManager = useCallback((initialTab?: TabType) => {
+    if (initialTab) {
+      setUnifiedManagerTab(initialTab);
+    }
+    setShowUnifiedManager(true);
+  }, []);
   const value: AppContextType = {
     // App state
     urlData: appState.urlData,
@@ -434,8 +347,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     yamlOutput: appState.yamlOutput,
     activeSection: appState.activeSection,
     segmentVariables: appState.segmentVariables,
-    sharedVariables: appState.sharedVariables,
-    globalVariables: appState.globalVariables,
 
     // Session state
     activeSession: sessionManager.activeSession,
@@ -457,21 +368,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     setSegmentVariables: appState.setSegmentVariables,
     setTokenConfig: tokenManager.setTokenConfig,
 
-    // Variable management
-    updateSharedVariable,
-    deleteSharedVariable,
-    updateGlobalVariable,
-    deleteGlobalVariable,
-    updateSessionVariable,
-    deleteSessionVariable,
-
     // Session management
     handleNewSession,
     handleLoadSession,
     handleSaveSession,
     handleDeleteSession,
     handleImportSessions,
-    openSessionManager,
 
     // Workflow handlers
     handleURLBuilderSubmit,
@@ -497,19 +399,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     updateSaveFrequency: saveManager.updateSaveFrequency,
     isUndoAvailable: saveManager.isUndoAvailable,
     isRedoAvailable: saveManager.isRedoAvailable,
-    setShowUnifiedManager,
+
+    // Unified Manager
     showUnifiedManager,
+    setShowUnifiedManager,
+    unifiedManagerTab,
+    openUnifiedManager,
+
+    // Session variables
+    updateSessionVariables,
   };
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return <AppContext value={value}>{children}</AppContext>;
 };
 
-const useAppContext = () => {
+function useAppContext() {
   const context = useContext(AppContext);
   if (!context) {
     throw new Error("useAppContext must be used within an AppProvider");
   }
   return context;
-};
+}
 
 export { useAppContext };

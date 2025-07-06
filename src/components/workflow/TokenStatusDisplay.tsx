@@ -4,9 +4,9 @@ import TokenGenerator from "../utils/TokenGenerator";
 import Modal from "../core/Modal";
 import { Button } from "../ui";
 import { TOKEN_CHECK_INTERVAL, TOKEN_EXPIRATION_STYLES } from "../../constants/requestConfig";
+import { useVariablesContext } from "../../context/VariablesContext";
 
 export interface TokenStatusDisplayProps {
-    globalVariables?: Record<string, string> | null;
     className?: string;
     compact?: boolean;
     showTokenGenerator?: boolean;
@@ -14,12 +14,12 @@ export interface TokenStatusDisplayProps {
 }
 
 const TokenStatusDisplay: React.FC<TokenStatusDisplayProps> = ({
-    globalVariables,
     className = "",
     compact = false,
     showTokenGenerator = true,
     showTokenDetails = true,
 }) => {
+    const { globalVariables } = useVariablesContext();
     const [tokenExpiration, setTokenExpiration] = useState<number | null>(null);
     const [showTokenModal, setShowTokenModal] = useState(false);
     const [decodedToken, setDecodedToken] = useState<any>(null);

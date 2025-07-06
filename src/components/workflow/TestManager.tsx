@@ -1,6 +1,6 @@
 import React from "react";
 import { useAppContext } from "../../context/AppContext";
-import { useTheme } from "../../context/ThemeContext";
+import { useVariablesContext } from "../../context/VariablesContext";
 import { TestCase } from "../../types/features/SavedManager";
 import {
     FiPlay,
@@ -32,15 +32,15 @@ const TestManager: React.FC = () => {
     const {
         urlData,
         requestConfig,
-        globalVariables,
         activeSession,
         handleSaveSession,
         setActiveSection,
         generateAuthHeaders,
-        openSessionManager,
+        openUnifiedManager,
     } = useAppContext();
+    const { globalVariables, sharedVariables } = useVariablesContext();
 
-    const { isDarkMode } = useTheme();
+
     const tests: TestCase[] = activeSession?.tests ?? [];
 
     // Calculate test statistics
@@ -162,8 +162,10 @@ const TestManager: React.FC = () => {
             if (test.pathOverrides?.[varName] && test.pathOverrides[varName].trim() !== '') {
                 return test.pathOverrides[varName];
             }
-            if (activeSession?.sharedVariables?.[varName]) {
-                return activeSession.sharedVariables[varName];
+            // Check shared variables from VariablesContext
+            const sharedVar = sharedVariables.find(v => v.key === varName);
+            if (sharedVar) {
+                return sharedVar.value;
             }
             if (globalVariables?.[varName]) {
                 return globalVariables[varName];
@@ -308,13 +310,13 @@ const TestManager: React.FC = () => {
                 {/* No Active Session Warning */}
                 <Card variant="elevated" padding="xl">
                     <div className="text-center">
-                        <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500">
                             <FiCode className="w-8 h-8 text-white" />
                         </div>
                         <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
                             No Active Session
                         </h3>
-                        <p className="mb-6 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+                        <p className="max-w-md mx-auto mb-6 text-gray-600 dark:text-gray-300">
                             You need to create or select an active session before managing tests.
                             Please go to the Session Manager to create a session first.
                         </p>
@@ -326,8 +328,9 @@ const TestManager: React.FC = () => {
                                 Go Back
                             </Button>
                             <Button
+                                gradient
                                 variant="primary"
-                                onClick={() => openSessionManager({ tab: 'sessions' })}
+                                onClick={() => openUnifiedManager('sessions')}
                             >
                                 Create Session
                             </Button>
@@ -390,9 +393,9 @@ const TestManager: React.FC = () => {
 
             {/* Action Buttons */}
             <Card variant="gradient" padding="lg">
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg">
+                        <div className="p-2 rounded-lg shadow-lg bg-gradient-to-br from-blue-500 to-blue-600">
                             <FiZap className="w-5 h-5 text-white" />
                         </div>
                         <div>
@@ -457,7 +460,7 @@ const TestManager: React.FC = () => {
 
                 {/* Quick Stats Row */}
                 <div className="pt-4 mt-6 border-t border-gray-200 dark:border-gray-600">
-                    <div className="flex justify-between items-center text-sm">
+                    <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-1">
                                 <TestStatusBadge status="pass" size="sm" />
@@ -487,7 +490,7 @@ const TestManager: React.FC = () => {
                 {tests.length === 0 ? (
                     <Card variant="outlined" padding="xl">
                         <div className="text-center">
-                            <FiCode className="mx-auto mb-4 w-12 h-12 text-gray-400" />
+                            <FiCode className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                             <p className="mb-4 text-gray-500 dark:text-gray-400">No tests created yet</p>
                             <p className="mb-4 text-sm text-gray-400 dark:text-gray-500">Create your first test to start validating your API endpoints</p>
                             <Button
@@ -504,15 +507,9 @@ const TestManager: React.FC = () => {
                         <TestCard
                             key={test.id}
                             test={test}
-                            urlData={urlData}
-                            requestConfig={requestConfig}
-                            globalVariables={globalVariables}
-                            activeSession={activeSession}
-                            isDarkMode={isDarkMode}
                             handleUpdateTest={handleUpdateTest}
                             handleDuplicateTest={handleDuplicateTest}
                             handleRemoveTest={handleRemoveTest}
-                            generateAuthHeaders={generateAuthHeaders}
                         />
                     ))
                 )}

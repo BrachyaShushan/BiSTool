@@ -121,12 +121,12 @@ const Button: React.FC<ButtonProps> = ({
         >
             {/* Shimmer effect for gradient buttons */}
             {gradient && (
-                <div className="absolute inset-0 bg-gradient-to-r transition-transform duration-700 transform -translate-x-full -skew-x-12 from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
+                <div className="absolute inset-0 transition-transform duration-700 transform -translate-x-full -skew-x-12 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
             )}
 
             {/* Loading spinner */}
             {loading && (
-                <div className="relative z-10 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                <div className="relative z-10 w-4 h-4 border-2 border-current rounded-full border-t-transparent animate-spin"></div>
             )}
 
             {/* Icon */}

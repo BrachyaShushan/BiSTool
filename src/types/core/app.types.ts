@@ -224,10 +224,8 @@ export interface AppContextType {
   yamlOutput: string;
   activeSection: SectionId;
   segmentVariables: Record<string, string>;
-  sharedVariables: Variable[];
   activeSession: ExtendedSession | null;
   savedSessions: ExtendedSession[];
-  globalVariables: Record<string, string>;
   tokenConfig: TokenConfig;
   methodColor: Record<string, { value: string; label: string; color: string }>;
   isLoading: boolean;
@@ -240,23 +238,14 @@ export interface AppContextType {
   setTokenConfig: (
     config: TokenConfig | ((prev: TokenConfig) => TokenConfig)
   ) => void;
-  updateSharedVariable: (key: string, value: string) => void;
-  deleteSharedVariable: (key: string) => void;
-  updateGlobalVariable: (key: string, value: string) => void;
-  updateSessionVariable: (key: string, value: string) => void;
-  deleteSessionVariable: (key: string) => void;
   handleNewSession: () => void;
   handleLoadSession: (session: ExtendedSession) => void;
   handleSaveSession: (name: string, sessionData?: ExtendedSession) => void;
   handleDeleteSession: (id: string) => void;
   handleImportSessions: (sessions: any[]) => void;
-  openSessionManager: (options?: {
-    tab?: "sessions" | "variables" | "projects";
-  }) => void;
   handleURLBuilderSubmit: (data: URLData) => void;
   handleRequestConfigSubmit: (data: RequestConfigData) => void;
   handleYAMLGenerated: (yaml: string) => void;
-  deleteGlobalVariable: (key: string) => void;
   regenerateToken: () => Promise<void>;
   generateAuthHeaders: () => Record<string, string>;
   getCurrentToken: () => string | null;
@@ -274,9 +263,13 @@ export interface AppContextType {
   redo: () => void;
   isUndoAvailable: boolean;
   isRedoAvailable: boolean;
+  openUnifiedManager: (initialTab?: TabType) => void;
   setShowUnifiedManager: (show: boolean) => void;
+  unifiedManagerTab: TabType;
   showUnifiedManager: boolean;
+  updateSessionVariables: (sessionVariables: Record<string, string>) => void;
 }
+export type TabType = "sessions" | "variables" | "projects" | "settings";
 
 export interface ThemeContextType {
   isDarkMode: boolean;

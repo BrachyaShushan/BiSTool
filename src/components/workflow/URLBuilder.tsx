@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
 import { useAppContext } from "../../context/AppContext";
+import { useVariablesContext } from "../../context/VariablesContext";
 import { URLBuilderProps } from "../../types/components/components.types";
 import { FiPlus, FiTrash2, FiCopy, FiCheck, FiEyeOff, FiArrowRight, FiInfo, FiGlobe } from "react-icons/fi";
 import {
@@ -23,9 +24,9 @@ import { useURLBuilder } from "../../hooks/useURLBuilder";
 const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
   const {
     activeSession,
-    openSessionManager,
-    globalVariables
+    openUnifiedManager,
   } = useAppContext();
+  const { globalVariables } = useVariablesContext();
 
   // Use the URL builder hook
   const {
@@ -143,7 +144,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                 gradient
                 onClick={() => {
                   // Open session manager modal on sessions tab
-                  openSessionManager({ tab: 'sessions' });
+                  openUnifiedManager('sessions');
                 }}
                 className="text-white"
               >

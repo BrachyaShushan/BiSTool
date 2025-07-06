@@ -1,4 +1,5 @@
 import { useAppContext } from "../context/AppContext";
+import { useVariablesContext } from "../context/VariablesContext";
 import { useTheme } from "../context/ThemeContext";
 import { useProjectContext } from "../context/ProjectContext";
 
@@ -17,11 +18,11 @@ const Header = () => {
         isSaving,
         lastSaved,
         hasUnsavedChanges,
-        globalVariables,
         tokenConfig,
         regenerateToken,
-        setShowUnifiedManager,
+        openUnifiedManager,
     } = useAppContext();
+    const { globalVariables } = useVariablesContext();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [isTokenLoading, setIsTokenLoading] = useState(false);
     const [isTokenExpired, setIsTokenExpired] = useState(false);
@@ -219,7 +220,7 @@ const Header = () => {
                                     )}
                                     {/* Project Manager Button */}
                                     <button
-                                        onClick={() => setShowUnifiedManager(true)}
+                                        onClick={() => openUnifiedManager()}
                                         className={`group p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-white text-gray-700 bg-gray-100 hover:bg-gray-200 hover:text-gray-900`}
                                         title="Manager"
                                     >

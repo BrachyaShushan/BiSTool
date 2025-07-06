@@ -37,7 +37,7 @@ import { Toggle } from "../ui";
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
-  const { activeSession, handleSaveSession, tokenConfig, generateAuthHeaders, openSessionManager } = useAppContext();
+  const { activeSession, handleSaveSession, tokenConfig, generateAuthHeaders, openUnifiedManager } = useAppContext();
   const { aiConfig, setAIConfig } = useAIConfigContext();
   const [requirements, setRequirements] = useState<string>("");
   const [useOOP, setUseOOP] = useState<boolean>(true);
@@ -141,7 +141,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
               <button
                 onClick={() => {
                   // Open session manager modal on sessions tab
-                  openSessionManager({ tab: 'sessions' });
+                  openUnifiedManager('sessions');
                 }}
                 className="px-6 py-3 font-medium text-white transition-all duration-200 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600 hover:scale-105 hover:shadow-lg"
               >

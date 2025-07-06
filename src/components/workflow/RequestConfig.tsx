@@ -33,11 +33,11 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   const {
     requestConfig: savedConfig,
     setRequestConfig,
-    globalVariables,
     activeSession,
     handleSaveSession,
-    openSessionManager,
+    openUnifiedManager,
   } = useAppContext();
+
 
   const [activeTab, setActiveTab] = useState<RequestConfigState["activeTab"]>(
     () => {
@@ -289,8 +289,9 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
               </Button>
               <Button
                 variant="primary"
+                gradient
                 onClick={() => {
-                  openSessionManager({ tab: 'sessions' });
+                  openUnifiedManager('sessions');
                 }}
                 className="text-white"
               >
@@ -330,7 +331,6 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
           <div className="flex items-center justify-end w-8/12 space-x-3">
             {/* Token Status Display */}
             <TokenStatusDisplay
-              globalVariables={globalVariables}
               compact={false}
             />
 

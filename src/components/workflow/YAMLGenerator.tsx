@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useAppContext } from "../../context/AppContext";
+import { useAppContext } from '../../context/AppContext';
+import { useVariablesContext } from '../../context/VariablesContext';
 import {
   FiDownload,
   FiCopy,
@@ -23,7 +24,8 @@ import {
   FiLayers,
   FiActivity,
   FiWifi,
-  FiServer
+  FiServer,
+  FiArrowLeft
 } from "react-icons/fi";
 import {
   Button,
@@ -56,18 +58,8 @@ const extractVariables = (url: string): string[] => {
 };
 
 const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
-  const {
-    urlData,
-    requestConfig,
-    setYamlOutput,
-    globalVariables,
-    segmentVariables,
-    activeSession,
-    handleSaveSession,
-    setActiveSection,
-    generateAuthHeaders,
-    openSessionManager,
-  } = useAppContext();
+  const { globalVariables, sharedVariables } = useVariablesContext();
+  const { urlData, requestConfig, setYamlOutput, segmentVariables, activeSession, handleSaveSession, setActiveSection, generateAuthHeaders, openUnifiedManager } = useAppContext();
 
   const [localYamlOutput, setLocalYamlOutput] = useState<string>("");
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
@@ -151,12 +143,10 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
           return segmentVariables[varName] ?? null;
         }
 
-        // Finally check session variables
-        if (
-          activeSession?.sharedVariables &&
-          varName in activeSession.sharedVariables
-        ) {
-          return activeSession.sharedVariables[varName] ?? null;
+        // Finally check shared variables from VariablesContext
+        const sharedVar = sharedVariables.find(v => v.key === varName);
+        if (sharedVar) {
+          return sharedVar.value;
         }
 
         return value;
@@ -176,12 +166,10 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
           return segmentVariables[varName] ?? null;
         }
 
-        // Finally check session variables
-        if (
-          activeSession?.sharedVariables &&
-          varName in activeSession.sharedVariables
-        ) {
-          return activeSession.sharedVariables[varName] ?? null;
+        // Finally check shared variables from VariablesContext
+        const sharedVar = sharedVariables.find(v => v.key === varName);
+        if (sharedVar) {
+          return sharedVar.value;
         }
 
         return value;
@@ -196,16 +184,15 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
         return segmentVariables[value] ?? null;
       }
 
-      if (
-        activeSession?.sharedVariables &&
-        value in activeSession.sharedVariables
-      ) {
-        return activeSession.sharedVariables[value] ?? null;
+      // Check shared variables from VariablesContext
+      const sharedVar = sharedVariables.find(v => v.key === value);
+      if (sharedVar) {
+        return sharedVar.value;
       }
 
       return value;
     },
-    [globalVariables, segmentVariables, activeSession]
+    [globalVariables, sharedVariables, segmentVariables]
   );
 
   const handleEditorDidMount = (editor: any, monaco: any): void => {
@@ -912,21 +899,26 @@ ${generateRequestBody()}
               Please go to the Session Manager to create a session first.
             </p>
             <div className="flex justify-center space-x-4">
-              <button
+              <Button
                 onClick={() => window.history.back()}
                 className="px-6 py-3 font-medium text-gray-700 transition-all duration-200 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
-              >
-                Go Back
-              </button>
-              <button
+                icon={FiArrowLeft}
+                variant="outline"
+                iconPosition="right"
+                children="Go Back"
+              />
+              <Button
+                variant="primary"
+                gradient
                 onClick={() => {
                   // Open session manager modal on sessions tab
-                  openSessionManager({ tab: 'sessions' });
+                  openUnifiedManager('sessions');
                 }}
                 className="px-6 py-3 font-medium text-white transition-all duration-200 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:scale-105 hover:shadow-lg"
-              >
-                Create Session
-              </button>
+                icon={FiPlus}
+                iconPosition="right"
+                children="Create Session"
+              />
             </div>
           </div>
         </div>

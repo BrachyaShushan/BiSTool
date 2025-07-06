@@ -10,11 +10,13 @@ import { AppProvider, useAppContext } from "./context/AppContext";
 import { ProjectProvider, useProjectContext } from "./context/ProjectContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AIConfigProvider } from "./context/AIConfigContext";
+import { StorageProvider } from "./context/StorageContext";
 import { Section } from "./types/core";
 import Header from "./layout/Header";
 import MonacoEditorDemo from "./components/ui/MonacoEditorDemo";
 import UIComponentsDemo from "./components/ui/UIComponentsDemo";
 import UnifiedManager from "./components/navigation/UnifiedManager";
+import { VariablesProvider } from "./context/VariablesContext";
 
 const AppContent: React.FC = () => {
     const {
@@ -26,6 +28,7 @@ const AppContent: React.FC = () => {
         setActiveSection,
         handleImportSessions,
         showUnifiedManager,
+        unifiedManagerTab,
         setShowUnifiedManager,
     } = useAppContext();
     const { currentProject } = useProjectContext();
@@ -106,7 +109,7 @@ const AppContent: React.FC = () => {
                 <UnifiedManager
                     isOpen={showUnifiedManager}
                     onClose={() => setShowUnifiedManager(false)}
-                    initialTab="projects"
+                    initialTab={unifiedManagerTab}
                 />
             )}
         </>
@@ -117,7 +120,9 @@ const App: React.FC = () => {
     return (
         <ThemeProvider>
             <ProjectProvider>
-                <AppContentWrapper />
+                <StorageProvider>
+                    <AppContentWrapper />
+                </StorageProvider>
             </ProjectProvider>
         </ThemeProvider>
     );
@@ -132,12 +137,14 @@ const AppContentWrapper: React.FC = () => {
             getProjectStorageKey={getProjectStorageKey}
             currentProjectId={currentProject?.id || null}
         >
-            <AppProvider
-                currentProjectId={currentProject?.id || null}
-                forceReload={forceReload}
-            >
-                <AppContent />
-            </AppProvider>
+            <VariablesProvider>
+                <AppProvider
+                    currentProjectId={currentProject?.id || null}
+                    forceReload={forceReload}
+                >
+                    <AppContent />
+                </AppProvider>
+            </VariablesProvider>
         </AIConfigProvider>
     );
 };

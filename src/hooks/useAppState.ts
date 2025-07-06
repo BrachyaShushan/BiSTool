@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { URLData, RequestConfigData, SectionId, Variable } from "../types";
+import { URLData, RequestConfigData, SectionId } from "../types";
 import { DEFAULT_URL_DATA } from "../utils/storage";
 
 // Custom hook for managing app state
@@ -13,10 +13,6 @@ export const useAppState = () => {
   const [segmentVariables, setSegmentVariables] = useState<
     Record<string, string>
   >({});
-  const [globalVariables, setGlobalVariables] = useState<
-    Record<string, string>
-  >({});
-  const [sharedVariables, setSharedVariables] = useState<Variable[]>([]);
 
   // Memoized app state object
   const appState = useMemo(
@@ -26,16 +22,8 @@ export const useAppState = () => {
       yamlOutput,
       activeSection,
       segmentVariables,
-      globalVariables,
     }),
-    [
-      urlData,
-      requestConfig,
-      yamlOutput,
-      activeSection,
-      segmentVariables,
-      globalVariables,
-    ]
+    [urlData, requestConfig, yamlOutput, activeSection, segmentVariables]
   );
 
   // Reset app state to defaults
@@ -45,8 +33,6 @@ export const useAppState = () => {
     setYamlOutput("");
     setActiveSection("url");
     setSegmentVariables({});
-    setGlobalVariables({});
-    setSharedVariables([]);
   }, []);
 
   // Load app state from external data
@@ -57,7 +43,6 @@ export const useAppState = () => {
       yamlOutput?: string;
       activeSection?: SectionId;
       segmentVariables?: Record<string, string>;
-      globalVariables?: Record<string, string>;
     }) => {
       if (data.urlData) setUrlData(data.urlData);
       if (data.requestConfig !== undefined)
@@ -65,7 +50,6 @@ export const useAppState = () => {
       if (data.yamlOutput !== undefined) setYamlOutput(data.yamlOutput);
       if (data.activeSection) setActiveSection(data.activeSection);
       if (data.segmentVariables) setSegmentVariables(data.segmentVariables);
-      if (data.globalVariables) setGlobalVariables(data.globalVariables);
     },
     []
   );
@@ -77,8 +61,6 @@ export const useAppState = () => {
     yamlOutput,
     activeSection,
     segmentVariables,
-    globalVariables,
-    sharedVariables,
     appState,
 
     // Setters
@@ -87,8 +69,6 @@ export const useAppState = () => {
     setYamlOutput,
     setActiveSection,
     setSegmentVariables,
-    setGlobalVariables,
-    setSharedVariables,
 
     // Actions
     resetAppState,

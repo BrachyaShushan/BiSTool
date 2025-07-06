@@ -1,22 +1,13 @@
 import { useState, useCallback } from "react";
 import { TokenConfig } from "../types";
 import { DEFAULT_TOKEN_CONFIG } from "../utils/storage";
+import { useVariablesContext } from "../context/VariablesContext";
 
 // Custom hook for managing tokens and authentication
-export const useTokenManager = (globalVariables: Record<string, string>) => {
+export const useTokenManager = () => {
   const [tokenConfig, setTokenConfig] =
     useState<TokenConfig>(DEFAULT_TOKEN_CONFIG);
-
-  // Replace variables in strings
-  const replaceVariables = useCallback(
-    (str: string): string => {
-      if (!str) return str;
-      return str.replace(/\{([^}]+)\}/g, (match, variableName) => {
-        return globalVariables?.[variableName] || match;
-      });
-    },
-    [globalVariables]
-  );
+  const { replaceVariables, globalVariables } = useVariablesContext();
 
   // Regenerate token
   const regenerateToken = useCallback(async (): Promise<{
@@ -43,24 +34,41 @@ export const useTokenManager = (globalVariables: Record<string, string>) => {
           ? {
               oauth2: {
                 ...tokenConfig.oauth2,
-                clientId: replaceVariables(tokenConfig.oauth2.clientId || ""),
-                clientSecret: replaceVariables(
-                  tokenConfig.oauth2.clientSecret || ""
-                ),
-                redirectUri: replaceVariables(
-                  tokenConfig.oauth2.redirectUri || ""
-                ),
-                scope: replaceVariables(tokenConfig.oauth2.scope || ""),
-                authorizationUrl: replaceVariables(
-                  tokenConfig.oauth2.authorizationUrl || ""
-                ),
-                tokenUrl: replaceVariables(tokenConfig.oauth2.tokenUrl || ""),
+                clientId:
+                  replaceVariables?.(tokenConfig.oauth2.clientId || "") ||
+                  tokenConfig.oauth2.clientId ||
+                  "",
+                clientSecret:
+                  replaceVariables?.(tokenConfig.oauth2.clientSecret || "") ||
+                  tokenConfig.oauth2.clientSecret ||
+                  "",
+                redirectUri:
+                  replaceVariables?.(tokenConfig.oauth2.redirectUri || "") ||
+                  tokenConfig.oauth2.redirectUri ||
+                  "",
+                scope:
+                  replaceVariables?.(tokenConfig.oauth2.scope || "") ||
+                  tokenConfig.oauth2.scope ||
+                  "",
+                authorizationUrl:
+                  replaceVariables?.(
+                    tokenConfig.oauth2.authorizationUrl || ""
+                  ) ||
+                  tokenConfig.oauth2.authorizationUrl ||
+                  "",
+                tokenUrl:
+                  replaceVariables?.(tokenConfig.oauth2.tokenUrl || "") ||
+                  tokenConfig.oauth2.tokenUrl ||
+                  "",
                 ...(tokenConfig.oauth2.refreshUrl !== undefined &&
-                replaceVariables(tokenConfig.oauth2.refreshUrl || "")
+                replaceVariables?.(tokenConfig.oauth2.refreshUrl || "")
                   ? {
-                      refreshUrl: replaceVariables(
-                        tokenConfig.oauth2.refreshUrl || ""
-                      ),
+                      refreshUrl:
+                        replaceVariables?.(
+                          tokenConfig.oauth2.refreshUrl || ""
+                        ) ||
+                        tokenConfig.oauth2.refreshUrl ||
+                        "",
                     }
                   : {}),
               },
@@ -70,9 +78,18 @@ export const useTokenManager = (globalVariables: Record<string, string>) => {
           ? {
               apiKey: {
                 ...tokenConfig.apiKey,
-                keyName: replaceVariables(tokenConfig.apiKey.keyName || ""),
-                keyValue: replaceVariables(tokenConfig.apiKey.keyValue || ""),
-                prefix: replaceVariables(tokenConfig.apiKey.prefix || ""),
+                keyName:
+                  replaceVariables?.(tokenConfig.apiKey.keyName || "") ||
+                  tokenConfig.apiKey.keyName ||
+                  "",
+                keyValue:
+                  replaceVariables?.(tokenConfig.apiKey.keyValue || "") ||
+                  tokenConfig.apiKey.keyValue ||
+                  "",
+                prefix:
+                  replaceVariables?.(tokenConfig.apiKey.prefix || "") ||
+                  tokenConfig.apiKey.prefix ||
+                  "",
               },
             }
           : {}),
@@ -80,12 +97,18 @@ export const useTokenManager = (globalVariables: Record<string, string>) => {
           ? {
               session: {
                 ...tokenConfig.session,
-                sessionIdField: replaceVariables(
-                  tokenConfig.session.sessionIdField || ""
-                ),
-                sessionTokenField: replaceVariables(
-                  tokenConfig.session.sessionTokenField || ""
-                ),
+                sessionIdField:
+                  replaceVariables?.(
+                    tokenConfig.session.sessionIdField || ""
+                  ) ||
+                  tokenConfig.session.sessionIdField ||
+                  "",
+                sessionTokenField:
+                  replaceVariables?.(
+                    tokenConfig.session.sessionTokenField || ""
+                  ) ||
+                  tokenConfig.session.sessionTokenField ||
+                  "",
               },
             }
           : {}),

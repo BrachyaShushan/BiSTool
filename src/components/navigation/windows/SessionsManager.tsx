@@ -3,6 +3,8 @@ import { useAppContext } from "../../../context/AppContext";
 import React, { useEffect, useState } from "react";
 import Modal from "../../core/Modal";
 import { FiEdit2, FiCopy, FiTrash2, FiFolder, FiPlus, FiDownload, FiUpload, FiChevronDown, FiCheckSquare, FiSquare, FiKey } from "react-icons/fi";
+import { useVariablesContext } from '../../../context/VariablesContext';
+
 const SessionsManager = () => {
     const [divideBy, setDivideBy] = useState<'none' | 'category'>("category");
     const [orderBy, setOrderBy] = useState<'date' | 'name' | 'method'>("name");
@@ -38,7 +40,14 @@ const SessionsManager = () => {
         setSelectedImportVariables(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
     };
 
-    const { methodColor, activeSession, globalVariables, handleLoadSession, savedSessions, handleSaveSession, handleDeleteSession, updateGlobalVariable } = useAppContext();
+    const { methodColor, activeSession, savedSessions, handleLoadSession, handleSaveSession, handleDeleteSession } = useAppContext();
+    const {
+        globalVariables,
+        updateGlobalVariable,
+
+    } = useVariablesContext();
+    // Convert sharedVariables array to object for logic if needed
+
     // Utility functions
     const handleSessionAction = (action: ModalType, session: ExtendedSession | null = null): void => {
         setSelectedSession(session);
