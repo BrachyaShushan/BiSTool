@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { FiShield, FiClock } from "react-icons/fi";
-import TokenGenerator from "../utils/TokenGenerator";
 import Modal from "../core/Modal";
 import { Button } from "../ui";
 import { TOKEN_CHECK_INTERVAL, TOKEN_EXPIRATION_STYLES } from "../../constants/requestConfig";
@@ -9,14 +8,12 @@ import { useVariablesContext } from "../../context/VariablesContext";
 export interface TokenStatusDisplayProps {
     className?: string;
     compact?: boolean;
-    showTokenGenerator?: boolean;
     showTokenDetails?: boolean;
 }
 
 const TokenStatusDisplay: React.FC<TokenStatusDisplayProps> = ({
     className = "",
     compact = false,
-    showTokenGenerator = true,
     showTokenDetails = true,
 }) => {
     const { globalVariables } = useVariablesContext();
@@ -118,9 +115,6 @@ const TokenStatusDisplay: React.FC<TokenStatusDisplayProps> = ({
 
     return (
         <div className={`flex items-center space-x-3 ${className}`}>
-            {/* Token Generator */}
-            {showTokenGenerator && <TokenGenerator />}
-
             {/* Token Details Button */}
             {showTokenDetails && (
                 <Button

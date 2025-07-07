@@ -18,7 +18,7 @@ const TokenGenerator: React.FC = () => {
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [tokenDuration, setTokenDuration] = useState<number>(0);
     const [successMessage, setSuccessMessage] = useState<string>("");
-    const [activeTab, setActiveTab] = useState<'auth' | 'extraction' | 'validation' | 'security' | 'preview' | 'debug'>('auth');
+    const [activeTab, setActiveTab] = useState<'auth' | 'extraction' | 'validation' | 'security' | 'preview' | 'debug' | 'help'>('auth');
     const [responseInfo, setResponseInfo] = useState<{
         cookies: Array<{ name: string; value: string }>;
         headers: Array<{ name: string; value: string }>;
@@ -208,15 +208,24 @@ const TokenGenerator: React.FC = () => {
         safeSetState(setSuccessMessage, "");
 
         try {
+            // Validate required global variables
             if (!globalVariables['username'] || !globalVariables['password']) {
-                throw new Error("Please set username and password in global variables");
+                throw new Error("❌ Missing Credentials: Please set both 'username' and 'password' in your global variables. Go to Variables Manager to configure these.");
             }
 
             // Use replaceVariables to interpolate domain and path
             const domain = replaceVariables(tokenConfig.domain);
             const path = replaceVariables(tokenConfig.path);
+
             if (!domain) {
-                throw new Error("Please set a valid domain");
+                throw new Error("❌ Invalid Domain: Please set a valid domain in your token configuration. The domain should be a complete URL (e.g., https://api.example.com).");
+            }
+
+            // Validate domain format
+            try {
+                new URL(domain);
+            } catch {
+                throw new Error("❌ Invalid Domain Format: The domain must be a valid URL. Please include the protocol (http:// or https://) and ensure it's properly formatted.");
             }
 
             const requestUrl = `${domain}${path}`;
@@ -241,15 +250,59 @@ const TokenGenerator: React.FC = () => {
                 contentType = 'application/x-www-form-urlencoded';
             }
 
-            const response = await fetch(requestUrl, {
-                method: tokenConfig.method,
-                headers: {
-                    'Accept': '*/*',
-                    'Content-Type': contentType,
-                },
-                body: requestBody,
-                signal: abortControllerRef.current.signal,
-            });
+            let response: Response;
+            try {
+                response = await fetch(requestUrl, {
+                    method: tokenConfig.method,
+                    headers: {
+                        'Accept': '*/*',
+                        'Content-Type': contentType,
+                    },
+                    body: requestBody,
+                    signal: abortControllerRef.current.signal,
+                });
+            } catch (fetchError) {
+                if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+                    return; // Request was aborted, don't update state
+                }
+                if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
+                    throw new Error(`❌ Network Error: Unable to connect to ${requestUrl}. Please check:\n• Your internet connection\n• The server is running and accessible\n• The URL is correct\n• No firewall is blocking the request`);
+                }
+                throw new Error(`❌ Request Failed: ${fetchError instanceof Error ? fetchError.message : 'Unknown network error'}`);
+            }
+
+            // Check for HTTP error status codes
+            if (!response.ok) {
+                let errorMessage = `❌ HTTP Error ${response.status}: ${response.statusText}`;
+
+                // Provide specific guidance based on status code
+                switch (response.status) {
+                    case 401:
+                        errorMessage += "\n\n🔐 Authentication Failed: Your credentials are incorrect or have expired. Please check:\n• Username and password are correct\n• Account is not locked or disabled\n• Credentials have proper permissions";
+                        break;
+                    case 403:
+                        errorMessage += "\n\n🚫 Access Forbidden: You don't have permission to access this resource. Please check:\n• Your account has the required permissions\n• The API endpoint is correct\n• Your IP is not blocked";
+                        break;
+                    case 404:
+                        errorMessage += "\n\n🔍 Not Found: The authentication endpoint was not found. Please check:\n• The URL path is correct\n• The API endpoint exists\n• You're using the right API version";
+                        break;
+                    case 429:
+                        errorMessage += "\n\n⏱️ Rate Limited: Too many requests. Please wait before trying again.";
+                        break;
+                    case 500:
+                        errorMessage += "\n\n🔧 Server Error: The authentication server is experiencing issues. Please try again later.";
+                        break;
+                    case 502:
+                    case 503:
+                    case 504:
+                        errorMessage += "\n\n🌐 Service Unavailable: The authentication service is temporarily unavailable. Please try again later.";
+                        break;
+                    default:
+                        errorMessage += "\n\nPlease check your request configuration and try again.";
+                }
+
+                throw new Error(errorMessage);
+            }
 
             // Capture response information for debugging
             const allHeaders: Array<{ name: string; value: string }> = [];
@@ -279,7 +332,6 @@ const TokenGenerator: React.FC = () => {
                     responseText = await response.text();
                     let jsonData: any;
                     try {
-
                         jsonData = JSON.parse(responseText);
                     } catch (e) {
                         console.log("Response is not JSON, trying other extraction methods", e);
@@ -311,7 +363,6 @@ const TokenGenerator: React.FC = () => {
                     token = extractTokenFromCookies(tokenConfig.extractionMethods.cookieNames);
                     if (token) {
                         extractionSource = 'response cookies';
-                    } else {
                     }
                 }
             }
@@ -336,12 +387,26 @@ const TokenGenerator: React.FC = () => {
             }
 
             if (!token) {
-                throw new Error("Token not found in response. Check your extraction configuration.");
+                let extractionError = "❌ Token Extraction Failed: No token found in the response.\n\n";
+                extractionError += "🔍 Debugging Steps:\n";
+                extractionError += "1. Check the 'Debug' tab to see the actual response\n";
+                extractionError += "2. Verify your extraction method settings\n";
+                extractionError += "3. Ensure the API returns tokens in the expected format\n\n";
+                extractionError += "📋 Current Extraction Settings:\n";
+                extractionError += `• JSON Extraction: ${tokenConfig.extractionMethods.json ? 'Enabled' : 'Disabled'}\n`;
+                extractionError += `• Cookie Extraction: ${tokenConfig.extractionMethods.cookies ? 'Enabled' : 'Disabled'}\n`;
+                extractionError += `• Header Extraction: ${tokenConfig.extractionMethods.headers ? 'Enabled' : 'Disabled'}\n`;
+                extractionError += `• JSON Paths: ${tokenConfig.extractionMethods.jsonPaths.join(', ') || 'Default paths'}\n`;
+                extractionError += `• Cookie Names: ${tokenConfig.extractionMethods.cookieNames.join(', ') || 'Default names'}\n`;
+                extractionError += `• Header Names: ${tokenConfig.extractionMethods.headerNames.join(', ') || 'Default names'}\n\n`;
+                extractionError += "💡 Try using the 'Auto Detect' feature to automatically configure extraction settings.";
+
+                throw new Error(extractionError);
             }
 
             updateGlobalVariable(tokenConfig.tokenName, token);
             updateGlobalVariable("tokenName", tokenConfig.tokenName);
-            safeSetState(setSuccessMessage, `Token extracted from ${extractionSource} successfully!`);
+            safeSetState(setSuccessMessage, `✅ Token extracted from ${extractionSource} successfully!`);
             safeSetState(setIsModalOpen, false);
 
             // Handle refresh token extraction
@@ -380,7 +445,7 @@ const TokenGenerator: React.FC = () => {
                 return; // Request was aborted, don't update state
             }
             console.error("Token generation error:", error);
-            safeSetState(setError, error instanceof Error ? error.message : "Failed to generate token");
+            safeSetState(setError, error instanceof Error ? error.message : "❌ Failed to generate token: Unknown error occurred");
         } finally {
             safeSetState(setIsGenerating, false);
         }
@@ -481,13 +546,13 @@ const TokenGenerator: React.FC = () => {
         safeSetState(setSuccessMessage, "");
         try {
             if (!globalVariables['username'] || !globalVariables['password']) {
-                throw new Error("Please set username and password in global variables");
+                throw new Error("❌ Missing Credentials: Please set both 'username' and 'password' in your global variables before using auto-detect.");
             }
             // Use replaceVariables to interpolate domain and path
             const domain = replaceVariables(tokenConfig.domain);
             const path = replaceVariables(tokenConfig.path);
             if (!domain) {
-                throw new Error("Please set a valid domain");
+                throw new Error("❌ Invalid Domain: Please set a valid domain in your token configuration before using auto-detect.");
             }
             const requestUrl = `${domain}${path}`;
             let requestBody: string;
@@ -504,15 +569,28 @@ const TokenGenerator: React.FC = () => {
                     `&${tokenConfig.requestMapping.passwordField}=${encodeURIComponent(globalVariables['password'])}`;
                 contentType = 'application/x-www-form-urlencoded';
             }
-            const response = await fetch(requestUrl, {
-                method: tokenConfig.method,
-                headers: {
-                    'Accept': '*/*',
-                    'Content-Type': contentType,
-                },
-                body: requestBody,
-                signal: abortControllerRef.current.signal,
-            });
+
+            let response: Response;
+            try {
+                response = await fetch(requestUrl, {
+                    method: tokenConfig.method,
+                    headers: {
+                        'Accept': '*/*',
+                        'Content-Type': contentType,
+                    },
+                    body: requestBody,
+                    signal: abortControllerRef.current.signal,
+                });
+            } catch (fetchError) {
+                if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+                    return; // Request was aborted, don't update state
+                }
+                throw new Error(`❌ Auto-detect failed: Unable to connect to ${requestUrl}. Please check your network connection and API endpoint.`);
+            }
+
+            if (!response.ok) {
+                throw new Error(`❌ Auto-detect failed: HTTP ${response.status} - ${response.statusText}. Please check your credentials and API endpoint.`);
+            }
 
             if (isMountedRef.current) {
                 await new Promise(resolve => setTimeout(resolve, 100));
@@ -538,7 +616,7 @@ const TokenGenerator: React.FC = () => {
                             };
                             return updated;
                         });
-                        safeSetState(setSuccessMessage, 'Auto-detected: JSON extraction');
+                        safeSetState(setSuccessMessage, '✅ Auto-detected: JSON extraction method configured successfully!');
                         updateGlobalVariable(tokenConfig.tokenName, token);
                         safeSetState(setIsAutoDetecting, false);
                     }
@@ -561,7 +639,7 @@ const TokenGenerator: React.FC = () => {
                         };
                         return updated;
                     });
-                    safeSetState(setSuccessMessage, 'Auto-detected: Cookie extraction');
+                    safeSetState(setSuccessMessage, '✅ Auto-detected: Cookie extraction method configured successfully!');
                     updateGlobalVariable(tokenConfig.tokenName, token);
                     safeSetState(setIsAutoDetecting, false);
                 }
@@ -583,7 +661,7 @@ const TokenGenerator: React.FC = () => {
                         };
                         return updated;
                     });
-                    safeSetState(setSuccessMessage, 'Auto-detected: Cookie extraction');
+                    safeSetState(setSuccessMessage, '✅ Auto-detected: Cookie extraction method configured successfully!');
                     updateGlobalVariable(tokenConfig.tokenName, token);
                     safeSetState(setIsAutoDetecting, false);
                 }
@@ -605,7 +683,7 @@ const TokenGenerator: React.FC = () => {
                         };
                         return updated;
                     });
-                    safeSetState(setSuccessMessage, 'Auto-detected: Header extraction');
+                    safeSetState(setSuccessMessage, '✅ Auto-detected: Header extraction method configured successfully!');
                     updateGlobalVariable(tokenConfig.tokenName, token);
                     safeSetState(setIsAutoDetecting, false);
                 }
@@ -627,18 +705,33 @@ const TokenGenerator: React.FC = () => {
                         };
                         return updated;
                     });
-                    safeSetState(setSuccessMessage, 'Auto-detected: Regex/Text extraction');
+                    safeSetState(setSuccessMessage, '✅ Auto-detected: Regex/Text extraction method configured successfully!');
                     updateGlobalVariable(tokenConfig.tokenName, token);
                     safeSetState(setIsAutoDetecting, false);
                 }
                 return;
             }
-            safeSetState(setError, 'Auto-detect failed: No token found.');
+
+            // If we get here, no token was found
+            let autoDetectError = "❌ Auto-detect failed: No token found in the response.\n\n";
+            autoDetectError += "🔍 What was checked:\n";
+            autoDetectError += "• JSON response body with common token field names\n";
+            autoDetectError += "• Set-Cookie headers for token cookies\n";
+            autoDetectError += "• Browser cookies for stored tokens\n";
+            autoDetectError += "• Response headers for Authorization tokens\n";
+            autoDetectError += "• Response text for JWT patterns\n\n";
+            autoDetectError += "💡 Suggestions:\n";
+            autoDetectError += "• Check the Debug tab to see the actual API response\n";
+            autoDetectError += "• Verify your API returns tokens in a standard format\n";
+            autoDetectError += "• Try manually configuring extraction settings\n";
+            autoDetectError += "• Check the Help tab for configuration examples";
+
+            safeSetState(setError, autoDetectError);
         } catch (err) {
             if (err instanceof Error && err.name === 'AbortError') {
                 return; // Request was aborted, don't update state
             }
-            safeSetState(setError, err instanceof Error ? err.message : 'Auto-detect failed.');
+            safeSetState(setError, err instanceof Error ? err.message : '❌ Auto-detect failed: Unknown error occurred.');
         } finally {
             safeSetState(setIsAutoDetecting, false);
         }
@@ -651,13 +744,13 @@ const TokenGenerator: React.FC = () => {
                 <button
                     onClick={() => setIsModalOpen(true)}
                     className={`relative px-6 py-3 rounded-xl font-semibold flex items-center space-x-3 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden ${isDarkMode
-                        ? "text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25"
-                        : "text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25"
+                        ? "text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 shadow-purple-500/25"
+                        : "text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 shadow-purple-500/25"
                         }`}
                 >
                     <div className="absolute inset-0 transition-transform duration-700 transform -translate-x-full -skew-x-12 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
                     <FiKey className="relative z-10 w-5 h-5" />
-                    <span className="relative z-10">Token Generator</span>
+                    <span className="relative z-10">Configure Token Settings</span>
                     {tokenDuration > 0 && (
                         <div className={`relative z-10 px-2 py-1 text-xs font-bold rounded-full ${tokenDuration > 5
                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
@@ -711,7 +804,8 @@ const TokenGenerator: React.FC = () => {
                         { id: 'validation', label: 'Validation', icon: FiUserCheck, description: 'Token validation & refresh' },
                         { id: 'security', label: 'Security', icon: FiShield, description: 'Encryption & security settings' },
                         { id: 'preview', label: 'Preview', icon: FiEye, description: 'Request & token preview' },
-                        { id: 'debug', label: 'Debug', icon: FiCode, description: 'Response analysis' }
+                        { id: 'debug', label: 'Debug', icon: FiCode, description: 'Response analysis' },
+                        { id: 'help', label: 'Help', icon: FiGlobe, description: 'Additional information' }
                     ].map(({ id, label, icon: Icon, description }) => (
                         <button
                             key={id}
@@ -2303,27 +2397,370 @@ const TokenGenerator: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    {/* Help Tab */}
+                    {activeTab === 'help' && (
+                        <div className="space-y-6">
+                            {/* Getting Started */}
+                            <div className="p-6 border border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-4 space-x-3">
+                                    <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900">
+                                        <FiGlobe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Getting Started</h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-white rounded-lg border border-blue-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">🚀 Quick Setup Guide</h4>
+                                        <ol className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                                            <li className="flex items-start space-x-2">
+                                                <span className="flex-shrink-0 w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                                                <span>Set your <strong>username</strong> and <strong>password</strong> in Global Variables (Variables Manager)</span>
+                                            </li>
+                                            <li className="flex items-start space-x-2">
+                                                <span className="flex-shrink-0 w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                                                <span>Configure your <strong>Domain</strong> and <strong>Path</strong> in the Authentication tab</span>
+                                            </li>
+                                            <li className="flex items-start space-x-2">
+                                                <span className="flex-shrink-0 w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                                                <span>Choose your <strong>Authentication Type</strong> (Bearer, OAuth2, API Key, etc.)</span>
+                                            </li>
+                                            <li className="flex items-start space-x-2">
+                                                <span className="flex-shrink-0 w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">4</span>
+                                                <span>Configure <strong>Token Extraction</strong> methods in the Extraction tab</span>
+                                            </li>
+                                            <li className="flex items-start space-x-2">
+                                                <span className="flex-shrink-0 w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">5</span>
+                                                <span>Use <strong>Auto Detect</strong> or manually configure extraction settings</span>
+                                            </li>
+                                            <li className="flex items-start space-x-2">
+                                                <span className="flex-shrink-0 w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">6</span>
+                                                <span>Click <strong>Generate Token</strong> to test your configuration</span>
+                                            </li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Authentication Types */}
+                            <div className="p-6 border border-green-200 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-4 space-x-3">
+                                    <div className="p-2 bg-green-100 rounded-lg dark:bg-green-900">
+                                        <FiLock className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Authentication Types Explained</h3>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="p-4 bg-white rounded-lg border border-green-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-green-800 dark:text-green-300 mb-2">🔑 Bearer Token</h4>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Most common for APIs</p>
+                                        <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                            <li>• Login with username/password</li>
+                                            <li>• Receive JWT or access token</li>
+                                            <li>• Token sent in Authorization header</li>
+                                            <li>• Supports auto-refresh</li>
+                                        </ul>
+                                    </div>
+
+                                    <div className="p-4 bg-white rounded-lg border border-green-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-green-800 dark:text-green-300 mb-2">🔐 OAuth 2.0</h4>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Industry standard</p>
+                                        <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                            <li>• Multiple grant types</li>
+                                            <li>• Client credentials flow</li>
+                                            <li>• Refresh tokens</li>
+                                            <li>• Scope-based permissions</li>
+                                        </ul>
+                                    </div>
+
+                                    <div className="p-4 bg-white rounded-lg border border-green-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-green-800 dark:text-green-300 mb-2">🗝️ API Key</h4>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Simple authentication</p>
+                                        <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                            <li>• Static API key</li>
+                                            <li>• Header/Query/Cookie location</li>
+                                            <li>• No login required</li>
+                                            <li>• Fastest setup</li>
+                                        </ul>
+                                    </div>
+
+                                    <div className="p-4 bg-white rounded-lg border border-green-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-green-800 dark:text-green-300 mb-2">👥 Session Auth</h4>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Web application style</p>
+                                        <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                            <li>• Session cookies</li>
+                                            <li>• Server-side sessions</li>
+                                            <li>• Keep-alive functionality</li>
+                                            <li>• Common in web apps</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Token Extraction Methods */}
+                            <div className="p-6 border border-purple-200 bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-4 space-x-3">
+                                    <div className="p-2 bg-purple-100 rounded-lg dark:bg-purple-900">
+                                        <FiDatabase className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Token Extraction Methods</h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-white rounded-lg border border-purple-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-purple-800 dark:text-purple-300 mb-2">📊 JSON Response Extraction</h4>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Extract token from JSON response body</p>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                            <p><strong>Common JSON paths:</strong></p>
+                                            <ul className="ml-4 space-y-1">
+                                                <li>• <code>token</code> - Simple token field</li>
+                                                <li>• <code>access_token</code> - OAuth2 access token</li>
+                                                <li>• <code>jwt</code> - JWT token</li>
+                                                <li>• <code>auth_token</code> - Authentication token</li>
+                                            </ul>
+                                            <p className="mt-2"><strong>Example response:</strong></p>
+                                            <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs overflow-x-auto">
+                                                {`{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "def456...",
+  "expires_in": 3600
+}`}
+                                            </pre>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-white rounded-lg border border-purple-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-purple-800 dark:text-purple-300 mb-2">🍪 Cookie Extraction</h4>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Extract token from Set-Cookie headers or browser cookies</p>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                            <p><strong>Common cookie names:</strong></p>
+                                            <ul className="ml-4 space-y-1">
+                                                <li>• <code>token</code> - Simple token cookie</li>
+                                                <li>• <code>access_token</code> - Access token cookie</li>
+                                                <li>• <code>auth_token</code> - Auth token cookie</li>
+                                                <li>• <code>session_token</code> - Session token</li>
+                                            </ul>
+                                            <p className="mt-2"><strong>Example Set-Cookie header:</strong></p>
+                                            <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs overflow-x-auto">
+                                                Set-Cookie: access_token=eyJhbGciOiJIUzI1NiIs...; HttpOnly; Secure; SameSite=Strict
+                                            </pre>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-white rounded-lg border border-purple-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-purple-800 dark:text-purple-300 mb-2">📋 Header Extraction</h4>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Extract token from response headers</p>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                            <p><strong>Common header names:</strong></p>
+                                            <ul className="ml-4 space-y-1">
+                                                <li>• <code>Authorization</code> - Bearer token header</li>
+                                                <li>• <code>X-Access-Token</code> - Custom access token header</li>
+                                                <li>• <code>X-Auth-Token</code> - Custom auth token header</li>
+                                                <li>• <code>Token</code> - Simple token header</li>
+                                            </ul>
+                                            <p className="mt-2"><strong>Example header:</strong></p>
+                                            <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs overflow-x-auto">
+                                                Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+                                            </pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Troubleshooting */}
+                            <div className="p-6 border border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-4 space-x-3">
+                                    <div className="p-2 bg-orange-100 rounded-lg dark:bg-orange-900">
+                                        <FiAlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Troubleshooting Guide</h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-white rounded-lg border border-orange-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-orange-800 dark:text-orange-300 mb-2">🔍 Common Issues & Solutions</h4>
+                                        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                                            <div>
+                                                <h5 className="font-medium text-orange-700 dark:text-orange-300">❌ "Missing Credentials" Error</h5>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                    <strong>Solution:</strong> Go to Variables Manager and set both 'username' and 'password' variables.
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <h5 className="font-medium text-orange-700 dark:text-orange-300">❌ "Invalid Domain" Error</h5>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                    <strong>Solution:</strong> Ensure your domain includes the protocol (http:// or https://) and is properly formatted.
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <h5 className="font-medium text-orange-700 dark:text-orange-300">❌ "401 Authentication Failed" Error</h5>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                    <strong>Solution:</strong> Check your username/password, ensure account is active, and verify API endpoint.
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <h5 className="font-medium text-orange-700 dark:text-orange-300">❌ "Token Extraction Failed" Error</h5>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                    <strong>Solution:</strong> Use the Debug tab to see the actual response, then configure extraction settings accordingly.
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <h5 className="font-medium text-orange-700 dark:text-orange-300">❌ "Network Error" Error</h5>
+                                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                    <strong>Solution:</strong> Check internet connection, server accessibility, and firewall settings.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-white rounded-lg border border-orange-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-orange-800 dark:text-orange-300 mb-2">💡 Pro Tips</h4>
+                                        <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                                            <li className="flex items-start space-x-2">
+                                                <span className="text-orange-500 mt-1">•</span>
+                                                <span>Use <strong>Auto Detect</strong> feature to automatically configure extraction settings</span>
+                                            </li>
+                                            <li className="flex items-start space-x-2">
+                                                <span className="text-orange-500 mt-1">•</span>
+                                                <span>Check the <strong>Debug</strong> tab to see the actual API response</span>
+                                            </li>
+                                            <li className="flex items-start space-x-2">
+                                                <span className="text-orange-500 mt-1">•</span>
+                                                <span>Use <strong>Preview</strong> tab to verify your request configuration</span>
+                                            </li>
+                                            <li className="flex items-start space-x-2">
+                                                <span className="text-orange-500 mt-1">•</span>
+                                                <span>Enable <strong>Auto Refresh</strong> for tokens that expire frequently</span>
+                                            </li>
+                                            <li className="flex items-start space-x-2">
+                                                <span className="text-orange-500 mt-1">•</span>
+                                                <span>Use <strong>Token Validation</strong> to ensure tokens are working correctly</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Examples */}
+                            <div className="p-6 border border-indigo-200 bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 rounded-xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+                                <div className="flex items-center mb-4 space-x-3">
+                                    <div className="p-2 bg-indigo-100 rounded-lg dark:bg-indigo-900">
+                                        <FiCode className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Configuration Examples</h3>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="p-4 bg-white rounded-lg border border-indigo-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-indigo-800 dark:text-indigo-300 mb-2">🔑 Basic Bearer Token</h4>
+                                        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                                            <p><strong>Domain:</strong> https://api.example.com</p>
+                                            <p><strong>Path:</strong> /auth/login</p>
+                                            <p><strong>Method:</strong> POST</p>
+                                            <p><strong>Content Type:</strong> JSON</p>
+                                            <p><strong>JSON Paths:</strong> access_token, token</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-white rounded-lg border border-indigo-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-indigo-800 dark:text-indigo-300 mb-2">🍪 Cookie-Based Auth</h4>
+                                        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                                            <p><strong>Domain:</strong> https://app.example.com</p>
+                                            <p><strong>Path:</strong> /login</p>
+                                            <p><strong>Method:</strong> POST</p>
+                                            <p><strong>Content Type:</strong> Form</p>
+                                            <p><strong>Cookie Names:</strong> session_token, auth_token</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-white rounded-lg border border-indigo-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-indigo-800 dark:text-indigo-300 mb-2">🔐 OAuth2 Client Credentials</h4>
+                                        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                                            <p><strong>Domain:</strong> https://oauth.example.com</p>
+                                            <p><strong>Path:</strong> /oauth/token</p>
+                                            <p><strong>Method:</strong> POST</p>
+                                            <p><strong>Grant Type:</strong> client_credentials</p>
+                                            <p><strong>JSON Paths:</strong> access_token</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-white rounded-lg border border-indigo-200 dark:bg-gray-700 dark:border-gray-600">
+                                        <h4 className="font-semibold text-indigo-800 dark:text-indigo-300 mb-2">🗝️ API Key Authentication</h4>
+                                        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                                            <p><strong>Domain:</strong> https://api.example.com</p>
+                                            <p><strong>Path:</strong> /auth/validate</p>
+                                            <p><strong>Method:</strong> GET</p>
+                                            <p><strong>Key Location:</strong> Header</p>
+                                            <p><strong>Key Name:</strong> X-API-Key</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Status Messages */}
                 {error && (
                     <div className="p-4 mt-6 border border-red-200 bg-red-50 rounded-xl dark:bg-red-900/20 dark:border-red-800">
-                        <div className="flex items-center space-x-2">
-                            <FiAlertCircle className="w-5 h-5 text-red-500" />
-                            <p className={`text-sm font-medium ${isDarkMode ? "text-red-300" : "text-red-700"}`}>
-                                {error}
-                            </p>
+                        <div className="flex items-start space-x-3">
+                            <FiAlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className={`text-sm font-medium ${isDarkMode ? "text-red-300" : "text-red-700"}`}>
+                                        Token Generation Failed
+                                    </p>
+                                    <button
+                                        onClick={() => setError('')}
+                                        className={`p-1 rounded-full hover:bg-red-200 dark:hover:bg-red-800 transition-colors ${isDarkMode ? "text-red-400 hover:text-red-300" : "text-red-500 hover:text-red-700"}`}
+                                        title="Dismiss error"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div className={`text-sm ${isDarkMode ? "text-red-200" : "text-red-600"} whitespace-pre-line`}>
+                                    {error}
+                                </div>
+                                {error.includes("Token Extraction Failed") && (
+                                    <div className="mt-3 p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                                        <p className={`text-xs font-medium ${isDarkMode ? "text-red-200" : "text-red-700"} mb-2`}>
+                                            🔧 Quick Fix Suggestions:
+                                        </p>
+                                        <ul className={`text-xs space-y-1 ${isDarkMode ? "text-red-200" : "text-red-600"}`}>
+                                            <li>• Try the <strong>Auto Detect</strong> feature in the Extraction tab</li>
+                                            <li>• Check the <strong>Debug</strong> tab to see the actual API response</li>
+                                            <li>• Verify your extraction method settings match the API response format</li>
+                                            <li>• Use the <strong>Help</strong> tab for detailed configuration examples</li>
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {successMessage && (
                     <div className="p-4 mt-6 border border-green-200 bg-green-50 rounded-xl dark:bg-green-900/20 dark:border-green-800">
-                        <div className="flex items-center space-x-2">
-                            <FiCheckCircle className="w-5 h-5 text-green-500" />
-                            <p className={`text-sm font-medium ${isDarkMode ? "text-green-300" : "text-green-700"}`}>
-                                {successMessage}
-                            </p>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <FiCheckCircle className="w-5 h-5 text-green-500" />
+                                <p className={`text-sm font-medium ${isDarkMode ? "text-green-300" : "text-green-700"}`}>
+                                    {successMessage}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setSuccessMessage('')}
+                                className={`p-1 rounded-full hover:bg-green-200 dark:hover:bg-green-800 transition-colors ${isDarkMode ? "text-green-400 hover:text-green-300" : "text-green-500 hover:text-green-700"}`}
+                                title="Dismiss message"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 )}

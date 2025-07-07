@@ -6,6 +6,7 @@ import YAMLGenerator from "./components/workflow/YAMLGenerator";
 import AITestGenerator from "./components/workflow/AITestGenerator";
 import SessionImporter from "./components/workflow/SessionImporter";
 import WelcomeScreen from "./components/core/WelcomeScreen";
+import BasicMode from "./components/core/BasicMode";
 import { AppProvider, useAppContext } from "./context/AppContext";
 import { ProjectProvider, useProjectContext } from "./context/ProjectContext";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -32,6 +33,7 @@ const AppContent: React.FC = () => {
         setShowUnifiedManager,
         isLoading: appIsLoading,
         error: appError,
+        mode,
     } = useAppContext();
     const { currentProject, isLoading: projectIsLoading, error: projectError } = useProjectContext();
 
@@ -125,31 +127,36 @@ const AppContent: React.FC = () => {
                 <div
                     className={`min-h-screen text-gray-900 bg-gray-100 transition-colors duration-200 dark:bg-gray-900 dark:text-gray-100`}
                 >
-                    <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-                        {/* Header */}
-                        <Header />
+                    {/* Header */}
+                    <Header />
 
-                        {/* Navigation */}
-                        <nav className="mt-6 overflow-hidden bg-white border border-gray-200 shadow-lg rounded-xl dark:bg-gray-800 dark:border-gray-700">
-                            <div className="flex p-2 space-x-1">
-                                {sections.map((section) => (
-                                    <button
-                                        key={section.id}
-                                        onClick={() => setActiveSection(section.id)}
-                                        className={`px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-105 ${activeSection === section.id
-                                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25"
-                                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
-                                            }`}
-                                    >
-                                        {section.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </nav>
+                    {/* Render Basic Mode or Expert Mode based on current mode */}
+                    {mode === 'basic' ? (
+                        <BasicMode />
+                    ) : (
+                        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+                            {/* Navigation - Only show in Expert Mode */}
+                            <nav className="mt-6 overflow-hidden bg-white border border-gray-200 shadow-lg rounded-xl dark:bg-gray-800 dark:border-gray-700">
+                                <div className="flex p-2 space-x-1">
+                                    {sections.map((section) => (
+                                        <button
+                                            key={section.id}
+                                            onClick={() => setActiveSection(section.id)}
+                                            className={`px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-105 ${activeSection === section.id
+                                                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25"
+                                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                                                }`}
+                                        >
+                                            {section.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </nav>
 
-                        {/* Main Content */}
-                        <main className="mt-4">{renderActiveSection()}</main>
-                    </div >
+                            {/* Main Content */}
+                            <main className="mt-4">{renderActiveSection()}</main>
+                        </div>
+                    )}
                 </div >
             )}
 

@@ -5,6 +5,7 @@ import { useProjectContext } from "../context/ProjectContext";
 
 import { FiFolder, FiSettings, FiKey, FiMenu, FiX, FiSun, FiMoon, FiArrowRight } from "react-icons/fi";
 import SaveControls from "../components/ui/SaveControls";
+import { ModeSwitcher } from "../components/ui";
 import { useCallback, useEffect, useState } from "react";
 
 const Header = () => {
@@ -21,6 +22,9 @@ const Header = () => {
         tokenConfig,
         regenerateToken,
         openUnifiedManager,
+        // Mode management
+        mode,
+        setMode,
     } = useAppContext();
     const { globalVariables } = useVariablesContext();
     const { isDarkMode, toggleDarkMode } = useTheme();
@@ -89,25 +93,25 @@ const Header = () => {
     return (
         <>
             <header className={`sticky top-0 z-40 transition-all duration-300 dark:bg-gray-900 dark:border-gray-700 bg-white border-gray-200 border-b shadow-sm`}>
-                <div className="flex items-center justify-between px-6 py-3">
+                <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-2 sm:py-3">
                     {/* Left side - Project info and navigation */}
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
                         <button
                             onClick={handleReturnToWelcome}
-                            className="flex items-center space-x-3 transition-all duration-200 group hover:scale-105"
+                            className="flex items-center space-x-2 sm:space-x-3 transition-all duration-200 group hover:scale-105 flex-shrink-0"
                             title="Return to Welcome Screen"
                         >
-                            <div className="p-3 shadow-lg bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
-                                <h1 className="text-2xl font-bold text-white">B</h1>
+                            <div className="p-2 sm:p-3 shadow-lg bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl">
+                                <h1 className="text-lg sm:text-2xl font-bold text-white">B</h1>
                             </div>
-                            <div className="flex flex-col">
-                                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+                            <div className="flex flex-col min-w-0">
+                                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 truncate">
                                     BiSTool
                                 </h1>
                                 {currentProject && (
-                                    <div className="flex items-center mt-1 space-x-2">
-                                        <FiFolder size={14} className="text-gray-500 dark:text-gray-400" />
-                                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                                    <div className="flex items-center mt-0.5 sm:mt-1 space-x-1 sm:space-x-2 min-w-0">
+                                        <FiFolder size={12} className="text-gray-500 dark:text-gray-400 flex-shrink-0 sm:w-3.5 sm:h-3.5" />
+                                        <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 truncate">
                                             {currentProject.name}
                                         </span>
                                     </div>
@@ -116,12 +120,21 @@ const Header = () => {
                         </button>
                     </div>
 
-                    {/* Right side - Save controls and theme toggle */}
-                    <div className="flex items-center space-x-3">
+                    {/* Center - Mode Switcher */}
+                    <div className="hidden sm:flex items-center justify-center flex-1">
+                        <ModeSwitcher
+                            mode={mode}
+                            onModeChange={setMode}
+                            className="mx-4"
+                        />
+                    </div>
 
-                        {/* Sessions of Current Category */}
+                    {/* Right side - Save controls and theme toggle */}
+                    <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 flex-shrink-0">
+
+                        {/* Sessions of Current Category - Hidden on mobile when collapsed */}
                         {activeSession?.category && (
-                            <div className={`flex gap-2 p-3 bg-white rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-md opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
+                            <div className={`hidden sm:flex gap-2 p-2 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-xs lg:max-w-md opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
                                 <div className="flex items-center flex-shrink-0 space-x-2">
                                     <span className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                                         {activeSession.category}
@@ -170,7 +183,7 @@ const Header = () => {
                                                     <button
                                                         key={session.id}
                                                         onClick={() => handleLoadSession(session)}
-                                                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 flex-shrink-0 whitespace-nowrap ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color
+                                                        className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-105 flex-shrink-0 whitespace-nowrap ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color
                                                             } ${activeSession.id === session.id
                                                                 ? "bg-opacity-100 shadow-md"
                                                                 : "bg-opacity-30 dark:bg-opacity-30 hover:bg-opacity-50"
@@ -182,15 +195,24 @@ const Header = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">No other sessions</span>
+                                    <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No other sessions</span>
                                 )}
                             </div>
                         )}
-                        <div className="flex items-center justify-end gap-2">
+
+                        <div className="flex items-center justify-end gap-1 sm:gap-2">
                             {/* Collapsible Header Content */}
-                            <div className={`flex items-center space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
+                            <div className={`flex items-center space-x-2 sm:space-x-3 md:space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
+                                {/* Mobile Mode Switcher */}
+                                <div className="sm:hidden">
+                                    <ModeSwitcher
+                                        mode={mode}
+                                        onModeChange={setMode}
+                                    />
+                                </div>
+
                                 {/* Action Buttons */}
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-1 sm:space-x-2">
 
                                     {/* Save Status Indicator */}
                                     <SaveControls
@@ -203,34 +225,35 @@ const Header = () => {
                                     {/* Theme toggle */}
                                     <button
                                         onClick={toggleDarkMode}
-                                        className={`p-2 rounded-lg transition-colors dark:hover:bg-gray-700 hover:bg-gray-100`}
+                                        className={`p-1.5 sm:p-2 rounded-lg transition-colors dark:hover:bg-gray-700 hover:bg-gray-100`}
                                         title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
                                     >
-                                        {isDarkMode ? <FiSun className="w-5 h-5" /> : <FiMoon className="w-5 h-5" />}
+                                        {isDarkMode ? <FiSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FiMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
                                     </button>
 
-                                    {/* Active Session Method Badge */}
+                                    {/* Active Session Method Badge - Hidden on mobile */}
                                     {activeSession?.requestConfig && (
-                                        <div className="flex items-center space-x-2">
-                                            <span className={`px-3 py-2 rounded-lg text-xs font-bold shadow-md ${methodColor[activeSession.requestConfig.method]?.color
+                                        <div className="hidden sm:flex items-center space-x-2">
+                                            <span className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-bold shadow-md ${methodColor[activeSession.requestConfig.method]?.color
                                                 }`}>
                                                 {activeSession.requestConfig.method}
                                             </span>
                                         </div>
                                     )}
+
                                     {/* Project Manager Button */}
                                     <button
                                         onClick={() => openUnifiedManager()}
-                                        className={`group p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-white text-gray-700 bg-gray-100 hover:bg-gray-200 hover:text-gray-900`}
+                                        className={`group p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-200 hover:scale-105 shadow-md dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-white text-gray-700 bg-gray-100 hover:bg-gray-200 hover:text-gray-900`}
                                         title="Manager"
                                     >
-                                        <FiSettings size={18} className="transition-transform duration-200 group-hover:rotate-90" />
+                                        <FiSettings size={16} className="transition-transform duration-200 group-hover:rotate-90 sm:w-4.5 sm:h-4.5" />
                                     </button>
 
                                     {/* Token Status */}
                                     <button
                                         onClick={handleRegenerateToken}
-                                        className={`group p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md ${isTokenExpired
+                                        className={`group p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-200 hover:scale-105 shadow-md ${isTokenExpired
                                             ? "text-red-500 bg-red-100 dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800"
                                             : isTokenLoading
                                                 ? "text-blue-500 bg-blue-100 dark:bg-blue-900 dark:text-blue-300"
@@ -245,7 +268,7 @@ const Header = () => {
                                         }
                                         aria-label="Regenerate token"
                                     >
-                                        <FiKey size={18} className={`transition-transform duration-200 group-hover:scale-110 ${isTokenLoading ? 'animate-spin' : ''}`} />
+                                        <FiKey size={16} className={`transition-transform duration-200 group-hover:scale-110 ${isTokenLoading ? 'animate-spin' : ''} sm:w-4.5 sm:h-4.5`} />
                                     </button>
                                 </div>
                             </div>
@@ -253,12 +276,12 @@ const Header = () => {
                             {/* Hamburger Menu Button */}
                             <button
                                 onClick={toggleHeaderCollapse}
-                                className={`group flex justify-center items-center p-3 rounded-xl transition-all duration-200 hover:scale-105 shadow-md dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 bg-gray-100 hover:bg-gray-200`}
+                                className={`group flex justify-center items-center p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-200 hover:scale-105 shadow-md dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 bg-gray-100 hover:bg-gray-200`}
                                 title={isHeaderCollapsed === true ? "Expand header" : "Collapse header"}
                                 aria-label={isHeaderCollapsed === true ? "Expand header" : "Collapse header"}
                             >
                                 <div className="transition-transform duration-200 group-hover:scale-110">
-                                    {isHeaderCollapsed === true ? <FiMenu size={18} /> : <FiX size={18} />}
+                                    {isHeaderCollapsed === true ? <FiMenu size={16} className="sm:w-4.5 sm:h-4.5" /> : <FiX size={16} className="sm:w-4.5 sm:h-4.5" />}
                                 </div>
                             </button>
                         </div>

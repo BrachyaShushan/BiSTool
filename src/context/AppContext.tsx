@@ -37,6 +37,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   const intendedActiveSessionId = useRef<string | null>(null);
   const [showUnifiedManager, setShowUnifiedManager] = useState(false);
   const [unifiedManagerTab, setUnifiedManagerTab] = useState<TabType>("projects");
+  const [mode, setMode] = useState<'basic' | 'expert'>('expert');
   // Get current project name from ProjectContext
   const projectContext = useProjectContext();
   const projectName = projectContext?.currentProject?.name || "Unnamed Project";
@@ -371,6 +372,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     methodColor,
     isLoading,
     error,
+
+    // Mode state
+    mode,
+    setMode,
 
     // App state setters
     setUrlData: appState.setUrlData,

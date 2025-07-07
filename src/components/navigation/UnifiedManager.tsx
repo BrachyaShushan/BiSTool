@@ -95,7 +95,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
                 </div>
 
                 {/* Tab Content */}
-                <div className="overflow-y-auto max-h-[60vh]">
+                <div>
                     {/* Sessions Tab */}
                     {activeTab === 'sessions' && <SessionsManager />}
 

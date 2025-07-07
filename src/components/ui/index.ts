@@ -14,6 +14,7 @@ export { default as SectionHeader } from "./SectionHeader";
 export { default as MonacoEditor } from "./MonacoEditor";
 export { default as LazyMonacoEditor } from "./LazyMonacoEditor";
 export { default as Toggle } from "./Toggle";
+export { default as ModeSwitcher } from "./ModeSwitcher";
 
 export type { ButtonProps } from "./Button";
 export type { CardProps } from "./Card";
@@ -30,3 +31,4 @@ export type { TestStatusBadgeProps } from "./TestStatusBadge";
 export type { SectionHeaderProps } from "./SectionHeader";
 export type { MonacoEditorProps } from "./MonacoEditor";
 export type { ToggleProps } from "./Toggle";
+export type { ModeSwitcherProps } from "./ModeSwitcher";

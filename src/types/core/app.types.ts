@@ -230,6 +230,9 @@ export interface AppContextType {
   methodColor: Record<string, { value: string; label: string; color: string }>;
   isLoading: boolean;
   error: string | null;
+  // Mode state
+  mode: "basic" | "expert";
+  setMode: (mode: "basic" | "expert") => void;
   setUrlData: (data: URLData) => void;
   setRequestConfig: (config: RequestConfigData | null) => void;
   setYamlOutput: (yaml: string) => void;

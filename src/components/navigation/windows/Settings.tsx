@@ -1,5 +1,6 @@
-import { FiSettings, FiSave, FiRotateCcw } from "react-icons/fi";
+import { FiSettings, FiSave, FiRotateCcw, FiKey } from "react-icons/fi";
 import { useAppContext } from "../../../context/AppContext";
+import TokenGenerator from "../../utils/TokenGenerator";
 
 const Settings = () => {
     const {
@@ -46,8 +47,6 @@ const Settings = () => {
                     </div>
                 </div>
             </div>
-
-
 
             {/* Save Settings Section */}
             <div className="p-5 bg-white rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
@@ -161,6 +160,30 @@ const Settings = () => {
                                 <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">Ctrl+Shift+Z</code>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Token Configuration Section */}
+            <div className="p-5 bg-white rounded-xl border border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+                <div className="flex justify-between items-center mb-4">
+                    <h4 className={`text-lg font-semibold flex items-center space-x-2 dark:text-gray-200 text-gray-800`}>
+                        <FiKey className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        <span>Token Configuration</span>
+                    </h4>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="p-4 bg-purple-50 rounded-lg dark:bg-purple-900/20">
+                        <p className={`text-sm dark:text-purple-300 text-purple-700`}>
+                            Configure authentication tokens for API requests. Set up your authentication method,
+                            extraction rules, and token management settings.
+                        </p>
+                    </div>
+
+                    {/* Token Generator Component */}
+                    <div className="flex justify-center">
+                        <TokenGenerator />
                     </div>
                 </div>
             </div>

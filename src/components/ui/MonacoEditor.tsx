@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useEffect, useState, Suspense, lazy } from 'react';
-import { Editor, OnMount } from '@monaco-editor/react';
+import { Editor } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { useTheme } from '../../context/ThemeContext';
 import { IconType } from 'react-icons';
@@ -728,25 +728,25 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                 <div className={`absolute inset-0 border-b ${themeClasses.toolbar} ${themeClasses.toolbarBorder}`}></div>
 
                                 {/* Toolbar content */}
-                                <div className="relative flex items-center justify-between px-4 py-3 backdrop-blur-sm">
-                                    <div className="flex items-center space-x-4">
+                                <div className="relative flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 backdrop-blur-sm">
+                                    <div className="flex items-center space-x-2 sm:space-x-4">
                                         {/* macOS-style window controls with enhanced styling */}
-                                        <div className="flex items-center space-x-2">
+                                        <div className="hidden sm:flex items-center space-x-2">
                                             <div className="w-3 h-3 transition-all duration-200 rounded-full shadow-sm cursor-pointer bg-gradient-to-br from-red-400 to-red-600 ring-1 ring-red-300/50 hover:ring-red-400/70"></div>
                                             <div className="w-3 h-3 transition-all duration-200 rounded-full shadow-sm cursor-pointer bg-gradient-to-br from-yellow-400 to-yellow-600 ring-1 ring-yellow-300/50 hover:ring-yellow-400/70"></div>
                                             <div className="w-3 h-3 transition-all duration-200 rounded-full shadow-sm cursor-pointer bg-gradient-to-br from-green-400 to-green-600 ring-1 ring-green-300/50 hover:ring-green-400/70"></div>
                                         </div>
 
                                         {/* Language indicator with premium styling */}
-                                        <div className="flex items-center space-x-3">
-                                            <div className="px-3 py-1.5 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 dark:from-blue-400/20 dark:to-indigo-400/20 border border-blue-200/50 dark:border-blue-600/30 rounded-lg backdrop-blur-sm">
+                                        <div className="flex items-center space-x-2 sm:space-x-3">
+                                            <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 dark:from-blue-400/20 dark:to-indigo-400/20 border border-blue-200/50 dark:border-blue-600/30 rounded-lg backdrop-blur-sm">
                                                 <span className="text-xs font-semibold text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text">
                                                     {language.toUpperCase()}
                                                 </span>
                                             </div>
 
                                             {filename && (
-                                                <div className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100/80 dark:bg-gray-700/50 rounded-lg border border-gray-200/60 dark:border-gray-600/40 backdrop-blur-sm">
+                                                <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-gray-100/80 dark:bg-gray-700/50 rounded-lg border border-gray-200/60 dark:border-gray-600/40 backdrop-blur-sm">
                                                     <div className="w-2 h-2 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 animate-pulse"></div>
                                                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                                                         {filename}
@@ -761,7 +761,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                             <button
                                                 key={index}
                                                 onClick={action.action}
-                                                className={`p-2 rounded-lg text-xs transition-all duration-200 ${action.variant === 'primary'
+                                                className={`p-1.5 sm:p-2 rounded-lg text-xs transition-all duration-200 ${action.variant === 'primary'
                                                     ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/25'
                                                     : action.variant === 'danger'
                                                         ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg shadow-red-500/25'
@@ -769,14 +769,14 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                                     }`}
                                                 title={action.label}
                                             >
-                                                <action.icon className="w-3.5 h-3.5" />
+                                                <action.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                             </button>
                                         ))}
 
                                         {allowCopy && (
                                             <button
                                                 onClick={handleCopy}
-                                                className="p-2 text-gray-500 transition-all duration-200 rounded-lg hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 backdrop-blur-sm"
+                                                className="p-1.5 sm:p-2 text-gray-500 transition-all duration-200 rounded-lg hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 backdrop-blur-sm"
                                                 title="Copy code"
                                             >
                                                 {getCopyIcon()}
@@ -786,10 +786,10 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                         {allowDownload && (
                                             <button
                                                 onClick={handleDownload}
-                                                className="p-2 text-gray-500 transition-all duration-200 rounded-lg hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 backdrop-blur-sm"
+                                                className="p-1.5 sm:p-2 text-gray-500 transition-all duration-200 rounded-lg hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 backdrop-blur-sm"
                                                 title="Download code"
                                             >
-                                                <FiDownload className="w-3.5 h-3.5" />
+                                                <FiDownload className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                             </button>
                                         )}
 
@@ -797,13 +797,13 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                             <div className="relative">
                                                 <button
                                                     onClick={() => setShowSettings(!showSettings)}
-                                                    className={`p-2 rounded-lg transition-all duration-200 backdrop-blur-sm ${showSettings
+                                                    className={`p-1.5 sm:p-2 rounded-lg transition-all duration-200 backdrop-blur-sm ${showSettings
                                                         ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/25'
                                                         : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80'
                                                         }`}
                                                     title="Settings"
                                                 >
-                                                    <FiSettings className="w-3.5 h-3.5" />
+                                                    <FiSettings className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                                 </button>
                                             </div>
                                         )}
@@ -811,10 +811,10 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                         {allowFullscreen && (
                                             <button
                                                 onClick={handleFullscreen}
-                                                className="p-2 text-gray-500 transition-all duration-200 rounded-lg hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 backdrop-blur-sm"
+                                                className="p-1.5 sm:p-2 text-gray-500 transition-all duration-200 rounded-lg hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 backdrop-blur-sm"
                                                 title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                                             >
-                                                {isFullscreen ? <FiMinimize2 className="w-3.5 h-3.5" /> : <FiMaximize2 className="w-3.5 h-3.5" />}
+                                                {isFullscreen ? <FiMinimize2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <FiMaximize2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                                             </button>
                                         )}
                                     </div>
@@ -848,7 +848,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                         width={width}
                                         language={language}
                                         value={value}
-                                        onChange={onChange}
+                                        {...(onChange && { onChange })}
                                         onMount={handleEditorDidMount}
                                         theme={editorTheme}
                                         options={combinedOptions}
