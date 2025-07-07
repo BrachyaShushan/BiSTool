@@ -209,9 +209,45 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
   // Session management functions
   const handleNewSession = useCallback(() => {
+    // Create a new session with default values
+    const newSession = sessionManager.createSession("New Session", {
+      urlData: {
+        baseURL: "",
+        segments: "",
+        parsedSegments: [],
+        queryParams: [],
+        segmentVariables: [],
+        processedURL: "",
+        domain: "",
+        protocol: "https",
+        builtUrl: "",
+        environment: "development",
+      },
+      requestConfig: {
+        method: "GET",
+        queryParams: [],
+        headers: [],
+        bodyType: "none",
+        jsonBody: "{\n  \n}",
+        formData: [],
+      },
+      yamlOutput: "",
+      segmentVariables: {},
+      sharedVariables: [],
+    });
+
+    // Save and load the new session
+    sessionManager.saveSession(newSession);
+    sessionManager.loadSession(newSession);
+
+    // Reset app state to match the new session
+    appState.resetAppState();
+  }, [sessionManager, appState]);
+
+  const handleClearSession = useCallback(() => {
     sessionManager.clearActiveSession();
     appState.resetAppState();
-  }, []);
+  }, [sessionManager, appState]);
 
   const handleLoadSession = useCallback((session: ExtendedSession) => {
     sessionManager.loadSession(session);
@@ -387,6 +423,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
     // Session management
     handleNewSession,
+    handleClearSession,
     handleLoadSession,
     handleSaveSession,
     handleDeleteSession,

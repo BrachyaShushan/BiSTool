@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useVariablesContext } from '../../context/VariablesContext';
 import { Card, SectionHeader, MonacoEditor, Input, Button, Toggle, Textarea, Badge, IconButton, Divider } from '../ui';
-import { FiGlobe, FiSettings, FiCode, FiSend, FiEye, FiPlus, FiTrash2, FiLink, FiZap, FiDatabase, FiActivity } from 'react-icons/fi';
+import { FiGlobe, FiSettings, FiCode, FiSend, FiEye, FiPlus, FiTrash2, FiLink, FiZap, FiDatabase, FiActivity, FiEdit2, FiCheck, FiX, FiShield } from 'react-icons/fi';
 import { useURLBuilder } from '../../hooks/useURLBuilder';
 import { Header, QueryParam, FormDataField } from '../../types';
 import { DEFAULT_JSON_BODY, DEFAULT_FORM_DATA } from '../../constants/requestConfig';
@@ -14,12 +14,31 @@ const BasicMode: React.FC = () => {
         yamlOutput,
         activeSession,
         handleNewSession,
+        handleClearSession,
+        handleSaveSession,
+        generateAuthHeaders,
     } = useAppContext();
 
-    const { globalVariables, updateGlobalVariable } = useVariablesContext();
+    const { globalVariables, sharedVariables, updateGlobalVariable, updateSharedVariable, deleteGlobalVariable, deleteSharedVariable, replaceVariables } = useVariablesContext();
     const [responseData, setResponseData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [responseError, setResponseError] = useState<string | null>(null);
+    const [isCreatingSession, setIsCreatingSession] = useState(false);
+    const [includeToken, setIncludeToken] = useState<boolean>(activeSession?.includeToken ?? true);
+
+    // Inline editing state
+    const [editingGlobalKey, setEditingGlobalKey] = useState<string | null>(null);
+    const [editingGlobalValue, setEditingGlobalValue] = useState<string>('');
+    const [editingGlobalNewKey, setEditingGlobalNewKey] = useState<string>('');
+    const [editingSessionKey, setEditingSessionKey] = useState<string | null>(null);
+    const [editingSessionValue, setEditingSessionValue] = useState<string>('');
+    const [editingSessionNewKey, setEditingSessionNewKey] = useState<string>('');
+
+    // Refs for auto-focusing inputs
+    const globalEditKeyRef = useRef<HTMLInputElement>(null);
+    const globalEditValueRef = useRef<HTMLInputElement>(null);
+    const sessionEditKeyRef = useRef<HTMLInputElement>(null);
+    const sessionEditValueRef = useRef<HTMLInputElement>(null);
 
     // URL Builder state
     const {
@@ -45,23 +64,124 @@ const BasicMode: React.FC = () => {
     const [formData, setFormData] = useState<FormDataField[]>(requestConfig?.formData || DEFAULT_FORM_DATA);
     const [textBody, setTextBody] = useState<string>(requestConfig?.textBody || '');
 
-    // Ensure we have an active session for Basic Mode
-    useEffect(() => {
-        if (!activeSession) {
+    // Custom session creation handler
+    const handleCreateNewSession = () => {
+        console.log('BasicMode: Creating new session...');
+        setIsCreatingSession(true);
+        try {
             handleNewSession();
+            console.log('BasicMode: handleNewSession called successfully');
+        } catch (error) {
+            console.error('Error creating session:', error);
+            setIsCreatingSession(false);
         }
-    }, [activeSession, handleNewSession]);
+    };
 
-    // Show loading while session is being created
-    if (!activeSession) {
+    // Reset creating session state when session is available
+    useEffect(() => {
+        console.log('BasicMode: activeSession changed:', activeSession?.id, 'isCreatingSession:', isCreatingSession);
+        if (activeSession && isCreatingSession) {
+            console.log('BasicMode: Session created successfully, resetting loading state');
+            setIsCreatingSession(false);
+        }
+    }, [activeSession, isCreatingSession]);
+
+    // Timeout for session creation to prevent infinite loading
+    useEffect(() => {
+        if (isCreatingSession) {
+            const timeout = setTimeout(() => {
+                console.warn('Session creation timeout, resetting state');
+                setIsCreatingSession(false);
+            }, 5000); // 5 second timeout
+
+            return () => clearTimeout(timeout);
+        }
+        return undefined;
+    }, [isCreatingSession]);
+
+    // Sync includeToken with session on session change
+    useEffect(() => {
+        setIncludeToken(activeSession?.includeToken ?? true);
+    }, [activeSession?.id]);
+
+    // Save includeToken to session when it changes
+    useEffect(() => {
+        if (activeSession && includeToken !== undefined) {
+            const updatedSession = {
+                ...activeSession,
+                includeToken,
+            };
+            if (activeSession.includeToken !== includeToken) {
+                handleSaveSession(activeSession.name, updatedSession);
+            }
+        }
+    }, [includeToken, activeSession?.id]);
+
+    // Auto-focus input when editing starts
+    useEffect(() => {
+        if (editingGlobalKey && globalEditKeyRef.current) {
+            globalEditKeyRef.current.focus();
+        }
+    }, [editingGlobalKey]);
+
+    useEffect(() => {
+        if (editingSessionKey && sessionEditKeyRef.current) {
+            sessionEditKeyRef.current.focus();
+        }
+    }, [editingSessionKey]);
+
+    // Show loading state when creating session
+    if (isCreatingSession) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900">
                 <div className="text-center">
                     <div className="w-16 h-16 mx-auto mb-6 border-4 rounded-full border-blue-500/20 border-t-blue-500 animate-spin"></div>
                     <div className="mb-2 text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                        Initializing Basic Mode...
+                        Creating Session...
                     </div>
-                    <div className="text-gray-600 dark:text-gray-300">Setting up your workspace</div>
+                    <div className="mb-6 text-gray-600 dark:text-gray-300">Setting up your workspace</div>
+                    <Button
+                        onClick={() => setIsCreatingSession(false)}
+                        variant="secondary"
+                        size="sm"
+                        icon={FiX}
+                    >
+                        Cancel
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    // Show no session state
+    if (!activeSession) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900">
+                <div className="max-w-md p-8 mx-auto text-center">
+                    <div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full shadow-xl bg-gradient-to-br from-blue-500 to-indigo-600">
+                        <FiZap className="w-10 h-10 text-white" />
+                    </div>
+                    <h1 className="mb-4 text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                        No Active Session
+                    </h1>
+                    <p className="mb-8 text-lg text-gray-600 dark:text-gray-300">
+                        Start a new session to begin testing your APIs in Basic Mode
+                    </p>
+                    <div className="space-y-4">
+                        <Button
+                            onClick={handleCreateNewSession}
+                            variant="primary"
+                            size="lg"
+                            icon={FiPlus}
+                            gradient
+                            className="w-full"
+                        >
+                            Create New Session
+                        </Button>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Or switch to Expert Mode to manage sessions
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -78,31 +198,58 @@ const BasicMode: React.FC = () => {
         setResponseError(null);
 
         try {
+            // Apply variable replacement to URL
+            let resolvedUrl = replaceVariables(urlData.builtUrl);
+
+            // Add query parameters if any
+            const queryParamsWithValues = queryParams.filter(param => param.key && param.value);
+            if (queryParamsWithValues.length > 0) {
+                const queryString = queryParamsWithValues
+                    .map(param => {
+                        const resolvedKey = replaceVariables(param.key);
+                        const resolvedValue = replaceVariables(param.value);
+                        return `${encodeURIComponent(resolvedKey)}=${encodeURIComponent(resolvedValue)}`;
+                    })
+                    .join('&');
+                resolvedUrl = `${resolvedUrl}${resolvedUrl.includes('?') ? '&' : '?'}${queryString}`;
+            }
+
             const headersObj: Record<string, string> = {};
             headers.forEach(header => {
                 if (header.key && header.value) {
-                    headersObj[header.key] = header.value;
+                    // Apply variable replacement to header values
+                    headersObj[header.key] = replaceVariables(header.value);
                 }
             });
 
+            // Add authentication headers if includeToken is enabled
+            if (includeToken) {
+                const authHeaders = generateAuthHeaders();
+                Object.assign(headersObj, authHeaders);
+            }
+
             let body: any = undefined;
             if (bodyType === 'json' && jsonBody) {
-                body = JSON.stringify(JSON.parse(jsonBody));
+                // Apply variable replacement to JSON body
+                const resolvedJsonBody = replaceVariables(jsonBody);
+                body = JSON.stringify(JSON.parse(resolvedJsonBody));
                 headersObj['Content-Type'] = 'application/json';
             } else if (bodyType === 'form' && formData) {
                 const formDataObj = new FormData();
                 formData.forEach(field => {
                     if (field.key && field.value) {
-                        formDataObj.append(field.key, field.value);
+                        // Apply variable replacement to form data values
+                        formDataObj.append(field.key, replaceVariables(field.value));
                     }
                 });
                 body = formDataObj;
             } else if (bodyType === 'text' && textBody) {
-                body = textBody;
+                // Apply variable replacement to text body
+                body = replaceVariables(textBody);
                 headersObj['Content-Type'] = 'text/plain';
             }
 
-            const response = await fetch(urlData.builtUrl, {
+            const response = await fetch(resolvedUrl, {
                 method,
                 headers: headersObj,
                 body,
@@ -229,6 +376,58 @@ const BasicMode: React.FC = () => {
         setJsonBody(value || '');
     };
 
+    // Inline editing functions for global variables
+    const startEditingGlobal = (key: string, value: string) => {
+        setEditingGlobalKey(key);
+        setEditingGlobalValue(value);
+        setEditingGlobalNewKey(key);
+    };
+
+    const saveGlobalEdit = () => {
+        if (editingGlobalKey && editingGlobalNewKey.trim() && editingGlobalValue.trim()) {
+            // If key changed, delete old key and create new one
+            if (editingGlobalKey !== editingGlobalNewKey.trim()) {
+                deleteGlobalVariable(editingGlobalKey);
+            }
+            updateGlobalVariable(editingGlobalNewKey.trim(), editingGlobalValue.trim());
+        }
+        setEditingGlobalKey(null);
+        setEditingGlobalValue('');
+        setEditingGlobalNewKey('');
+    };
+
+    const cancelGlobalEdit = () => {
+        setEditingGlobalKey(null);
+        setEditingGlobalValue('');
+        setEditingGlobalNewKey('');
+    };
+
+    // Inline editing functions for session variables
+    const startEditingSession = (key: string, value: string) => {
+        setEditingSessionKey(key);
+        setEditingSessionValue(value);
+        setEditingSessionNewKey(key);
+    };
+
+    const saveSessionEdit = () => {
+        if (editingSessionKey && editingSessionNewKey.trim() && editingSessionValue.trim()) {
+            // If key changed, delete old key and create new one
+            if (editingSessionKey !== editingSessionNewKey.trim()) {
+                deleteSharedVariable(editingSessionKey);
+            }
+            updateSharedVariable(editingSessionNewKey.trim(), editingSessionValue.trim());
+        }
+        setEditingSessionKey(null);
+        setEditingSessionValue('');
+        setEditingSessionNewKey('');
+    };
+
+    const cancelSessionEdit = () => {
+        setEditingSessionKey(null);
+        setEditingSessionValue('');
+        setEditingSessionNewKey('');
+    };
+
     return (
         <div className="min-h-screen p-4 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900">
             <div className="mx-auto space-y-6 max-w-7xl">
@@ -243,6 +442,43 @@ const BasicMode: React.FC = () => {
                     <p className="text-lg text-gray-600 dark:text-gray-300">
                         Simplified interface for quick API testing and configuration
                     </p>
+
+                    {/* Session Info */}
+                    {activeSession && (
+                        <div className="p-4 mt-6 border border-gray-200 bg-white/80 dark:bg-gray-800/80 rounded-xl dark:border-gray-700 backdrop-blur-sm">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                            Active Session: {activeSession.name || 'Untitled Session'}
+                                        </div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            ID: {activeSession.id}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Button
+                                        onClick={handleCreateNewSession}
+                                        variant="secondary"
+                                        size="sm"
+                                        icon={FiPlus}
+                                    >
+                                        New Session
+                                    </Button>
+                                    <Button
+                                        onClick={handleClearSession}
+                                        variant="danger"
+                                        size="sm"
+                                        icon={FiTrash2}
+                                    >
+                                        Clear Session
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -467,6 +703,24 @@ const BasicMode: React.FC = () => {
                                     </div>
                                 </div>
 
+                                {/* Token Toggle */}
+                                <div className="flex items-center p-3 space-x-2 rounded-lg bg-gray-50 dark:bg-gray-700">
+                                    <FiShield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                    <Toggle
+                                        checked={includeToken && !!globalVariables["tokenName"]}
+                                        onChange={() => setIncludeToken((prev) => !prev)}
+                                        label="Include Token"
+                                        disabled={!globalVariables["tokenName"]}
+                                        colorScheme="purple"
+                                        size="md"
+                                    />
+                                    {!globalVariables["tokenName"] && (
+                                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                            No token configured
+                                        </span>
+                                    )}
+                                </div>
+
                                 <Divider />
 
                                 {/* Query Parameters */}
@@ -656,34 +910,197 @@ const BasicMode: React.FC = () => {
                         <Card variant="elevated" className="p-6 border-0 shadow-xl">
                             <SectionHeader
                                 icon={FiDatabase}
-                                title="Global Variables"
-                                description="Manage environment variables"
+                                title="Variables"
+                                description="Manage global and session variables"
                                 className="mb-6"
                             />
-                            <div className="space-y-3">
-                                {Object.entries(globalVariables).map(([key, value]) => (
-                                    <div key={key} className="flex items-center p-3 space-x-3 border rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-700">
-                                        <div className="flex-1">
-                                            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{key}</div>
-                                            <div className="text-xs text-gray-500 truncate dark:text-gray-400">{value}</div>
+
+                            {/* Global Variables */}
+                            <div className="mb-6">
+                                <div className="flex items-center mb-3 space-x-2">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Global Variables</h4>
+                                    <Badge variant="default" className="text-xs">
+                                        {Object.keys(globalVariables).length}
+                                    </Badge>
+                                </div>
+                                <div className="space-y-3">
+                                    {Object.entries(globalVariables).map(([key, value]) => (
+                                        <div key={key} className="flex items-center p-3 space-x-3 border border-green-200 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 dark:border-green-700">
+                                            {editingGlobalKey === key ? (
+                                                // Edit mode
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <Input
+                                                            ref={globalEditKeyRef}
+                                                            value={editingGlobalNewKey}
+                                                            onChange={(e) => setEditingGlobalNewKey(e.target.value)}
+                                                            placeholder="Variable key"
+                                                            className="flex-1 text-sm"
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') globalEditValueRef.current?.focus();
+                                                                if (e.key === 'Escape') cancelGlobalEdit();
+                                                            }}
+                                                        />
+                                                        <Input
+                                                            ref={globalEditValueRef}
+                                                            value={editingGlobalValue}
+                                                            onChange={(e) => setEditingGlobalValue(e.target.value)}
+                                                            placeholder="Variable value"
+                                                            className="flex-1 text-sm"
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') saveGlobalEdit();
+                                                                if (e.key === 'Escape') cancelGlobalEdit();
+                                                            }}
+                                                        />
+                                                        <IconButton
+                                                            icon={FiCheck}
+                                                            variant="ghost"
+                                                            onClick={saveGlobalEdit}
+                                                            size="sm"
+                                                            className="text-green-500 hover:text-green-700"
+                                                        />
+                                                        <IconButton
+                                                            icon={FiX}
+                                                            variant="ghost"
+                                                            onClick={cancelGlobalEdit}
+                                                            size="sm"
+                                                            className="text-red-500 hover:text-red-700"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                // View mode
+                                                <>
+                                                    <div className="flex-1">
+                                                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{key}</div>
+                                                        <div className="text-xs text-gray-500 truncate dark:text-gray-400">{value}</div>
+                                                    </div>
+                                                    <div className="flex items-center space-x-1">
+                                                        <IconButton
+                                                            icon={FiEdit2}
+                                                            variant="ghost"
+                                                            onClick={() => startEditingGlobal(key, value)}
+                                                            size="sm"
+                                                            className="text-green-500 hover:text-green-700"
+                                                        />
+                                                        <IconButton
+                                                            icon={FiTrash2}
+                                                            variant="ghost"
+                                                            onClick={() => deleteGlobalVariable(key)}
+                                                            size="sm"
+                                                            className="text-red-500 hover:text-red-700"
+                                                        />
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
-                                        <IconButton
-                                            icon={FiTrash2}
-                                            variant="ghost"
-                                            onClick={() => updateGlobalVariable(key, '')}
-                                            size="sm"
-                                            className="text-red-500 hover:text-red-700"
-                                        />
-                                    </div>
-                                ))}
-                                <Button
-                                    variant="secondary"
-                                    icon={FiPlus}
-                                    onClick={() => updateGlobalVariable(`var_${Date.now()}`, '')}
-                                    fullWidth
-                                >
-                                    Add Variable
-                                </Button>
+                                    ))}
+                                    <Button
+                                        variant="secondary"
+                                        icon={FiPlus}
+                                        onClick={() => updateGlobalVariable(`global_${Date.now()}`, '')}
+                                        size="sm"
+                                        fullWidth
+                                    >
+                                        Add Global Variable
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <Divider />
+
+                            {/* Session Variables */}
+                            <div>
+                                <div className="flex items-center mb-3 space-x-2">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Session Variables</h4>
+                                    <Badge variant="default" className="text-xs">
+                                        {sharedVariables.length}
+                                    </Badge>
+                                </div>
+                                <div className="space-y-3">
+                                    {sharedVariables.map((variable) => (
+                                        <div key={variable.key} className="flex items-center p-3 space-x-3 border border-blue-200 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 dark:border-blue-700">
+                                            {editingSessionKey === variable.key ? (
+                                                // Edit mode
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <Input
+                                                            ref={sessionEditKeyRef}
+                                                            value={editingSessionNewKey}
+                                                            onChange={(e) => setEditingSessionNewKey(e.target.value)}
+                                                            placeholder="Variable key"
+                                                            className="flex-1 text-sm"
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') sessionEditValueRef.current?.focus();
+                                                                if (e.key === 'Escape') cancelSessionEdit();
+                                                            }}
+                                                        />
+                                                        <Input
+                                                            ref={sessionEditValueRef}
+                                                            value={editingSessionValue}
+                                                            onChange={(e) => setEditingSessionValue(e.target.value)}
+                                                            placeholder="Variable value"
+                                                            className="flex-1 text-sm"
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') saveSessionEdit();
+                                                                if (e.key === 'Escape') cancelSessionEdit();
+                                                            }}
+                                                        />
+                                                        <IconButton
+                                                            icon={FiCheck}
+                                                            variant="ghost"
+                                                            onClick={saveSessionEdit}
+                                                            size="sm"
+                                                            className="text-green-500 hover:text-green-700"
+                                                        />
+                                                        <IconButton
+                                                            icon={FiX}
+                                                            variant="ghost"
+                                                            onClick={cancelSessionEdit}
+                                                            size="sm"
+                                                            className="text-red-500 hover:text-red-700"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                // View mode
+                                                <>
+                                                    <div className="flex-1">
+                                                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{variable.key}</div>
+                                                        <div className="text-xs text-gray-500 truncate dark:text-gray-400">{variable.value}</div>
+                                                    </div>
+                                                    <div className="flex items-center space-x-1">
+                                                        <IconButton
+                                                            icon={FiEdit2}
+                                                            variant="ghost"
+                                                            onClick={() => startEditingSession(variable.key, variable.value)}
+                                                            size="sm"
+                                                            className="text-blue-500 hover:text-blue-700"
+                                                        />
+                                                        <IconButton
+                                                            icon={FiTrash2}
+                                                            variant="ghost"
+                                                            onClick={() => deleteSharedVariable(variable.key)}
+                                                            size="sm"
+                                                            className="text-red-500 hover:text-red-700"
+                                                        />
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <Button
+                                        variant="secondary"
+                                        icon={FiPlus}
+                                        onClick={() => updateSharedVariable(`session_${Date.now()}`, '')}
+                                        size="sm"
+                                        fullWidth
+                                    >
+                                        Add Session Variable
+                                    </Button>
+                                </div>
                             </div>
                         </Card>
                     </div>

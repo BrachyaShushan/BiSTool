@@ -242,6 +242,7 @@ export interface AppContextType {
     config: TokenConfig | ((prev: TokenConfig) => TokenConfig)
   ) => void;
   handleNewSession: () => void;
+  handleClearSession: () => void;
   handleLoadSession: (session: ExtendedSession) => void;
   handleSaveSession: (name: string, sessionData?: ExtendedSession) => void;
   handleDeleteSession: (id: string) => void;

@@ -15,7 +15,7 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
     'data-testid'?: string;
 }
 
-const Input: React.FC<InputProps> = ({
+const Input = React.forwardRef<HTMLInputElement, InputProps>(({
     variant = 'default',
     size = 'md',
     icon: Icon,
@@ -28,7 +28,7 @@ const Input: React.FC<InputProps> = ({
     className = '',
     'data-testid': dataTestId,
     ...props
-}) => {
+}, ref) => {
     const { isDarkMode } = useTheme();
 
     const baseClasses = 'rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
@@ -93,6 +93,7 @@ const Input: React.FC<InputProps> = ({
                 )}
 
                 <input
+                    ref={ref}
                     className={inputClasses}
                     data-testid={dataTestId}
                     {...props}
@@ -119,6 +120,6 @@ const Input: React.FC<InputProps> = ({
             )}
         </div>
     );
-};
+});
 
 export default Input; 
