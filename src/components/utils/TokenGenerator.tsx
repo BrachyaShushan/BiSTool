@@ -11,7 +11,7 @@ import {
 } from 'react-icons/fi';
 
 const TokenGenerator: React.FC = () => {
-    const { globalVariables, updateGlobalVariable } = useVariablesContext();
+    const { globalVariables, updateGlobalVariable, replaceVariables } = useVariablesContext();
     const { tokenConfig, setTokenConfig } = useAppContext();
     const { isDarkMode } = useTheme();
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -212,12 +212,14 @@ const TokenGenerator: React.FC = () => {
                 throw new Error("Please set username and password in global variables");
             }
 
-            const domain = tokenConfig.domain;
+            // Use replaceVariables to interpolate domain and path
+            const domain = replaceVariables(tokenConfig.domain);
+            const path = replaceVariables(tokenConfig.path);
             if (!domain) {
                 throw new Error("Please set a valid domain");
             }
 
-            const requestUrl = `${domain}${tokenConfig.path}`;
+            const requestUrl = `${domain}${path}`;
 
             // Build request body based on content type and field mappings
             let requestBody: string;
@@ -382,7 +384,7 @@ const TokenGenerator: React.FC = () => {
         } finally {
             safeSetState(setIsGenerating, false);
         }
-    }, [globalVariables, tokenConfig, extractTokenFromJson, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromSetCookieHeader, getCookieValue, extractTokenFromResponseText]);
+    }, [globalVariables, tokenConfig, extractTokenFromJson, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromSetCookieHeader, getCookieValue, extractTokenFromResponseText, replaceVariables]);
 
     const checkTokenExpiration = useCallback((): boolean => {
         if (!globalVariables) return false;
@@ -481,11 +483,13 @@ const TokenGenerator: React.FC = () => {
             if (!globalVariables['username'] || !globalVariables['password']) {
                 throw new Error("Please set username and password in global variables");
             }
-            const domain = tokenConfig.domain;
+            // Use replaceVariables to interpolate domain and path
+            const domain = replaceVariables(tokenConfig.domain);
+            const path = replaceVariables(tokenConfig.path);
             if (!domain) {
                 throw new Error("Please set a valid domain");
             }
-            const requestUrl = `${domain}${tokenConfig.path}`;
+            const requestUrl = `${domain}${path}`;
             let requestBody: string;
             let contentType: string;
             if (tokenConfig.requestMapping.contentType === "json") {
@@ -638,7 +642,7 @@ const TokenGenerator: React.FC = () => {
         } finally {
             safeSetState(setIsAutoDetecting, false);
         }
-    }, [globalVariables, tokenConfig, extractTokenFromJson, extractTokenFromSetCookieHeader, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromResponseText, updateGlobalVariable, setTokenConfig]);
+    }, [globalVariables, tokenConfig, extractTokenFromJson, extractTokenFromSetCookieHeader, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromResponseText, updateGlobalVariable, setTokenConfig, replaceVariables]);
 
     return (
         <>

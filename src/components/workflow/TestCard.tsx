@@ -73,30 +73,13 @@ const isPartialMatch = (expected: string, actual: string) => {
     }
 };
 
-const evaluateUrl = (url: string, test: TestCase, sharedVariables: any, globalVariables: any) => {
-    return url.replace(/\{([^}]+)\}/g, (match, varName) => {
-        if (test.pathOverrides?.[varName] && test.pathOverrides[varName].trim() !== '') {
-            return test.pathOverrides[varName];
-        }
-        // Check shared variables from VariablesContext
-        const sharedVar = sharedVariables.find((v: any) => v.key === varName);
-        if (sharedVar) {
-            return sharedVar.value;
-        }
-        if (globalVariables?.[varName]) {
-            return globalVariables[varName];
-        }
-        return match; // leave as is if not found
-    });
-};
-
 const TestCard: React.FC<TestCardProps> = ({
     test,
     handleUpdateTest,
     handleDuplicateTest,
     handleRemoveTest,
 }) => {
-    const { globalVariables, sharedVariables } = useVariablesContext();
+    const { replaceVariables } = useVariablesContext();
     const { urlData, requestConfig, generateAuthHeaders } = useAppContext();
     const { isDarkMode } = useTheme();
     const [loading, setLoading] = useState(false);
@@ -124,8 +107,8 @@ const TestCard: React.FC<TestCardProps> = ({
             });
         }
 
-        // Replace any remaining {variable} in the URL with test overrides, shared, or global variables
-        url = evaluateUrl(url, test, sharedVariables, globalVariables);
+        // Use replaceVariables for any remaining variables
+        url = replaceVariables(url);
 
         // Query param overrides: only override if non-empty string
         let queryString = '';
