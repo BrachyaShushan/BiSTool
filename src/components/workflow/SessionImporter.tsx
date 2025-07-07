@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Editor as MonacoEditor } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import jsonata from 'jsonata';
-import { FiUpload, FiDownload, FiPlay, FiInfo, FiAlertCircle, FiCheckCircle, FiXCircle } from 'react-icons/fi';
+import { FiUpload, FiDownload, FiPlay, FiInfo, FiAlertCircle, FiCheckCircle, FiXCircle, FiCopy, FiCheck } from 'react-icons/fi';
 import { useTheme } from '../../context/ThemeContext';
 import {
     generateJsonataSuggestions,
@@ -13,6 +13,9 @@ import {
     jsonataFunctionDocs,
     JsonataSuggestion
 } from '../../utils/jsonataSuggestions';
+import Modal from '../core/Modal';
+import { copyToClipboard } from '../../utils/clipboard';
+import { Button } from '../ui';
 
 interface SessionImporterProps {
     onImportSessions?: (sessions: any[]) => void;
@@ -488,6 +491,8 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
     const [autoValidate, setAutoValidate] = useState(true);
     const { isDarkMode } = useTheme();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const [showStructureModal, setShowStructureModal] = useState(false);
+    const [copySuccess, setCopySuccess] = useState(false);
 
     // Update global variable when imported file changes
     useEffect(() => {
@@ -808,6 +813,49 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
         "segmentVariables": {},
         "sharedVariables": {}
       })`
+        },
+        {
+            name: 'Transform imported file to BiSTool session format (whole file)',
+            expression: `{
+  "savedSessions": $map($.savedSessions, function($s) {
+    {
+      "id": $s.id,
+      "name": $s.name,
+      "timestamp": $s.timestamp ? $s.timestamp : $now(),
+      "category": $s.category ? $s.category : "Imported",
+      "urlData": {
+        "domain": $s.urlData.domain ? $s.urlData.domain : (
+          $s.urlData.builtUrl ? $split($s.urlData.builtUrl, "/")[2] : ""
+        ),
+        "protocol": $s.urlData.protocol ? $s.urlData.protocol : (
+          $s.urlData.builtUrl ? $substring($s.urlData.builtUrl, 0, $indexOf($s.urlData.builtUrl, "://")) : ""
+        ),
+        "builtUrl": $s.urlData.builtUrl ? $s.urlData.builtUrl : "",
+        "environment": $s.urlData.environment ? $s.urlData.environment : "development",
+        "baseURL": $s.urlData.baseURL ? $s.urlData.baseURL : (
+          $s.urlData.builtUrl ? $substring($s.urlData.builtUrl, 0, $lastIndexOf($s.urlData.builtUrl, "/")) : ""
+        ),
+        "processedURL": $s.urlData.processedURL ? $s.urlData.processedURL : $s.urlData.builtUrl,
+        "segments": $s.urlData.segments ? $s.urlData.segments : "",
+        "parsedSegments": $s.urlData.parsedSegments ? $s.urlData.parsedSegments : [],
+        "queryParams": $s.urlData.queryParams ? $s.urlData.queryParams : [],
+        "segmentVariables": $s.urlData.segmentVariables ? $s.urlData.segmentVariables : []
+      },
+      "requestConfig": {
+        "method": $s.requestConfig.method ? $s.requestConfig.method : "GET",
+        "headers": $s.requestConfig.headers ? $s.requestConfig.headers : [],
+        "queryParams": $s.requestConfig.queryParams ? $s.requestConfig.queryParams : [],
+        "bodyType": $s.requestConfig.bodyType ? $s.requestConfig.bodyType : "json",
+        "jsonBody": $s.requestConfig.jsonBody ? $s.requestConfig.jsonBody : "",
+        "formData": $s.requestConfig.formData ? $s.requestConfig.formData : []
+      },
+      "yamlOutput": $s.yamlOutput ? $s.yamlOutput : "",
+      "segmentVariables": $s.segmentVariables ? $s.segmentVariables : {},
+      "sharedVariables": $s.sharedVariables ? $s.sharedVariables : {}
+    }
+  }),
+  "globalVariables": $.globalVariables
+}`
         }
     ];
 
@@ -898,6 +946,43 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
         }
     };
 
+    // Storage structure explanation (customize as needed)
+    const storageStructureExplanation = `BiSTool Session Storage Structure:\n\n{
+      "id": string, // Unique session ID
+      "name": string, // Session name
+      "timestamp": string, // ISO timestamp
+      "category": string, // Session category
+      "urlData": object, // URL and endpoint info
+      "requestConfig": object, // Request configuration
+      "yamlOutput": string, // YAML output (optional)
+      "segmentVariables": object, // Segment variables (optional)
+      "sharedVariables": object // Shared variables (optional)
+    }\n\n- urlData: { domain, protocol, builtUrl, environment, baseURL, processedURL, segments, parsedSegments, queryParams, segmentVariables }
+    - requestConfig: { method, headers, queryParams, bodyType, jsonBody, formData }\n\nThis structure is required for AI-powered session import and manipulation.`;
+
+    // Get a sample JSONata expression (use the last one from sampleExpressions)
+    const sampleJsonata = sampleExpressions[sampleExpressions.length - 1]?.expression || '';
+
+    // Compose the prompt for copying
+    const getPromptText = () => {
+        return [
+            '--- Storage Structure Explanation ---',
+            storageStructureExplanation,
+            '',
+            '--- Imported File ---',
+            importedFile ? JSON.stringify(importedFile.data, null, 2) : '',
+            '',
+            '--- Sample JSONata Expression ---',
+            sampleJsonata
+        ].join('\n\n');
+    };
+
+    const handleCopyPrompt = async () => {
+        await copyToClipboard(getPromptText());
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 p-8">
             <div className="max-w-7xl mx-auto">
@@ -978,6 +1063,7 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
                                 <div className="flex items-center gap-3 mb-2">
                                     <FiInfo className="w-5 h-5 text-blue-400" />
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Imported JSON Preview</h3>
+                                    <Button variant="outline" size="sm" icon={FiInfo} children="View Structure" onClick={() => setShowStructureModal(true)} />
                                 </div>
                                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                                     <MonacoEditor
@@ -1266,6 +1352,47 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
                         </div>
                     </div>
                 )}
+
+                {/* Modal for storage structure explanation */}
+                <Modal
+                    isOpen={showStructureModal}
+                    onClose={() => setShowStructureModal(false)}
+                    title={<span className="flex items-center gap-2"><FiInfo className="w-5 h-5 text-indigo-500" /> Storage Structure & Import Guide</span>}
+                    showSaveButton={false}
+                    showCancelButton={true}
+                    cancelButtonText="Close"
+                    size="3xl"
+                >
+                    <div className="space-y-6">
+                        <div>
+                            <h4 className="font-bold text-lg mb-1 text-gray-900 dark:text-white">Session Storage Structure</h4>
+                            <pre className="bg-gray-100 dark:bg-gray-800 rounded p-4 text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap border border-gray-200 dark:border-gray-700">
+                                {storageStructureExplanation}
+                            </pre>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-lg mb-1 text-gray-900 dark:text-white">Imported File</h4>
+                            <pre className="bg-gray-50 dark:bg-gray-900 rounded p-4 text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap border border-gray-200 dark:border-gray-700 max-h-48 overflow-auto">
+                                {importedFile ? JSON.stringify(importedFile.data, null, 2) : ''}
+                            </pre>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-lg mb-1 text-gray-900 dark:text-white">Sample JSONata Expression</h4>
+                            <pre className="bg-blue-50 dark:bg-blue-900 rounded p-4 text-xs text-blue-900 dark:text-blue-200 whitespace-pre-wrap border border-blue-200 dark:border-blue-700">
+                                {sampleJsonata}
+                            </pre>
+                        </div>
+                        <div className="flex justify-end">
+                            <button
+                                onClick={handleCopyPrompt}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors duration-200 ${copySuccess ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                            >
+                                {copySuccess ? <FiCheck className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
+                                {copySuccess ? 'Copied!' : 'Copy Prompt'}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
             </div>
         </div>
     );
