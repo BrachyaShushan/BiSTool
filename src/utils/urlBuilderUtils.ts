@@ -1,4 +1,5 @@
 import { URLData } from "../types/core/app.types";
+import { useVariablesContext } from '../context/VariablesContext';
 
 // Define Segment interface
 export interface Segment {
@@ -76,25 +77,43 @@ export const buildUrlFromSegments = (
   segments: Segment[],
   globalVariables: Record<string, string>
 ): string => {
-  // Resolve base_url from global variables if domain is {base_url}
-  let resolvedDomain = domain;
-  if (domain === "{base_url}" && globalVariables?.["base_url"]) {
-    resolvedDomain = globalVariables["base_url"];
+  // Use replaceVariables for domain
+  // Note: This is a utility, so we need to get replaceVariables from context
+  // If this is not in a React component, consider refactoring to pass replaceVariables as a parameter
+  try {
+    const { replaceVariables } = useVariablesContext();
+    let resolvedDomain = replaceVariables(domain);
+    const segmentPath =
+      segments.length > 0
+        ? "/" +
+          segments
+            .map((segment) =>
+              segment.isDynamic && segment.paramName
+                ? `{${segment.paramName}}`
+                : segment.value
+            )
+            .join("/")
+        : "";
+    return `${protocol}://${resolvedDomain}${segmentPath}`;
+  } catch {
+    // fallback for non-React usage
+    let resolvedDomain = domain;
+    if (domain === "{base_url}" && globalVariables?.["base_url"]) {
+      resolvedDomain = globalVariables["base_url"];
+    }
+    const segmentPath =
+      segments.length > 0
+        ? "/" +
+          segments
+            .map((segment) =>
+              segment.isDynamic && segment.paramName
+                ? `{${segment.paramName}}`
+                : segment.value
+            )
+            .join("/")
+        : "";
+    return `${protocol}://${resolvedDomain}${segmentPath}`;
   }
-
-  const segmentPath =
-    segments.length > 0
-      ? "/" +
-        segments
-          .map((segment) =>
-            segment.isDynamic && segment.paramName
-              ? `{${segment.paramName}}`
-              : segment.value
-          )
-          .join("/")
-      : "";
-
-  return `${protocol}://${resolvedDomain}${segmentPath}`;
 };
 
 // Create URL data from current state

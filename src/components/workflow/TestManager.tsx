@@ -38,7 +38,7 @@ const TestManager: React.FC = () => {
         generateAuthHeaders,
         openUnifiedManager,
     } = useAppContext();
-    const { globalVariables, sharedVariables } = useVariablesContext();
+    const { replaceVariables } = useVariablesContext();
 
 
     const tests: TestCase[] = activeSession?.tests ?? [];
@@ -158,20 +158,17 @@ const TestManager: React.FC = () => {
     };
 
     const evaluateUrl = (url: string, test: TestCase) => {
-        return url.replace(/\{([^}]+)\}/g, (match, varName) => {
-            if (test.pathOverrides?.[varName] && test.pathOverrides[varName].trim() !== '') {
-                return test.pathOverrides[varName];
-            }
-            // Check shared variables from VariablesContext
-            const sharedVar = sharedVariables.find(v => v.key === varName);
-            if (sharedVar) {
-                return sharedVar.value;
-            }
-            if (globalVariables?.[varName]) {
-                return globalVariables[varName];
-            }
-            return match; // leave as is if not found
-        });
+        // Apply pathOverrides first
+        if (urlData.parsedSegments) {
+            urlData.parsedSegments.forEach((seg: any) => {
+                const overrideVal = test.pathOverrides?.[seg.paramName];
+                if (seg.isDynamic && overrideVal && overrideVal.trim() !== '') {
+                    url = url.replace(`{${seg.paramName}}`, String(overrideVal));
+                }
+            });
+        }
+        // Use replaceVariables for any remaining variables
+        return replaceVariables(url);
     };
 
     // Run Test handler

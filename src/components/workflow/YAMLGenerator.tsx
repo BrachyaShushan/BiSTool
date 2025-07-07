@@ -42,23 +42,8 @@ import {
 import { RequestConfigData, ResponseCondition } from "../../types/core/app.types";
 import { ExtendedSession } from "../../types/features/SavedManager";
 
-// Extract variables from URL in {variable} format, excluding the base URL
-const extractVariables = (url: string): string[] => {
-  if (!url) return [];
-  url = url.split("//")[1] ?? url;
-  // Handle both {variable} and %7Bvariable%7D formats
-  const matches = url.match(/(?:{([^}]+)}|%7B([^%]+)%7D)/g) || [];
-  return matches.map((match) => {
-    if (match.startsWith("{")) {
-      return match.slice(1, -1);
-    } else {
-      return match.slice(3, -3);
-    }
-  });
-};
-
 const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
-  const { globalVariables, sharedVariables } = useVariablesContext();
+  const { globalVariables, sharedVariables, replaceVariables } = useVariablesContext();
   const { urlData, requestConfig, setYamlOutput, segmentVariables, activeSession, handleSaveSession, setActiveSection, generateAuthHeaders, openUnifiedManager } = useAppContext();
 
   const [localYamlOutput, setLocalYamlOutput] = useState<string>("");
@@ -244,15 +229,8 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
         })
         .join("&");
 
-      let url = urlData.builtUrl;
-      const variables = extractVariables(url);
-      variables.forEach((variable) => {
-        const value = getValueFromVariables(variable);
-        if (value) {
-          url = url.replace(`{${variable}}`, value as string);
-          url = url.replace(`%7B${variable}%7D`, value as string);
-        }
-      });
+      // Use replaceVariables for the URL
+      let url = replaceVariables(urlData.builtUrl);
       url = queryString
         ? `${url}?${queryString}`
         : url;
@@ -619,53 +597,35 @@ ${generateRequestBody()}
 
   const getResolvedUrl = useCallback(() => {
     if (!urlData?.builtUrl) return "";
-    let url = urlData.builtUrl;
-
-    // Replace variables in the URL path
-    const variables = extractVariables(url);
-    variables.forEach((variable) => {
-      const value = getValueFromVariables(variable);
-      if (value) {
-        url = url.replace(`{${variable}}`, value as string);
-        url = url.replace(`%7B${variable}%7D`, value as string);
-      }
-    });
-
+    let url = replaceVariables(urlData.builtUrl);
     // Add selected query parameters
     const selectedParams =
       requestConfig?.queryParams?.filter(
         (param) => selectedQueries[param.key]
       ) || [];
-
     const queryString = selectedParams
       .map((param) => {
         const resolvedValue = getValueFromVariables(param.value);
         return `${param.key}=${resolvedValue}`;
       })
       .join("&");
-
     return queryString ? `${url}?${queryString}` : url;
   }, [
     urlData?.builtUrl,
     requestConfig?.queryParams,
     selectedQueries,
     getValueFromVariables,
+    replaceVariables,
   ]);
 
   const getColoredUrl = useCallback(() => {
     const url = getResolvedUrl();
     if (!url) return null;
-
     // Split the URL into parts while preserving the structure
     const parts = url.split(/(?<=^[^:]+:\/\/)|(?<=\/)/);
-
     return parts.map((part, index) => {
-      // Replace any remaining variables in the part
-      const resolvedPart = part.replace(/\{([^}]+)\}/g, (match, variable) => {
-        const value = getValueFromVariables(variable);
-        return (value as string) || match;
-      });
-
+      // Use replaceVariables for any remaining variables in the part
+      const resolvedPart = replaceVariables(part);
       if (part.includes("://")) {
         return (
           <span key={`${index}-${resolvedPart}`} className="text-blue-500">
@@ -686,7 +646,7 @@ ${generateRequestBody()}
         );
       }
     });
-  }, [getResolvedUrl, getValueFromVariables]);
+  }, [getResolvedUrl, replaceVariables]);
 
 
   // Helper to get the default custom response
