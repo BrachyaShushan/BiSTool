@@ -29,10 +29,10 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return <StorageContext.Provider value={value}>{children}</StorageContext.Provider>;
 };
 
-export function useStorageContext() {
+export const useStorageContext = () => {
     const context = useContext(StorageContext);
     if (!context) {
         throw new Error("useStorageContext must be used within a StorageProvider");
     }
     return context;
-} 
+}; 

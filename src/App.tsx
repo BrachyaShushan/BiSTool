@@ -30,8 +30,58 @@ const AppContent: React.FC = () => {
         showUnifiedManager,
         unifiedManagerTab,
         setShowUnifiedManager,
+        isLoading: appIsLoading,
+        error: appError,
     } = useAppContext();
-    const { currentProject } = useProjectContext();
+    const { currentProject, isLoading: projectIsLoading, error: projectError } = useProjectContext();
+
+    // Determine if we should show loading state
+    const isInitializing = projectIsLoading || appIsLoading;
+    const hasError = projectError || appError;
+
+    // Show loading screen while initializing
+    if (isInitializing) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="inline-flex items-center justify-center p-4 mb-6 shadow-2xl bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl animate-pulse">
+                        <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <h1 className="mb-4 text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
+                        Loading BiSTool...
+                    </h1>
+                    <p className="text-gray-600 dark:text-gray-300">
+                        Initializing your workspace
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error state if there's an error
+    if (hasError) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-red-50 to-red-100 dark:from-gray-900 dark:via-red-900 dark:to-red-800 flex items-center justify-center">
+                <div className="text-center max-w-md mx-auto p-6">
+                    <div className="inline-flex items-center justify-center p-4 mb-6 shadow-2xl bg-gradient-to-br from-red-500 to-red-600 rounded-2xl">
+                        <div className="w-12 h-12 text-white text-2xl">⚠️</div>
+                    </div>
+                    <h1 className="mb-4 text-3xl font-bold text-red-600 dark:text-red-400">
+                        Loading Error
+                    </h1>
+                    <p className="mb-6 text-gray-700 dark:text-gray-300">
+                        {hasError}
+                    </p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-6 py-3 font-semibold text-white transition-all duration-200 shadow-lg bg-gradient-to-r from-red-600 to-red-700 rounded-xl hover:scale-105 hover:shadow-xl"
+                    >
+                        Reload App
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     const renderActiveSection = (): React.ReactNode => {
         switch (activeSection) {
@@ -65,7 +115,6 @@ const AppContent: React.FC = () => {
         { id: "monaco", label: "Monaco Editor" },
         { id: "ui", label: "UI Components" },
     ];
-
 
     return (
         <>

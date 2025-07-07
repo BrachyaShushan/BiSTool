@@ -19,6 +19,7 @@ export interface ProjectContextType {
   clearCurrentProject: () => void;
   getProjectStorageKey: (key: string) => string;
   forceReload: number;
+  setProjectLoadingComplete: () => void;
 }
 
 export interface ProjectStorage {

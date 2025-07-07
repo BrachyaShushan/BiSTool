@@ -81,6 +81,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   useEffect(() => {
     if (!currentProjectId) {
       setIsLoading(false);
+      // Notify ProjectContext that loading is complete when no project is selected
+      if (projectContext?.setProjectLoadingComplete) {
+        projectContext.setProjectLoadingComplete();
+      }
       return;
     }
 
@@ -125,10 +129,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
         setHasLoaded(true);
         setIsLoading(false);
+        // Notify ProjectContext that loading is complete
+        if (projectContext?.setProjectLoadingComplete) {
+          projectContext.setProjectLoadingComplete();
+        }
       } catch (err) {
         console.error("Failed to load project data:", err);
         setError(`Failed to load project data: ${err}`);
         setIsLoading(false);
+        // Notify ProjectContext that loading failed
+        if (projectContext?.setProjectLoadingComplete) {
+          projectContext.setProjectLoadingComplete();
+        }
       }
     };
 
@@ -413,12 +425,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   return <AppContext value={value}>{children}</AppContext>;
 };
 
-function useAppContext() {
+export const useAppContext = () => {
   const context = useContext(AppContext);
   if (!context) {
     throw new Error("useAppContext must be used within an AppProvider");
   }
   return context;
 }
-
-export { useAppContext };

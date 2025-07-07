@@ -3,11 +3,6 @@ export const DEFAULT_GLOBAL_VARIABLES: Record<string, string> = {
   username: "",
   password: "",
   base_url: "",
-  api_key: "",
-  token: "",
-  tokenName: "x-access-token",
-  refresh_token: "",
-  refreshTokenName: "refresh_token",
 };
 
 // Default shared variables (empty array, but can be extended)

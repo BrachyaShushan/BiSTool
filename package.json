@@ -20,9 +20,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.55.0",
-    "@headlessui/react": "^2.2.4",
     "@monaco-editor/react": "^4.7.0",
-    "@radix-ui/react-dialog": "^1.1.14",
     "autoprefixer": "^10.4.21",
     "BiSTool": "file:",
     "jsonata": "^2.0.6",

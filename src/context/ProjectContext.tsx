@@ -70,6 +70,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [currentProject, setCurrentProject] = useState<Project | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [forceReload, setForceReload] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Load current project after projects are loaded
     useEffect(() => {
@@ -102,6 +103,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             }
         } catch (err) {
             console.error("Failed to load active project:", err);
+            setError("Failed to load active project: " + err);
+        } finally {
+            setIsLoading(false);
         }
     }, [projects]);
 
@@ -159,6 +163,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, []);
 
     const switchProject = useCallback((projectId: string) => {
+        setIsLoading(true);
+        setError(null);
 
         const project = projects.find(p => p.id === projectId);
         if (project) {
@@ -170,7 +176,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             // Set the new current project
             setCurrentProject(project);
-            setError(null);
 
             // Set active project in localStorage immediately
             localStorage.setItem(ACTIVE_PROJECT_KEY, projectId);
@@ -180,6 +185,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else {
             console.error(`Project not found: ${projectId}`);
             setError(`Project not found: ${projectId}`);
+            setIsLoading(false);
         }
     }, [projects]);
 
@@ -234,10 +240,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return `${currentProject.id}_${key}`;
     }, [currentProject?.id]);
 
+    const setProjectLoadingComplete = useCallback(() => {
+        setIsLoading(false);
+    }, []);
+
     const value: ProjectContextType = {
         currentProject,
         projects,
-        isLoading: false,
+        isLoading,
         error,
         createProject,
         switchProject,
@@ -246,6 +256,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         clearCurrentProject,
         getProjectStorageKey,
         forceReload,
+        setProjectLoadingComplete,
     };
 
     return (

@@ -19,12 +19,7 @@ export default defineConfig({
           // Separate Monaco Editor into its own chunk (it's very large)
           "monaco-editor": ["@monaco-editor/react", "monaco-editor"],
           // Separate UI libraries
-          "ui-vendor": [
-            "@headlessui/react",
-            "@radix-ui/react-dialog",
-            "react-icons",
-            "react-loading-skeleton",
-          ],
+          "ui-vendor": ["react-icons", "react-loading-skeleton"],
           // Separate utility libraries
           "utils-vendor": ["jsonata", "uuid"],
           // Separate AI SDK

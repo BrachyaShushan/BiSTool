@@ -250,12 +250,10 @@ export const VariablesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return <VariablesContext.Provider value={value}>{children}</VariablesContext.Provider>;
 };
 
-function useVariablesContext() {
+export const useVariablesContext = () => {
     const context = useContext(VariablesContext);
     if (!context) {
         throw new Error("useVariablesContext must be used within a VariablesProvider");
     }
     return context;
-}
-
-export { useVariablesContext };
+};
