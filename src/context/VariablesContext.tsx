@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { Variable } from "../types/core/app.types";
 import { useProjectContext } from "./ProjectContext";
 import { useVariableStorage } from "../hooks/useStorage";
@@ -23,6 +23,17 @@ export interface VariablesContextType {
 
 const VariablesContext = createContext<VariablesContextType | undefined>(undefined);
 
+// Helper function to compare session variables
+function areSessionVarsEqual(a: Record<string, string>, b: Record<string, string>) {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) return false;
+    for (const key of aKeys) {
+        if (a[key] !== b[key]) return false;
+    }
+    return true;
+}
+
 export const VariablesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { currentProject } = useProjectContext();
     const projectId = currentProject?.id || null;
@@ -30,29 +41,18 @@ export const VariablesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [globalVariables, setGlobalVariables] = useState<Record<string, string>>(DEFAULT_GLOBAL_VARIABLES);
     const [sharedVariables, setSharedVariables] = useState<Variable[]>(DEFAULT_SHARED_VARIABLES);
     const [hasLoaded, setHasLoaded] = useState(false);
+    const isSavingRef = useRef(false);
     // Use the shared StorageManager from StorageContext
     const { storageManager } = useStorageContext();
     const { saveGlobalVariables, loadGlobalVariables } = useVariableStorage(storageManager, projectId, projectName);
 
-    // Try to get session data from AppContext, but don't fail if not available
-    let activeSession: any = null;
-    let updateSessionVariables: ((sessionVariables: Record<string, string>) => void) | null = null;
-
-    try {
-        const appContext = useAppContext();
-        activeSession = appContext.activeSession;
-        updateSessionVariables = appContext.updateSessionVariables;
-    } catch (error) {
-        // AppContext not available, continue without session functionality
-        console.log('VariablesContext: AppContext not available, session functionality disabled');
-    }
+    // ✅ Always call hooks at the top level
+    const { activeSession, updateSessionVariables } = useAppContext();
 
     // Load global variables from storage
     const loadVariables = useCallback(() => {
-        console.log('VariablesContext: Loading global variables for project:', projectId, projectName);
         try {
             const loadedGlobal = loadGlobalVariables();
-            console.log('VariablesContext: Loaded global variables:', loadedGlobal);
             if (loadedGlobal && Object.keys(loadedGlobal).length > 0) {
                 const mergedGlobal = { ...DEFAULT_GLOBAL_VARIABLES, ...loadedGlobal };
                 setGlobalVariables(mergedGlobal);
@@ -61,7 +61,6 @@ export const VariablesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }
             setHasLoaded(true);
         } catch (error) {
-            console.error('VariablesContext: Error loading global variables:', error);
             setGlobalVariables(DEFAULT_GLOBAL_VARIABLES);
             setHasLoaded(true);
         }
@@ -69,43 +68,37 @@ export const VariablesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     // Load session variables from active session
     const loadSessionVariables = useCallback(() => {
-        console.log('VariablesContext: Loading session variables from active session:', activeSession?.id);
         if (activeSession?.sharedVariables) {
             // Convert from Record<string, string> to Variable[]
             const sessionVars: Variable[] = Object.entries(activeSession.sharedVariables).map(([key, value]) => ({
                 key,
                 value: String(value)
             }));
-            console.log('VariablesContext: Loaded session variables:', sessionVars);
             setSharedVariables(sessionVars);
         } else {
-            console.log('VariablesContext: No session variables found, using defaults');
             setSharedVariables(DEFAULT_SHARED_VARIABLES);
         }
-    }, [activeSession]);
+    }, [activeSession?.sharedVariables]);
 
     // Save global variables to storage
     const saveVariables = useCallback(() => {
-        console.log('VariablesContext: Saving global variables for project:', projectId, projectName);
         if (projectId) {
-            console.log('VariablesContext: Saving global variables:', globalVariables);
             saveGlobalVariables(globalVariables);
         }
     }, [projectId, saveGlobalVariables, globalVariables]);
 
     // Save session variables to active session
     const saveSessionVariables = useCallback(() => {
-        console.log('VariablesContext: Saving session variables to active session:', activeSession?.id);
         if (activeSession && updateSessionVariables) {
             // Convert from Variable[] to Record<string, string>
             const sessionVarsObj: Record<string, string> = {};
             sharedVariables.forEach(v => {
                 sessionVarsObj[v.key] = v.value;
             });
-            console.log('VariablesContext: Saving session variables:', sessionVarsObj);
-
-            // Update the active session with new session variables
-            updateSessionVariables(sessionVarsObj);
+            // Only update if changed
+            if (!areSessionVarsEqual(sessionVarsObj, activeSession.sharedVariables || {})) {
+                updateSessionVariables(sessionVarsObj);
+            }
         }
     }, [activeSession, sharedVariables, updateSessionVariables]);
 
@@ -161,30 +154,35 @@ export const VariablesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     // Load session variables when active session changes
     useEffect(() => {
-        if (hasLoaded) {
+        if (activeSession) {
             loadSessionVariables();
         }
-    }, [activeSession?.id, hasLoaded, loadSessionVariables]);
+    }, [activeSession?.id, loadSessionVariables]);
 
     // Save global variables when they change (only if we have a current project and after load)
     useEffect(() => {
         if (projectId && hasLoaded) {
-            console.log('VariablesContext: Auto-saving global variables due to state change');
             saveVariables();
-        } else {
-            console.log('VariablesContext: No project ID or not loaded, skipping global auto-save');
         }
     }, [projectId, globalVariables, saveVariables, hasLoaded]);
 
-    // Save session variables when they change (only if we have an active session and after load)
+    // Save session variables when they change (only if we have an active session)
     useEffect(() => {
-        if (activeSession && hasLoaded) {
-            console.log('VariablesContext: Auto-saving session variables due to state change');
-            saveSessionVariables();
-        } else {
-            console.log('VariablesContext: No active session or not loaded, skipping session auto-save');
+        if (activeSession && hasLoaded && !isSavingRef.current) {
+            // Use a timeout to debounce rapid changes and prevent infinite loops
+            const timeoutId = setTimeout(() => {
+                isSavingRef.current = true;
+                saveSessionVariables();
+                // Reset the flag after a short delay
+                setTimeout(() => {
+                    isSavingRef.current = false;
+                }, 50);
+            }, 100);
+
+            return () => clearTimeout(timeoutId);
         }
-    }, [activeSession, sharedVariables, saveSessionVariables, hasLoaded]);
+        return undefined;
+    }, [activeSession?.id, sharedVariables, saveSessionVariables, hasLoaded]);
 
     // Replace variables in text with their values
     const replaceVariables = useCallback((text: string): string => {

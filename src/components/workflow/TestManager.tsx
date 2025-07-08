@@ -1,5 +1,6 @@
 import React from "react";
 import { useAppContext } from "../../context/AppContext";
+import { useTokenContext } from "../../context/TokenContext";
 import { useVariablesContext } from "../../context/VariablesContext";
 import { TestCase } from "../../types/features/SavedManager";
 import {
@@ -35,9 +36,9 @@ const TestManager: React.FC = () => {
         activeSession,
         handleSaveSession,
         setActiveSection,
-        generateAuthHeaders,
         openUnifiedManager,
     } = useAppContext();
+    const { generateAuthHeaders } = useTokenContext();
     const { replaceVariables } = useVariablesContext();
 
 

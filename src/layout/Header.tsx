@@ -1,4 +1,5 @@
 import { useAppContext } from "../context/AppContext";
+import { useTokenContext } from "../context/TokenContext";
 import { useVariablesContext } from "../context/VariablesContext";
 import { useTheme } from "../context/ThemeContext";
 import { useProjectContext } from "../context/ProjectContext";
@@ -24,12 +25,12 @@ const Header = () => {
         isSaving,
         lastSaved,
         hasUnsavedChanges,
-        tokenConfig,
         openUnifiedManager,
         // Mode management
         mode,
         setMode,
     } = useAppContext();
+    const { tokenConfig } = useTokenContext();
     const { globalVariables, updateGlobalVariable, replaceVariables } = useVariablesContext();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [isTokenLoading, setIsTokenLoading] = useState(false);
@@ -37,6 +38,9 @@ const Header = () => {
     const [tokenDuration, setTokenDuration] = useState<number | null>(null);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
     const { currentProject, clearCurrentProject } = useProjectContext();
+
+    const tokenName = (globalVariables && tokenConfig && tokenConfig.tokenName) || "x-access-token";
+    const token = globalVariables?.[tokenName];
 
     // Token regeneration logic using generateTokenCore
     const handleRegenerateToken = async () => {
@@ -93,17 +97,15 @@ const Header = () => {
     }, []);
 
     // Helper to decode JWT and check expiration
-    const checkTokenExpiration = useCallback(() => {
+    useEffect(() => {
         setIsTokenLoading(true);
+        if (!token || token.trim() === "") {
+            setTokenDuration(null);
+            setIsTokenExpired(true);
+            setIsTokenLoading(false);
+            return;
+        }
         try {
-            const tokenName = (globalVariables && tokenConfig && tokenConfig.tokenName) || "x-access-token";
-            const token = globalVariables?.[tokenName];
-            if (!token || token.trim() === "") {
-                setTokenDuration(null);
-                setIsTokenExpired(true);
-                setIsTokenLoading(false);
-                return;
-            }
             const parts = token.split(".");
             if (parts.length < 2 || typeof parts[1] !== "string") {
                 setTokenDuration(null);
@@ -122,36 +124,30 @@ const Header = () => {
             setIsTokenExpired(true);
         }
         setIsTokenLoading(false);
-    }, [globalVariables, tokenConfig]);
-
-    useEffect(() => {
-        checkTokenExpiration();
-        const interval = setInterval(checkTokenExpiration, 30000);
-        return () => clearInterval(interval);
-    }, [checkTokenExpiration]);
+    }, [token]);
 
     return (
         <>
-            <header className={`sticky top-0 z-40 transition-all duration-300 dark:bg-gray-900 dark:border-gray-700 bg-white border-gray-200 border-b shadow-sm`}>
-                <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-2 sm:py-3">
+            <header className={`sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm transition-all duration-300 dark:bg-gray-900 dark:border-gray-700`}>
+                <div className="flex justify-between items-center px-3 py-2 sm:px-4 md:px-6 sm:py-3">
                     {/* Left side - Project info and navigation */}
-                    <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+                    <div className="flex flex-1 items-center space-x-2 min-w-0 sm:space-x-4">
                         <button
                             onClick={handleReturnToWelcome}
-                            className="flex items-center space-x-2 sm:space-x-3 transition-all duration-200 group hover:scale-105 flex-shrink-0"
+                            className="flex flex-shrink-0 items-center space-x-2 transition-all duration-200 sm:space-x-3 group hover:scale-105"
                             title="Return to Welcome Screen"
                         >
-                            <div className="p-2 sm:p-3 shadow-lg bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl">
-                                <h1 className="text-lg sm:text-2xl font-bold text-white">B</h1>
+                            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg sm:p-3 sm:rounded-xl">
+                                <h1 className="text-lg font-bold text-white sm:text-2xl">B</h1>
                             </div>
                             <div className="flex flex-col min-w-0">
-                                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 truncate">
+                                <h1 className="text-lg font-bold text-transparent truncate bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 sm:text-xl md:text-2xl dark:from-blue-400 dark:to-indigo-400">
                                     BiSTool
                                 </h1>
                                 {currentProject && (
                                     <div className="flex items-center mt-0.5 sm:mt-1 space-x-1 sm:space-x-2 min-w-0">
                                         <FiFolder size={12} className="text-gray-500 dark:text-gray-400 flex-shrink-0 sm:w-3.5 sm:h-3.5" />
-                                        <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 truncate">
+                                        <span className="text-xs font-medium text-gray-600 truncate sm:text-sm dark:text-gray-300">
                                             {currentProject.name}
                                         </span>
                                     </div>
@@ -161,7 +157,7 @@ const Header = () => {
                     </div>
 
                     {/* Center - Mode Switcher */}
-                    <div className="hidden sm:flex items-center justify-center flex-1">
+                    <div className="hidden flex-1 justify-center items-center sm:flex">
                         <ModeSwitcher
                             mode={mode}
                             onModeChange={setMode}
@@ -170,12 +166,12 @@ const Header = () => {
                     </div>
 
                     {/* Right side - Save controls and theme toggle */}
-                    <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 flex-shrink-0">
+                    <div className="flex flex-shrink-0 items-center space-x-1 sm:space-x-2 md:space-x-3">
 
                         {/* Sessions of Current Category - Hidden on mobile when collapsed */}
                         {activeSession?.category && (
                             <div className={`hidden sm:flex gap-2 p-2 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-xs lg:max-w-md opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
-                                <div className="flex items-center flex-shrink-0 space-x-2">
+                                <div className="flex flex-shrink-0 items-center space-x-2">
                                     <span className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                                         {activeSession.category}
                                     </span>
@@ -191,7 +187,7 @@ const Header = () => {
                                                     container.scrollBy({ left: -200, behavior: 'smooth' });
                                                 }
                                             }}
-                                            className="absolute left-0 z-10 p-1 transition-all duration-200 -translate-y-1/2 bg-white border border-gray-200 rounded-full shadow-md opacity-0 top-1/2 dark:bg-gray-700 dark:border-gray-600 group-hover:opacity-100 hover:scale-110"
+                                            className="absolute left-0 top-1/2 z-10 p-1 bg-white rounded-full border border-gray-200 shadow-md opacity-0 transition-all duration-200 -translate-y-1/2 dark:bg-gray-700 dark:border-gray-600 group-hover:opacity-100 hover:scale-110"
                                             title="Scroll left"
                                         >
                                             <FiArrowRight className="w-2.5 h-2.5 text-gray-600 rotate-180 dark:text-gray-300" />
@@ -205,7 +201,7 @@ const Header = () => {
                                                     container.scrollBy({ left: 200, behavior: 'smooth' });
                                                 }
                                             }}
-                                            className="absolute right-0 z-10 p-1 transition-all duration-200 -translate-y-1/2 bg-white border border-gray-200 rounded-full shadow-md opacity-0 top-1/2 dark:bg-gray-700 dark:border-gray-600 group-hover:opacity-100 hover:scale-110"
+                                            className="absolute right-0 top-1/2 z-10 p-1 bg-white rounded-full border border-gray-200 shadow-md opacity-0 transition-all duration-200 -translate-y-1/2 dark:bg-gray-700 dark:border-gray-600 group-hover:opacity-100 hover:scale-110"
                                             title="Scroll right"
                                         >
                                             <FiArrowRight className="w-2.5 h-2.5 text-gray-600 dark:text-gray-300" />
@@ -214,7 +210,7 @@ const Header = () => {
                                         {/* Scrollable Content */}
                                         <div
                                             id="sessions-scroll"
-                                            className="flex items-center gap-1 px-4 overflow-x-auto scrollbar-hide scroll-smooth"
+                                            className="flex overflow-x-auto gap-1 items-center px-4 scrollbar-hide scroll-smooth"
                                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                                         >
                                             {savedSessions
@@ -235,12 +231,12 @@ const Header = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No other sessions</span>
+                                    <span className="text-xs text-gray-500 sm:text-sm dark:text-gray-400">No other sessions</span>
                                 )}
                             </div>
                         )}
 
-                        <div className="flex items-center justify-end gap-1 sm:gap-2">
+                        <div className="flex gap-1 justify-end items-center sm:gap-2">
                             {/* Collapsible Header Content */}
                             <div className={`flex items-center space-x-2 sm:space-x-3 md:space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
                                 {/* Mobile Mode Switcher */}
@@ -273,7 +269,7 @@ const Header = () => {
 
                                     {/* Active Session Method Badge - Hidden on mobile */}
                                     {activeSession?.requestConfig && (
-                                        <div className="hidden sm:flex items-center space-x-2">
+                                        <div className="hidden items-center space-x-2 sm:flex">
                                             <span className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-bold shadow-md ${methodColor[activeSession.requestConfig.method]?.color
                                                 }`}>
                                                 {activeSession.requestConfig.method}
@@ -284,7 +280,7 @@ const Header = () => {
                                     {/* Project Manager Button */}
                                     <button
                                         onClick={() => openUnifiedManager()}
-                                        className={`group p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-200 hover:scale-105 shadow-md dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-white text-gray-700 bg-gray-100 hover:bg-gray-200 hover:text-gray-900`}
+                                        className={`p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group sm:p-3 sm:rounded-xl hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-white hover:bg-gray-200 hover:text-gray-900`}
                                         title="Manager"
                                     >
                                         <FiSettings size={16} className="transition-transform duration-200 group-hover:rotate-90 sm:w-4.5 sm:h-4.5" />
@@ -316,7 +312,7 @@ const Header = () => {
                             {/* Hamburger Menu Button */}
                             <button
                                 onClick={toggleHeaderCollapse}
-                                className={`group flex justify-center items-center p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-200 hover:scale-105 shadow-md dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 bg-gray-100 hover:bg-gray-200`}
+                                className={`flex justify-center items-center p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group sm:p-3 sm:rounded-xl hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 hover:bg-gray-200`}
                                 title={isHeaderCollapsed === true ? "Expand header" : "Collapse header"}
                                 aria-label={isHeaderCollapsed === true ? "Expand header" : "Collapse header"}
                             >

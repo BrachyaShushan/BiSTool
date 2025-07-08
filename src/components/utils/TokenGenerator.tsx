@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useVariablesContext } from "../../context/VariablesContext";
 import { useTheme } from "../../context/ThemeContext";
-import { useAppContext } from "../../context/AppContext";
+import { useTokenContext } from "../../context/TokenContext";
 import Modal from "../core/Modal";
 import Tooltip from "../ui/Tooltip";
 import {
@@ -13,7 +13,7 @@ import { generateTokenCore } from "../../services/tokenService";
 
 const TokenGenerator: React.FC = () => {
     const { globalVariables, updateGlobalVariable, replaceVariables } = useVariablesContext();
-    const { tokenConfig, setTokenConfig } = useAppContext();
+    const { tokenConfig, setTokenConfig } = useTokenContext();
     const { isDarkMode } = useTheme();
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);

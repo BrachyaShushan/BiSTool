@@ -86,9 +86,25 @@ export const useURLBuilder = (
       protocol,
       domain,
       segments,
-      globalVariables || {}
+      globalVariables || {},
+      getVariableValueFromContext
+        ? (text: string) => {
+            // Create a simple replaceVariables function using getVariableValueFromContext
+            return text.replace(/\{([^}]+)\}/g, (match, varName) => {
+              const value = getVariableValueFromContext(varName, environment);
+              return value || match;
+            });
+          }
+        : undefined
     );
-  }, [protocol, domain, segments, globalVariables]);
+  }, [
+    protocol,
+    domain,
+    segments,
+    globalVariables,
+    getVariableValueFromContext,
+    environment,
+  ]);
 
   // Memoized URL data - automatically updates when local state changes
   const currentUrlData = useMemo(() => {

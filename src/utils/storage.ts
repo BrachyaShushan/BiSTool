@@ -22,6 +22,7 @@ export interface ProjectData {
     autoSave: boolean;
     saveFrequency: number;
     defaultEnvironment: string;
+    mode: "basic" | "expert";
   };
   appState: {
     urlData: URLData;
@@ -220,6 +221,10 @@ export const createDefaultProjectData = (
         preserveSettings && existingProject
           ? existingProject.settings.defaultEnvironment
           : "development",
+      mode:
+        preserveSettings && existingProject
+          ? existingProject.settings.mode
+          : "expert",
     },
     appState: {
       urlData:
@@ -379,6 +384,18 @@ export class StorageManager {
     data.settings = settings;
     data.metadata.lastModified = new Date().toISOString();
     this.saveCurrentProjectData(data);
+  }
+
+  // Mode-specific methods for easier access
+  saveMode(mode: "basic" | "expert", projectName: string): void {
+    const data = this.getCurrentProjectData(projectName);
+    data.settings.mode = mode;
+    data.metadata.lastModified = new Date().toISOString();
+    this.saveCurrentProjectData(data);
+  }
+
+  loadMode(projectName: string): "basic" | "expert" {
+    return this.getCurrentProjectData(projectName).settings.mode;
   }
   updateCategories(
     categories: ProjectData["categories"],

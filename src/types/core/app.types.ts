@@ -226,7 +226,6 @@ export interface AppContextType {
   segmentVariables: Record<string, string>;
   activeSession: ExtendedSession | null;
   savedSessions: ExtendedSession[];
-  tokenConfig: TokenConfig;
   methodColor: Record<string, { value: string; label: string; color: string }>;
   isLoading: boolean;
   error: string | null;
@@ -238,9 +237,6 @@ export interface AppContextType {
   setYamlOutput: (yaml: string) => void;
   setActiveSection: (section: SectionId) => void;
   setSegmentVariables: (vars: Record<string, string>) => void;
-  setTokenConfig: (
-    config: TokenConfig | ((prev: TokenConfig) => TokenConfig)
-  ) => void;
   handleNewSession: () => void;
   handleClearSession: () => void;
   handleLoadSession: (session: ExtendedSession) => void;
@@ -250,10 +246,6 @@ export interface AppContextType {
   handleURLBuilderSubmit: (data: URLData) => void;
   handleRequestConfigSubmit: (data: RequestConfigData) => void;
   handleYAMLGenerated: (yaml: string) => void;
-  regenerateToken: () => Promise<void>;
-  generateAuthHeaders: () => Record<string, string>;
-  getCurrentToken: () => string | null;
-  isAuthenticated: () => boolean;
   // Save manager properties
   autoSave: boolean;
   isSaving: boolean;

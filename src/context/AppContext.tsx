@@ -15,10 +15,8 @@ import {
 import { ExtendedSession } from "../types/features/SavedManager";
 import { useAppState } from "../hooks/useAppState";
 import { useSessionManager } from "../hooks/useSessionManager";
-import { useTokenManager } from "../hooks/useTokenManager";
-import { useVariablesContext } from "./VariablesContext";
 import { useSaveManager } from "../hooks/useSaveManager";
-import { useAppStateStorage, useSessionStorage, useTokenConfigStorage } from "../hooks/useStorage";
+import { useAppStateStorage, useSessionStorage, useModeStorage } from "../hooks/useStorage";
 import { useStorageContext } from "./StorageContext";
 import { useProjectContext } from "./ProjectContext";
 
@@ -48,11 +46,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   // Initialize hooks
   const appState = useAppState();
   const sessionManager = useSessionManager();
-  const tokenManager = useTokenManager();
-  const {
-    updateGlobalVariable,
-    sharedVariables,
-  } = useVariablesContext();
 
   // Initialize save manager
   const saveManager = useSaveManager(storageManager, projectName, {
@@ -65,7 +58,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   // Initialize storage hooks with projectId and projectName
   const appStateStorage = useAppStateStorage(storageManager, appState.appState, currentProjectId, projectName);
   const sessionStorage = useSessionStorage(storageManager, currentProjectId, projectName);
-  const tokenConfigStorage = useTokenConfigStorage(storageManager, currentProjectId, projectName);
+  const modeStorage = useModeStorage(storageManager, currentProjectId, projectName);
 
   // Method color mapping
   const methodColor = {
@@ -101,6 +94,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         // Load sessions (saved first, then active)
         const loadedSavedSessions = sessionStorage.loadSavedSessions();
         const loadedActiveSession = sessionStorage.loadActiveSession();
+        console.log('AppContext: Loaded active session from storage:', loadedActiveSession?.id, loadedActiveSession?.sharedVariables);
         intendedActiveSessionId.current = loadedActiveSession?.id || null;
         sessionManager.setSavedSessionsAndRestoreActive(
           loadedSavedSessions,
@@ -109,11 +103,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
         // Load shared variables - now handled by VariablesContext
 
-        // Load token config
-        const loadedTokenConfig = tokenConfigStorage.loadTokenConfig();
-        if (loadedTokenConfig) {
-          tokenManager.setTokenConfig(loadedTokenConfig);
-        }
+        // Load mode setting
+        const loadedMode = modeStorage.loadMode();
+        setMode(loadedMode);
 
         // Initialize save manager with loaded state
         saveManager.initialize({
@@ -167,16 +159,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     saveManager.autoSaveChanges(currentState);
   }, [appState.appState, sessionManager.activeSession, sessionManager.savedSessions, hasLoaded, saveManager]);
 
-  // Auto-save when token config changes
+  // Auto-save when mode changes
   useEffect(() => {
     if (!hasLoaded || !currentProjectId) return;
-    tokenConfigStorage.saveTokenConfig(tokenManager.tokenConfig);
-  }, [tokenManager.tokenConfig, hasLoaded, currentProjectId, projectName]);
+    modeStorage.saveMode(mode);
+  }, [mode, hasLoaded, currentProjectId, projectName, modeStorage]);
 
   // Handle session changes and load configurations
   useEffect(() => {
+    console.log('AppContext: Session change effect triggered:', sessionManager.activeSession?.id, 'hasLoaded:', hasLoaded);
     if (sessionManager.activeSession && hasLoaded) {
       const session = sessionManager.activeSession;
+      console.log('AppContext: Processing session change for session:', session.id, 'sharedVariables:', session.sharedVariables);
 
       // Load session data into app state (excluding activeSection - it should persist globally)
       const sessionData: any = {};
@@ -194,15 +188,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
   // Function to update session variables in the active session
   const updateSessionVariables = useCallback((sessionVariables: Record<string, string>) => {
+    console.log('AppContext: updateSessionVariables called with:', sessionVariables);
     if (sessionManager.activeSession) {
       const updatedSession = {
         ...sessionManager.activeSession,
         sharedVariables: sessionVariables
       };
+      console.log('AppContext: Updated session:', updatedSession);
       sessionManager.saveSession(updatedSession);
       sessionManager.loadSession(updatedSession);
+
+      // Also persist the updated session to localStorage
+      sessionStorage.saveActiveSession(updatedSession);
+      // Get the updated saved sessions list and save it
+      const updatedSavedSessions = sessionManager.savedSessions.map(session =>
+        session.id === updatedSession.id ? updatedSession : session
+      );
+      sessionStorage.saveSavedSessions(updatedSavedSessions);
+      console.log('AppContext: Session variables saved to localStorage');
     }
-  }, [sessionManager]);
+  }, [sessionManager, sessionStorage]);
 
   // Variable management functions
   // Session variable management now handled by VariablesContext
@@ -240,6 +245,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     sessionManager.saveSession(newSession);
     sessionManager.loadSession(newSession);
 
+    // Also persist the new session to localStorage
+    sessionStorage.saveActiveSession(newSession);
+    sessionStorage.saveSavedSessions(sessionManager.savedSessions);
+
     // Reset app state to match the new session
     appState.resetAppState();
   }, [sessionManager, appState]);
@@ -251,6 +260,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
   const handleLoadSession = useCallback((session: ExtendedSession) => {
     sessionManager.loadSession(session);
+
+    // Also persist the loaded session as active session to localStorage
+    sessionStorage.saveActiveSession(session);
+
     // Only update app state fields that are part of the session (excluding activeSection)
     const sessionData: any = {};
     if (session.urlData) sessionData.urlData = session.urlData;
@@ -261,12 +274,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     // DO NOT set globalVariables here!
     appState.loadAppState(sessionData);
     // Shared variables are now handled by VariablesContext
-  }, []);
+  }, [sessionManager, sessionStorage, appState]);
 
   const handleSaveSession = useCallback((name: string, sessionData?: ExtendedSession) => {
     if (sessionData) {
       sessionManager.saveSession(sessionData);
       sessionManager.loadSession(sessionData);
+
+      // Also persist the session to localStorage
+      sessionStorage.saveActiveSession(sessionData);
+      const updatedSavedSessions = sessionManager.savedSessions.map(session =>
+        session.id === sessionData.id ? sessionData : session
+      );
+      sessionStorage.saveSavedSessions(updatedSavedSessions);
     } else {
       const newSession = sessionManager.createSession(name, {
         urlData: appState.urlData,
@@ -274,12 +294,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         yamlOutput: appState.yamlOutput,
         // Don't save activeSection with sessions - it should be global
         segmentVariables: appState.segmentVariables,
-        sharedVariables,
+        sharedVariables: [], // Session variables are handled by VariablesContext
       });
       sessionManager.saveSession(newSession);
       sessionManager.loadSession(newSession);
+
+      // Also persist the new session to localStorage
+      sessionStorage.saveActiveSession(newSession);
+      sessionStorage.saveSavedSessions(sessionManager.savedSessions);
     }
-  }, [appState.appState]);
+  }, [appState.appState, sessionManager, sessionStorage]);
 
   const handleDeleteSession = useCallback((id: string) => {
     sessionManager.deleteSession(id);
@@ -304,33 +328,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     appState.setYamlOutput(yaml);
   }, []);
 
-  // Token management functions
-  const regenerateToken = useCallback(async (): Promise<void> => {
-    try {
-      const result = await tokenManager.regenerateToken();
-      updateGlobalVariable(result.tokenName, result.token);
-      updateGlobalVariable("tokenName", result.tokenName);
 
-      if (result.refreshToken && result.refreshTokenName) {
-        updateGlobalVariable(result.refreshTokenName, result.refreshToken);
-      }
-    } catch (error) {
-      console.error("Token regeneration error:", error);
-      throw error;
-    }
-  }, [tokenManager, updateGlobalVariable]);
-
-  const generateAuthHeaders = useCallback(() => {
-    return tokenManager.generateAuthHeaders();
-  }, [tokenManager]);
-
-  const getCurrentToken = useCallback(() => {
-    return tokenManager.getCurrentToken();
-  }, [tokenManager]);
-
-  const isAuthenticated = useCallback(() => {
-    return tokenManager.isAuthenticated();
-  }, [tokenManager]);
 
   // Save management functions
   const handleManualSave = useCallback(async () => {
@@ -389,6 +387,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     }
     setShowUnifiedManager(true);
   }, []);
+
+  // Custom setMode function that also saves the mode
+  const handleSetMode = useCallback((newMode: 'basic' | 'expert') => {
+    setMode(newMode);
+    // The mode will be auto-saved by the useEffect above
+  }, []);
   const value: AppContextType = {
     // App state
     urlData: appState.urlData,
@@ -401,9 +405,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     activeSession: sessionManager.activeSession,
     savedSessions: sessionManager.savedSessions,
 
-    // Token state
-    tokenConfig: tokenManager.tokenConfig,
-
     // UI state
     methodColor,
     isLoading,
@@ -411,7 +412,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
     // Mode state
     mode,
-    setMode,
+    setMode: handleSetMode,
 
     // App state setters
     setUrlData: appState.setUrlData,
@@ -419,7 +420,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     setYamlOutput: appState.setYamlOutput,
     setActiveSection: appState.setActiveSection,
     setSegmentVariables: appState.setSegmentVariables,
-    setTokenConfig: tokenManager.setTokenConfig,
 
     // Session management
     handleNewSession,
@@ -434,11 +434,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     handleRequestConfigSubmit,
     handleYAMLGenerated,
 
-    // Token management
-    regenerateToken,
-    generateAuthHeaders,
-    getCurrentToken,
-    isAuthenticated,
+
 
     // Save management
     autoSave: saveManager.autoSave,

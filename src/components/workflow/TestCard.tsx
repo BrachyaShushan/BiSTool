@@ -28,6 +28,7 @@ import {
 } from "../ui";
 import { useVariablesContext } from "../../context/VariablesContext";
 import { useAppContext } from "../../context/AppContext";
+import { useTokenContext } from "../../context/TokenContext";
 import { useTheme } from "../../context/ThemeContext";
 
 interface TestCardProps {
@@ -80,7 +81,8 @@ const TestCard: React.FC<TestCardProps> = ({
     handleRemoveTest,
 }) => {
     const { replaceVariables } = useVariablesContext();
-    const { urlData, requestConfig, generateAuthHeaders } = useAppContext();
+    const { urlData, requestConfig } = useAppContext();
+    const { generateAuthHeaders } = useTokenContext();
     const { isDarkMode } = useTheme();
     const [loading, setLoading] = useState(false);
     const [showDetails, setShowDetails] = useState(false);

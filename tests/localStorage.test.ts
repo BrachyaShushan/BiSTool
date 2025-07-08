@@ -307,4 +307,43 @@ test.describe("LocalStorage Functionality", () => {
     expect(project1Data.sharedVariables[0].key).toBe("project1-var");
     expect(project2Data.sharedVariables[0].key).toBe("project2-var");
   });
+
+  test("should persist mode setting (basic/expert) correctly", async ({
+    page,
+  }) => {
+    // First, create a project and set it as active
+    await localStorageHelper.setBiSToolProjectData(testProjectId, {
+      settings: { mode: "basic" },
+    });
+
+    // Set this project as the active project
+    await localStorageHelper.setItem("bistool_active_project", testProjectId);
+
+    // Reload page to test persistence
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // Verify mode setting persisted
+    const savedData = await localStorageHelper.getBiSToolProjectData(
+      testProjectId
+    );
+    expect(savedData.settings.mode).toBe("basic");
+
+    // Test switching to expert mode
+    await localStorageHelper.setBiSToolProjectData(testProjectId, {
+      settings: { mode: "expert" },
+    });
+
+    // Reload again
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // Verify expert mode persisted
+    const updatedData = await localStorageHelper.getBiSToolProjectData(
+      testProjectId
+    );
+    expect(updatedData.settings.mode).toBe("expert");
+  });
 });

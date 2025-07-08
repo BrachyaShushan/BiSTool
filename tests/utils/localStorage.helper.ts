@@ -159,7 +159,7 @@ export class LocalStorageHelper {
   }
 
   /**
-   * Get BiSTool project data
+   * Get BiSTool project data (new hierarchical structure)
    */
   async getBiSToolProjectData(projectId: string): Promise<{
     appState: any;
@@ -167,32 +167,36 @@ export class LocalStorageHelper {
     savedSessions: any[];
     sharedVariables: any[];
     tokenConfig: any;
+    settings: any;
   }> {
-    const [
-      appState,
-      activeSession,
-      savedSessions,
-      sharedVariables,
-      tokenConfig,
-    ] = await Promise.all([
-      this.getItemAsJSON(`bistool_${projectId}_appState`),
-      this.getItemAsJSON(`bistool_${projectId}_sessions_active`),
-      this.getItemAsJSON(`bistool_${projectId}_sessions_saved`),
-      this.getItemAsJSON(`bistool_${projectId}_variables_shared`),
-      this.getItemAsJSON(`bistool_${projectId}_token_config`),
-    ]);
+    // Get the hierarchical storage root
+    const root = await this.getItemAsJSON<any>("bistool_data");
+
+    if (!root || !root.projects || !root.projects[projectId]) {
+      return {
+        appState: {},
+        activeSession: null,
+        savedSessions: [],
+        sharedVariables: [],
+        tokenConfig: {},
+        settings: {},
+      };
+    }
+
+    const projectData = root.projects[projectId];
 
     return {
-      appState: appState || {},
-      activeSession: activeSession || null,
-      savedSessions: (savedSessions as any[]) || [],
-      sharedVariables: (sharedVariables as any[]) || [],
-      tokenConfig: tokenConfig || {},
+      appState: projectData.appState || {},
+      activeSession: projectData.sessions?.activeSession || null,
+      savedSessions: projectData.sessions?.savedSessions || [],
+      sharedVariables: projectData.variables?.shared || [],
+      tokenConfig: projectData.tokenConfig || {},
+      settings: projectData.settings || {},
     };
   }
 
   /**
-   * Set BiSTool project data
+   * Set BiSTool project data (new hierarchical structure)
    */
   async setBiSToolProjectData(
     projectId: string,
@@ -202,48 +206,74 @@ export class LocalStorageHelper {
       savedSessions?: any[];
       sharedVariables?: any[];
       tokenConfig?: any;
+      settings?: any;
     }
   ): Promise<void> {
-    const promises: Promise<void>[] = [];
+    // Get existing root or create new one
+    const root = (await this.getItemAsJSON<any>("bistool_data")) || {
+      theme: "light",
+      defaultAutoSave: true,
+      projects: {},
+    };
 
+    // Initialize project if it doesn't exist
+    if (!root.projects[projectId]) {
+      root.projects[projectId] = {
+        metadata: {
+          projectId,
+          projectName: `Test Project ${projectId}`,
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+          version: "1.0.0",
+        },
+        settings: {
+          theme: "light",
+          autoSave: true,
+          saveFrequency: 300,
+          defaultEnvironment: "development",
+          mode: "expert",
+        },
+        appState: {},
+        sessions: {
+          activeSession: null,
+          savedSessions: [],
+        },
+        variables: {
+          shared: [],
+          global: {},
+        },
+        tokenConfig: {},
+        categories: {},
+      };
+    }
+
+    // Update project data with provided values
     if (data.appState !== undefined) {
-      promises.push(
-        this.setItemAsJSON(`bistool_${projectId}_appState`, data.appState)
-      );
+      root.projects[projectId].appState = data.appState;
     }
     if (data.activeSession !== undefined) {
-      promises.push(
-        this.setItemAsJSON(
-          `bistool_${projectId}_sessions_active`,
-          data.activeSession
-        )
-      );
+      root.projects[projectId].sessions.activeSession = data.activeSession;
     }
     if (data.savedSessions !== undefined) {
-      promises.push(
-        this.setItemAsJSON(
-          `bistool_${projectId}_sessions_saved`,
-          data.savedSessions
-        )
-      );
+      root.projects[projectId].sessions.savedSessions = data.savedSessions;
     }
     if (data.sharedVariables !== undefined) {
-      promises.push(
-        this.setItemAsJSON(
-          `bistool_${projectId}_variables_shared`,
-          data.sharedVariables
-        )
-      );
+      root.projects[projectId].variables.shared = data.sharedVariables;
     }
     if (data.tokenConfig !== undefined) {
-      promises.push(
-        this.setItemAsJSON(
-          `bistool_${projectId}_token_config`,
-          data.tokenConfig
-        )
-      );
+      root.projects[projectId].tokenConfig = data.tokenConfig;
+    }
+    if (data.settings !== undefined) {
+      root.projects[projectId].settings = {
+        ...root.projects[projectId].settings,
+        ...data.settings,
+      };
     }
 
-    await Promise.all(promises);
+    // Update last modified timestamp
+    root.projects[projectId].metadata.lastModified = new Date().toISOString();
+
+    // Save the updated root
+    await this.setItemAsJSON("bistool_data", root);
   }
 }

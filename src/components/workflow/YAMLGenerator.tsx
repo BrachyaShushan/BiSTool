@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAppContext } from '../../context/AppContext';
+import { useTokenContext } from '../../context/TokenContext';
 import { useVariablesContext } from '../../context/VariablesContext';
 import {
   FiDownload,
@@ -44,7 +45,8 @@ import { ExtendedSession } from "../../types/features/SavedManager";
 
 const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
   const { globalVariables, sharedVariables, replaceVariables } = useVariablesContext();
-  const { urlData, requestConfig, setYamlOutput, segmentVariables, activeSession, handleSaveSession, setActiveSection, generateAuthHeaders, openUnifiedManager } = useAppContext();
+  const { urlData, requestConfig, setYamlOutput, segmentVariables, activeSession, handleSaveSession, setActiveSection, openUnifiedManager } = useAppContext();
+  const { generateAuthHeaders } = useTokenContext();
 
   const [localYamlOutput, setLocalYamlOutput] = useState<string>("");
   const [copySuccess, setCopySuccess] = useState<boolean>(false);

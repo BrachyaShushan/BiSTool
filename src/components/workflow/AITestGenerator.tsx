@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppContext } from "../../context/AppContext";
+import { useTokenContext } from "../../context/TokenContext";
 import { useAIConfigContext } from "../../context/AIConfigContext";
 import Editor from "@monaco-editor/react";
 import {
@@ -37,7 +38,8 @@ import { Toggle } from "../ui";
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
-  const { activeSession, handleSaveSession, tokenConfig, generateAuthHeaders, openUnifiedManager } = useAppContext();
+  const { activeSession, handleSaveSession, openUnifiedManager } = useAppContext();
+  const { tokenConfig, generateAuthHeaders } = useTokenContext();
   const { aiConfig, setAIConfig } = useAIConfigContext();
   const [requirements, setRequirements] = useState<string>("");
   const [useOOP, setUseOOP] = useState<boolean>(true);

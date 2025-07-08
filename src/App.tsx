@@ -18,6 +18,8 @@ import MonacoEditorDemo from "./components/ui/MonacoEditorDemo";
 import UIComponentsDemo from "./components/ui/UIComponentsDemo";
 import UnifiedManager from "./components/navigation/UnifiedManager";
 import { VariablesProvider } from "./context/VariablesContext";
+import { TokenProvider } from "./context/TokenContext";
+import { URLBuilderProvider } from "./context/URLBuilderContext";
 
 const AppContent: React.FC = () => {
     const {
@@ -34,6 +36,8 @@ const AppContent: React.FC = () => {
         isLoading: appIsLoading,
         error: appError,
         mode,
+        requestConfig,
+        setRequestConfig,
     } = useAppContext();
     const { currentProject, isLoading: projectIsLoading, error: projectError } = useProjectContext();
 
@@ -132,7 +136,10 @@ const AppContent: React.FC = () => {
 
                     {/* Render Basic Mode or Expert Mode based on current mode */}
                     {mode === 'basic' ? (
-                        <BasicMode />
+                        <BasicMode
+                            requestConfig={requestConfig}
+                            setRequestConfig={setRequestConfig}
+                        />
                     ) : (
                         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                             {/* Navigation - Only show in Expert Mode */}
@@ -193,14 +200,21 @@ const AppContentWrapper: React.FC = () => {
             getProjectStorageKey={getProjectStorageKey}
             currentProjectId={currentProject?.id || null}
         >
-            <VariablesProvider>
-                <AppProvider
-                    currentProjectId={currentProject?.id || null}
-                    forceReload={forceReload}
-                >
-                    <AppContent />
-                </AppProvider>
-            </VariablesProvider>
+            <AppProvider
+                currentProjectId={currentProject?.id || null}
+                forceReload={forceReload}
+            >
+                <VariablesProvider>
+                    <TokenProvider
+                        currentProjectId={currentProject?.id || null}
+                        forceReload={forceReload}
+                    >
+                        <URLBuilderProvider>
+                            <AppContent />
+                        </URLBuilderProvider>
+                    </TokenProvider>
+                </VariablesProvider>
+            </AppProvider>
         </AIConfigProvider>
     );
 };

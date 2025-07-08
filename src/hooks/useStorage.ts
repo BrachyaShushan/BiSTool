@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect, useState } from "react";
+import { useCallback, useRef, useEffect, useState, useMemo } from "react";
 import { StorageManager, ProjectData } from "../utils/storage";
 
 // Debounce utility
@@ -271,11 +271,43 @@ export const useTokenConfigStorage = (
     [storageManager, debouncedSave, projectName]
   );
 
+  const loadTokenConfig = useCallback(() => {
+    if (!projectId) return null;
+    return storageManager.loadTokenConfig(projectName);
+  }, [storageManager, projectId, projectName]);
+
+  // Memoize the return object to prevent recreation on every render
+  return useMemo(
+    () => ({
+      saveTokenConfig,
+      loadTokenConfig,
+    }),
+    [saveTokenConfig, loadTokenConfig]
+  );
+};
+
+// Hook for managing mode with automatic saving
+export const useModeStorage = (
+  storageManager: StorageManager,
+  projectId: string | null,
+  projectName: string
+) => {
+  const { debouncedSave } = useStorage(storageManager, projectId);
+
+  const saveMode = useCallback(
+    (mode: "basic" | "expert") => {
+      debouncedSave(() => {
+        storageManager.saveMode(mode, projectName);
+      }, 200);
+    },
+    [storageManager, debouncedSave, projectName]
+  );
+
   return {
-    saveTokenConfig,
-    loadTokenConfig: useCallback(() => {
-      if (!projectId) return null;
-      return storageManager.loadTokenConfig(projectName);
+    saveMode,
+    loadMode: useCallback(() => {
+      if (!projectId) return "expert" as const;
+      return storageManager.loadMode(projectName);
     }, [storageManager, projectId, projectName]),
   };
 };
