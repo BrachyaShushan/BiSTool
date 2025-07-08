@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useVariablesContext } from '../../context/VariablesContext';
-import { Card, SectionHeader, MonacoEditor, Input, Button, Toggle, Textarea, Badge, IconButton, Divider } from '../ui';
+import { Card, SectionHeader, MonacoEditor, Input, Button, Toggle, Textarea, Badge, IconButton, Divider, Tooltip } from '../ui';
 import { FiGlobe, FiSettings, FiCode, FiSend, FiEye, FiPlus, FiTrash2, FiLink, FiZap, FiDatabase, FiActivity, FiEdit2, FiCheck, FiX, FiShield } from 'react-icons/fi';
 import { useURLBuilder } from '../../hooks/useURLBuilder';
 import { Header, QueryParam, FormDataField } from '../../types';
@@ -948,6 +948,7 @@ const BasicMode: React.FC = () => {
                                                             onChange={(e) => setEditingGlobalValue(e.target.value)}
                                                             placeholder="Variable value"
                                                             className="flex-1 text-sm"
+                                                            autoFocus
                                                             onKeyDown={(e) => {
                                                                 if (e.key === 'Enter') saveGlobalEdit();
                                                                 if (e.key === 'Escape') cancelGlobalEdit();
@@ -974,7 +975,9 @@ const BasicMode: React.FC = () => {
                                                 <>
                                                     <div className="flex-1">
                                                         <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{key}</div>
-                                                        <div className="text-xs text-gray-500 truncate dark:text-gray-400">{value}</div>
+                                                        <Tooltip content={value} position="top" multiline>
+                                                            <div className="text-xs text-gray-500 truncate max-w-[220px] dark:text-gray-400 cursor-pointer select-text">{value}</div>
+                                                        </Tooltip>
                                                     </div>
                                                     <div className="flex items-center space-x-1">
                                                         <IconButton
@@ -1043,6 +1046,7 @@ const BasicMode: React.FC = () => {
                                                             onChange={(e) => setEditingSessionValue(e.target.value)}
                                                             placeholder="Variable value"
                                                             className="flex-1 text-sm"
+                                                            autoFocus
                                                             onKeyDown={(e) => {
                                                                 if (e.key === 'Enter') saveSessionEdit();
                                                                 if (e.key === 'Escape') cancelSessionEdit();
@@ -1069,7 +1073,9 @@ const BasicMode: React.FC = () => {
                                                 <>
                                                     <div className="flex-1">
                                                         <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{variable.key}</div>
-                                                        <div className="text-xs text-gray-500 truncate dark:text-gray-400">{variable.value}</div>
+                                                        <Tooltip content={variable.value} position="top" multiline>
+                                                            <div className="text-xs text-gray-500 truncate max-w-[220px] dark:text-gray-400 cursor-pointer select-text">{variable.value}</div>
+                                                        </Tooltip>
                                                     </div>
                                                     <div className="flex items-center space-x-1">
                                                         <IconButton

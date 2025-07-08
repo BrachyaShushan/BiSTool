@@ -7,6 +7,11 @@ import { FiFolder, FiSettings, FiKey, FiMenu, FiX, FiSun, FiMoon, FiArrowRight }
 import SaveControls from "../components/ui/SaveControls";
 import { ModeSwitcher } from "../components/ui";
 import { useCallback, useEffect, useState } from "react";
+import { generateTokenCore } from "../services/tokenService";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import "../styles/toastify-custom.css";
+import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 
 const Header = () => {
     const {
@@ -20,13 +25,12 @@ const Header = () => {
         lastSaved,
         hasUnsavedChanges,
         tokenConfig,
-        regenerateToken,
         openUnifiedManager,
         // Mode management
         mode,
         setMode,
     } = useAppContext();
-    const { globalVariables } = useVariablesContext();
+    const { globalVariables, updateGlobalVariable, replaceVariables } = useVariablesContext();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [isTokenLoading, setIsTokenLoading] = useState(false);
     const [isTokenExpired, setIsTokenExpired] = useState(false);
@@ -34,11 +38,47 @@ const Header = () => {
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
     const { currentProject, clearCurrentProject } = useProjectContext();
 
-    // Token regeneration logic (reuse from TokenGenerator)
+    // Token regeneration logic using generateTokenCore
     const handleRegenerateToken = async () => {
         setIsTokenLoading(true);
         try {
-            await regenerateToken();
+            const result = await generateTokenCore({
+                globalVariables,
+                tokenConfig,
+                updateGlobalVariable,
+                replaceVariables,
+            });
+            if (!result.success) {
+                toast.error(
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <FiAlertCircle style={{ marginRight: 12, fontSize: 22, color: '#ef4444' }} />
+                        <div>
+                            <div style={{ fontWeight: 600, marginBottom: 2 }}>Token Generation Failed</div>
+                            <div style={{ fontSize: '0.98em', whiteSpace: 'pre-line' }}>{result.error || "Token fetch failed"}</div>
+                        </div>
+                    </div>
+                );
+            } else {
+                toast.success(
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <FiCheckCircle style={{ marginRight: 12, fontSize: 22, color: '#22c55e' }} />
+                        <div>
+                            <div style={{ fontWeight: 600, marginBottom: 2 }}>Token Generated</div>
+                            <div style={{ fontSize: '0.98em', whiteSpace: 'pre-line' }}>{result.details ? result.details : 'Token generated successfully.'}</div>
+                        </div>
+                    </div>
+                );
+            }
+        } catch (e) {
+            toast.error(
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <FiAlertCircle style={{ marginRight: 12, fontSize: 22, color: '#ef4444' }} />
+                    <div>
+                        <div style={{ fontWeight: 600, marginBottom: 2 }}>Token Generation Error</div>
+                        <div style={{ fontSize: '0.98em', whiteSpace: 'pre-line' }}>{e instanceof Error ? e.message : String(e)}</div>
+                    </div>
+                </div>
+            );
         } finally {
             setIsTokenLoading(false);
         }
@@ -288,6 +328,7 @@ const Header = () => {
                     </div>
                 </div>
             </header>
+            <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
         </>
     )
 }

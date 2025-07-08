@@ -9,6 +9,7 @@ import {
     FiUpload, FiShield, FiGlobe, FiDatabase, FiCode, FiLock,
     FiRefreshCw, FiHash, FiUsers, FiUserCheck, FiKey
 } from 'react-icons/fi';
+import { generateTokenCore } from "../../services/tokenService";
 
 const TokenGenerator: React.FC = () => {
     const { globalVariables, updateGlobalVariable, replaceVariables } = useVariablesContext();
@@ -200,256 +201,30 @@ const TokenGenerator: React.FC = () => {
     }, []);
 
     const generateToken = useCallback(async (): Promise<void> => {
-        // Create new AbortController for this request
-        abortControllerRef.current = new AbortController();
-
         safeSetState(setIsGenerating, true);
         safeSetState(setError, '');
         safeSetState(setSuccessMessage, "");
-
         try {
-            // Validate required global variables
-            if (!globalVariables['username'] || !globalVariables['password']) {
-                throw new Error("❌ Missing Credentials: Please set both 'username' and 'password' in your global variables. Go to Variables Manager to configure these.");
-            }
-
-            // Use replaceVariables to interpolate domain and path
-            const domain = replaceVariables(tokenConfig.domain);
-            const path = replaceVariables(tokenConfig.path);
-
-            if (!domain) {
-                throw new Error("❌ Invalid Domain: Please set a valid domain in your token configuration. The domain should be a complete URL (e.g., https://api.example.com).");
-            }
-
-            // Validate domain format
-            try {
-                new URL(domain);
-            } catch {
-                throw new Error("❌ Invalid Domain Format: The domain must be a valid URL. Please include the protocol (http:// or https://) and ensure it's properly formatted.");
-            }
-
-            const requestUrl = `${domain}${path}`;
-
-            // Build request body based on content type and field mappings
-            let requestBody: string;
-            let contentType: string;
-
-            if (tokenConfig.requestMapping.contentType === "json") {
-                const bodyData = {
-                    [tokenConfig.requestMapping.usernameField]: globalVariables['username'],
-                    [tokenConfig.requestMapping.passwordField]: globalVariables['password']
-                };
-                requestBody = JSON.stringify(bodyData);
-                contentType = 'application/json';
+            const result = await generateTokenCore({
+                globalVariables,
+                tokenConfig,
+                updateGlobalVariable,
+                replaceVariables,
+                setResponseInfo: (info: any) => safeSetState(setResponseInfo, info),
+                setTokenDuration: (duration: number) => safeSetState(setTokenDuration, duration),
+            });
+            if (!result.success) {
+                safeSetState(setError, result.error || "❌ Failed to generate token: Unknown error occurred");
             } else {
-                requestBody = `${tokenConfig.requestMapping.usernameField}=${encodeURIComponent(
-                    globalVariables['username']
-                )}&${tokenConfig.requestMapping.passwordField}=${encodeURIComponent(
-                    globalVariables['password']
-                )}`;
-                contentType = 'application/x-www-form-urlencoded';
+                safeSetState(setSuccessMessage, result.details || "✅ Token generated successfully!");
+                safeSetState(setIsModalOpen, false);
             }
-
-            let response: Response;
-            try {
-                response = await fetch(requestUrl, {
-                    method: tokenConfig.method,
-                    headers: {
-                        'Accept': '*/*',
-                        'Content-Type': contentType,
-                    },
-                    body: requestBody,
-                    signal: abortControllerRef.current.signal,
-                });
-            } catch (fetchError) {
-                if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-                    return; // Request was aborted, don't update state
-                }
-                if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
-                    throw new Error(`❌ Network Error: Unable to connect to ${requestUrl}. Please check:\n• Your internet connection\n• The server is running and accessible\n• The URL is correct\n• No firewall is blocking the request`);
-                }
-                throw new Error(`❌ Request Failed: ${fetchError instanceof Error ? fetchError.message : 'Unknown network error'}`);
-            }
-
-            // Check for HTTP error status codes
-            if (!response.ok) {
-                let errorMessage = `❌ HTTP Error ${response.status}: ${response.statusText}`;
-
-                // Provide specific guidance based on status code
-                switch (response.status) {
-                    case 401:
-                        errorMessage += "\n\n🔐 Authentication Failed: Your credentials are incorrect or have expired. Please check:\n• Username and password are correct\n• Account is not locked or disabled\n• Credentials have proper permissions";
-                        break;
-                    case 403:
-                        errorMessage += "\n\n🚫 Access Forbidden: You don't have permission to access this resource. Please check:\n• Your account has the required permissions\n• The API endpoint is correct\n• Your IP is not blocked";
-                        break;
-                    case 404:
-                        errorMessage += "\n\n🔍 Not Found: The authentication endpoint was not found. Please check:\n• The URL path is correct\n• The API endpoint exists\n• You're using the right API version";
-                        break;
-                    case 429:
-                        errorMessage += "\n\n⏱️ Rate Limited: Too many requests. Please wait before trying again.";
-                        break;
-                    case 500:
-                        errorMessage += "\n\n🔧 Server Error: The authentication server is experiencing issues. Please try again later.";
-                        break;
-                    case 502:
-                    case 503:
-                    case 504:
-                        errorMessage += "\n\n🌐 Service Unavailable: The authentication service is temporarily unavailable. Please try again later.";
-                        break;
-                    default:
-                        errorMessage += "\n\nPlease check your request configuration and try again.";
-                }
-
-                throw new Error(errorMessage);
-            }
-
-            // Capture response information for debugging
-            const allHeaders: Array<{ name: string; value: string }> = [];
-            response.headers.forEach((value, key) => {
-                allHeaders.push({ name: key, value });
-            });
-            const setCookieHeader = response.headers.get('set-cookie');
-
-            // Wait a moment for cookies to be set by the browser
-            if (isMountedRef.current) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-
-            // Get all cookies from document.cookie
-            const allCookies = document.cookie.split(';').map(cookie => {
-                const [name, value] = cookie.trim().split('=');
-                return { name: name?.trim() ?? '', value: value?.trim() ?? '' };
-            }).filter(cookie => cookie.name);
-
-            let token: string | null = null;
-            let extractionSource = '';
-            let responseText = '';
-
-            // 1. Try to extract from JSON response first
-            if (tokenConfig.extractionMethods.json) {
-                try {
-                    responseText = await response.text();
-                    let jsonData: any;
-                    try {
-                        jsonData = JSON.parse(responseText);
-                    } catch (e) {
-                        console.log("Response is not JSON, trying other extraction methods", e);
-                    }
-
-                    if (jsonData) {
-                        token = extractTokenFromJson(jsonData, tokenConfig.extractionMethods.jsonPaths);
-                        if (token) {
-                            extractionSource = 'JSON response';
-                        }
-                    }
-                } catch (e) {
-                    console.log("Failed to extract from JSON:", e);
-                }
-            }
-
-            // 2. Try to extract from cookies if JSON extraction failed
-            if (!token && tokenConfig.extractionMethods.cookies) {
-                // First try to extract from Set-Cookie header directly
-                token = extractTokenFromSetCookieHeader(response, tokenConfig.extractionMethods.cookieNames);
-                if (token) {
-                    extractionSource = 'Set-Cookie header';
-                } else {
-                    // Wait longer for cookies to be set by the browser
-                    if (isMountedRef.current) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                    }
-
-                    token = extractTokenFromCookies(tokenConfig.extractionMethods.cookieNames);
-                    if (token) {
-                        extractionSource = 'response cookies';
-                    }
-                }
-            }
-
-            // 3. Try to extract from response headers if previous methods failed
-            if (!token && tokenConfig.extractionMethods.headers) {
-                token = extractTokenFromHeaders(response, tokenConfig.extractionMethods.headerNames);
-                if (token) {
-                    extractionSource = 'response headers';
-                }
-            }
-
-            // 4. Try to extract from response text if previous methods failed
-            if (!token && tokenConfig.extractionMethods.cookies) {
-                if (!responseText) {
-                    responseText = await response.text();
-                }
-                token = extractTokenFromResponseText(responseText);
-                if (token) {
-                    extractionSource = 'response text';
-                }
-            }
-
-            if (!token) {
-                let extractionError = "❌ Token Extraction Failed: No token found in the response.\n\n";
-                extractionError += "🔍 Debugging Steps:\n";
-                extractionError += "1. Check the 'Debug' tab to see the actual response\n";
-                extractionError += "2. Verify your extraction method settings\n";
-                extractionError += "3. Ensure the API returns tokens in the expected format\n\n";
-                extractionError += "📋 Current Extraction Settings:\n";
-                extractionError += `• JSON Extraction: ${tokenConfig.extractionMethods.json ? 'Enabled' : 'Disabled'}\n`;
-                extractionError += `• Cookie Extraction: ${tokenConfig.extractionMethods.cookies ? 'Enabled' : 'Disabled'}\n`;
-                extractionError += `• Header Extraction: ${tokenConfig.extractionMethods.headers ? 'Enabled' : 'Disabled'}\n`;
-                extractionError += `• JSON Paths: ${tokenConfig.extractionMethods.jsonPaths.join(', ') || 'Default paths'}\n`;
-                extractionError += `• Cookie Names: ${tokenConfig.extractionMethods.cookieNames.join(', ') || 'Default names'}\n`;
-                extractionError += `• Header Names: ${tokenConfig.extractionMethods.headerNames.join(', ') || 'Default names'}\n\n`;
-                extractionError += "💡 Try using the 'Auto Detect' feature to automatically configure extraction settings.";
-
-                throw new Error(extractionError);
-            }
-
-            updateGlobalVariable(tokenConfig.tokenName, token);
-            updateGlobalVariable("tokenName", tokenConfig.tokenName);
-            safeSetState(setSuccessMessage, `✅ Token extracted from ${extractionSource} successfully!`);
-            safeSetState(setIsModalOpen, false);
-
-            // Handle refresh token extraction
-            if (tokenConfig.refreshToken) {
-                let refreshToken: string | null = null;
-
-                // Try to extract refresh token using the same methods
-                if (tokenConfig.extractionMethods.json && responseText) {
-                    try {
-                        const jsonData = JSON.parse(responseText);
-                        refreshToken = jsonData.refresh_token || jsonData.refreshToken;
-                    } catch (e) {
-                        console.log("Failed to extract refresh token from JSON:", e);
-                        // Ignore JSON parsing errors for refresh token
-                    }
-                }
-
-                if (!refreshToken && tokenConfig.extractionMethods.cookies) {
-                    refreshToken = getCookieValue(tokenConfig.refreshTokenName);
-                }
-
-                if (refreshToken) {
-                    updateGlobalVariable(tokenConfig.refreshTokenName, refreshToken);
-                }
-            }
-
-            // Store response information in responseInfo state
-            safeSetState(setResponseInfo, {
-                cookies: allCookies,
-                headers: allHeaders,
-                responseText: responseText,
-                setCookieHeader: setCookieHeader
-            });
         } catch (error) {
-            if (error instanceof Error && error.name === 'AbortError') {
-                return; // Request was aborted, don't update state
-            }
-            console.error("Token generation error:", error);
             safeSetState(setError, error instanceof Error ? error.message : "❌ Failed to generate token: Unknown error occurred");
         } finally {
             safeSetState(setIsGenerating, false);
         }
-    }, [globalVariables, tokenConfig, extractTokenFromJson, extractTokenFromCookies, extractTokenFromHeaders, extractTokenFromSetCookieHeader, getCookieValue, extractTokenFromResponseText, replaceVariables]);
+    }, [globalVariables, tokenConfig, updateGlobalVariable, replaceVariables]);
 
     const checkTokenExpiration = useCallback((): boolean => {
         if (!globalVariables) return false;
