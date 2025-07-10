@@ -4,9 +4,11 @@ import { useTokenContext } from '../../context/TokenContext';
 import { useVariablesContext } from '../../context/VariablesContext';
 import { useURLBuilderContext } from '../../context/URLBuilderContext';
 import { Card, SectionHeader, MonacoEditor, Input, Button, Toggle, Textarea, Badge, IconButton, Divider, Tooltip } from '../ui';
-import { FiGlobe, FiSettings, FiSend, FiEye, FiPlus, FiTrash2, FiLink, FiZap, FiDatabase, FiEdit2, FiCheck, FiX, FiShield, FiInfo, FiServer, FiCode, FiFileText, FiKey, FiHash, FiList, FiType, FiMail, FiUser, FiAlertCircle, FiClock, FiExternalLink, FiLayers, FiTag, FiActivity as FiActivityIcon } from 'react-icons/fi';
+import { FiGlobe, FiSettings, FiSend, FiEye, FiPlus, FiTrash2, FiLink, FiZap, FiDatabase, FiEdit2, FiCheck, FiX, FiShield, FiInfo, FiServer, FiCode, FiFileText, FiKey, FiHash, FiList, FiType, FiMail, FiUser, FiAlertCircle, FiClock, FiExternalLink, FiLayers, FiTag, FiActivity as FiActivityIcon, FiDownload } from 'react-icons/fi';
 import { Header, QueryParam, FormDataField } from '../../types';
 import { DEFAULT_JSON_BODY, DEFAULT_FORM_DATA } from '../../constants/requestConfig';
+import { LuReplace } from 'react-icons/lu';
+import { GiTrafficLightsOrange, GiTrafficLightsReadyToGo, GiTrafficLightsRed } from 'react-icons/gi';
 
 interface BasicModeProps {
     requestConfig?: any;
@@ -550,9 +552,9 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                         </label>
                                         <div className="grid grid-cols-3 gap-3">
                                             {[
-                                                { id: 'dev', name: 'Development', color: 'green' },
-                                                { id: 'staging', name: 'Staging', color: 'yellow' },
-                                                { id: 'prod', name: 'Production', color: 'red' }
+                                                { id: 'dev', name: 'Development', color: 'green', icon: GiTrafficLightsRed },
+                                                { id: 'staging', name: 'Staging', color: 'yellow', icon: GiTrafficLightsOrange },
+                                                { id: 'prod', name: 'Production', color: 'red', icon: GiTrafficLightsReadyToGo }
                                             ].map((env) => {
                                                 const isActive = environment === env.id;
                                                 const colorClasses = {
@@ -562,20 +564,15 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                 };
 
                                                 return (
-                                                    <button
+                                                    <Button
                                                         key={env.id}
                                                         onClick={() => setEnvironment(env.id)}
                                                         className={`relative p-3 rounded-lg border-2 transition-all duration-200 group ${colorClasses[env.color as keyof typeof colorClasses]}`}
-                                                    >
-                                                        <div className="text-center">
-                                                            <div className="text-sm font-semibold">{env.name}</div>
-                                                        </div>
-                                                        {isActive && (
-                                                            <div className={`absolute -top-1 -right-1 w-5 h-5 bg-${env.color}-500 rounded-full flex items-center justify-center`}>
-                                                                <FiCheck className="w-3 h-3 text-white" />
-                                                            </div>
-                                                        )}
-                                                    </button>
+                                                        variant="secondary"
+                                                        icon={env.icon}
+                                                        isChecked={isActive}
+                                                        children={env.name}
+                                                    />
                                                 );
                                             })}
                                         </div>
@@ -767,26 +764,27 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                         <div className="grid grid-cols-5 gap-3">
                                             {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((httpMethod) => {
                                                 const methodColors = {
-                                                    GET: 'emerald',
-                                                    POST: 'blue',
-                                                    PUT: 'yellow',
-                                                    PATCH: 'purple',
-                                                    DELETE: 'red'
+                                                    GET: { color: 'emerald', icon: FiDownload },
+                                                    POST: { color: 'blue', icon: FiSend },
+                                                    PUT: { color: 'yellow', icon: LuReplace },
+                                                    PATCH: { color: 'purple', icon: FiEdit2 },
+                                                    DELETE: { color: 'red', icon: FiTrash2 }
                                                 };
-                                                const color = methodColors[httpMethod as keyof typeof methodColors];
+                                                const color = methodColors[httpMethod as keyof typeof methodColors].color;
                                                 const isActive = method === httpMethod;
 
                                                 return (
-                                                    <button
+                                                    <Button
                                                         key={httpMethod}
                                                         onClick={() => setMethod(httpMethod)}
                                                         className={`px-4 py-3 rounded-xl border-2 transition-all duration-300 font-bold text-sm hover:scale-105 ${isActive
                                                             ? `text-white bg-gradient-to-br shadow-xl border-${color}-500 from-${color}-500 to-${color}-600 shadow-${color}-500/25`
                                                             : `border-slate-200 dark:border-slate-600 hover:border-${color}-300 hover:bg-${color}-50 dark:hover:bg-${color}-900/10`
                                                             }`}
-                                                    >
-                                                        {httpMethod}
-                                                    </button>
+                                                        variant="secondary"
+                                                        icon={methodColors[httpMethod as keyof typeof methodColors].icon}
+                                                        children={httpMethod}
+                                                    />
                                                 );
                                             })}
                                         </div>
@@ -843,10 +841,8 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                 size="sm"
                                                 fullWidth
                                                 className="flex items-center space-x-2"
-                                            >
-                                                <FiHash className="w-4 h-4" />
-                                                <span>Add Query Parameter</span>
-                                            </Button>
+                                                children={"Query Parameter"}
+                                            />
                                         </div>
                                     </div>
 
@@ -901,10 +897,8 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                 size="sm"
                                                 fullWidth
                                                 className="flex items-center space-x-2"
-                                            >
-                                                <FiList className="w-4 h-4" />
-                                                <span>Add Header</span>
-                                            </Button>
+                                                children={"Header"}
+                                            />
                                         </div>
                                     </div>
 
@@ -1152,11 +1146,9 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                 onClick={addGlobalVariable}
                                                 size="sm"
                                                 fullWidth
+                                                children={"Global Variable"}
                                                 className="flex items-center space-x-2"
-                                            >
-                                                <FiGlobe className="w-4 h-4" />
-                                                <span>Add Global Variable</span>
-                                            </Button>
+                                            />
                                         </div>
                                     </div>
 
@@ -1256,11 +1248,9 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                 onClick={addSessionVariable}
                                                 size="sm"
                                                 fullWidth
+                                                children={"Session Variable"}
                                                 className="flex items-center space-x-2"
-                                            >
-                                                <FiUser className="w-4 h-4" />
-                                                <span>Add Session Variable</span>
-                                            </Button>
+                                            />
                                         </div>
                                     </div>
                                 </div>
