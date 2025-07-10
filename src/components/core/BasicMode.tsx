@@ -4,8 +4,7 @@ import { useTokenContext } from '../../context/TokenContext';
 import { useVariablesContext } from '../../context/VariablesContext';
 import { useURLBuilderContext } from '../../context/URLBuilderContext';
 import { Card, SectionHeader, MonacoEditor, Input, Button, Toggle, Textarea, Badge, IconButton, Divider, Tooltip } from '../ui';
-import LazyMonacoEditor from '../ui/LazyMonacoEditor';
-import { FiGlobe, FiSettings, FiSend, FiEye, FiPlus, FiTrash2, FiLink, FiZap, FiDatabase, FiActivity, FiEdit2, FiCheck, FiX, FiShield, FiInfo, FiServer, FiCode, FiFileText, FiKey, FiHash, FiList, FiType, FiMail, FiUser, FiLock, FiRefreshCw, FiPlay, FiPause, FiAlertCircle, FiClock, FiDownload, FiUpload, FiCopy, FiExternalLink, FiFilter, FiSearch, FiGrid, FiLayers, FiPackage, FiBox, FiTag, FiBookmark, FiStar, FiHeart, FiThumbsUp, FiThumbsDown, FiTrendingUp, FiTrendingDown, FiBarChart2, FiPieChart, FiActivity as FiActivityIcon } from 'react-icons/fi';
+import { FiGlobe, FiSettings, FiSend, FiEye, FiPlus, FiTrash2, FiLink, FiZap, FiDatabase, FiEdit2, FiCheck, FiX, FiShield, FiInfo, FiServer, FiCode, FiFileText, FiKey, FiHash, FiList, FiType, FiMail, FiUser, FiAlertCircle, FiClock, FiExternalLink, FiLayers, FiTag, FiActivity as FiActivityIcon } from 'react-icons/fi';
 import { Header, QueryParam, FormDataField } from '../../types';
 import { DEFAULT_JSON_BODY, DEFAULT_FORM_DATA } from '../../constants/requestConfig';
 
