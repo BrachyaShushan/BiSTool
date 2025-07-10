@@ -1350,13 +1350,18 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                 </div>
                                             </div>
                                             <div className="p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-600">
-                                                <LazyMonacoEditor
+                                                <MonacoEditor
+                                                    allowSettings
+                                                    allowFullscreen
+                                                    description='Response Body'
                                                     value={typeof responseData.body === 'string'
                                                         ? responseData.body
                                                         : JSON.stringify(responseData.body, null, 2)
                                                     }
                                                     language={typeof responseData.body === 'string' ? 'text' : 'json'}
                                                     height="300px"
+                                                    variant="compact"
+                                                    colorTheme="bistool"
                                                     readOnly
                                                 />
                                             </div>
