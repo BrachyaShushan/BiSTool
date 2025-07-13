@@ -136,16 +136,122 @@ export interface AIConfig {
 
 export interface AITestGeneratorConfig {
   aiConfig: AIConfig;
-  testFramework: "pytest" | "unittest" | "jest" | "mocha";
-  testStyle: "bdd" | "tdd" | "functional";
-  codeStyle: "oop" | "functional";
-  language: "python" | "javascript" | "typescript" | "java";
-  outputFormat: "code" | "markdown" | "json";
+  testFramework:
+    | "pytest"
+    | "unittest"
+    | "jest"
+    | "mocha"
+    | "cypress"
+    | "playwright"
+    | "rest-assured"
+    | "junit"
+    | "nunit"
+    | "xunit"
+    | "go-test"
+    | "rspec"
+    | "phpunit"
+    | "dotnet-test";
+  testStyle:
+    | "bdd"
+    | "tdd"
+    | "functional"
+    | "integration"
+    | "e2e"
+    | "unit"
+    | "api";
+  codeStyle: "oop" | "functional" | "procedural" | "declarative";
+  language:
+    | "python"
+    | "javascript"
+    | "typescript"
+    | "java"
+    | "csharp"
+    | "go"
+    | "ruby"
+    | "php"
+    | "rust"
+    | "kotlin"
+    | "swift"
+    | "dart"
+    | "scala"
+    | "elixir"
+    | "clojure"
+    | "fsharp";
+  outputFormat: "code" | "markdown" | "json" | "yaml" | "xml";
   includeExamples: boolean;
   includeEdgeCases: boolean;
   includePerformanceTests: boolean;
   includeSecurityTests: boolean;
+  includeLoadTests: boolean;
+  includeContractTests: boolean;
   customPrompts?: Record<string, string>;
+  // Enhanced configuration
+  apiEnvironment:
+    | "rest"
+    | "graphql"
+    | "soap"
+    | "grpc"
+    | "websocket"
+    | "event-driven"
+    | "microservices";
+  authenticationType:
+    | "none"
+    | "basic"
+    | "bearer"
+    | "api-key"
+    | "oauth2"
+    | "jwt"
+    | "session"
+    | "custom";
+  responseValidation: "strict" | "lenient" | "custom";
+  errorHandling: "comprehensive" | "basic" | "minimal";
+  loggingLevel: "debug" | "info" | "warn" | "error";
+  timeoutConfig: {
+    request: number;
+    response: number;
+    global: number;
+  };
+  retryConfig: {
+    enabled: boolean;
+    maxAttempts: number;
+    backoffStrategy: "linear" | "exponential" | "custom";
+    retryableStatusCodes: number[];
+  };
+  dataDrivenTesting: {
+    enabled: boolean;
+    dataSource: "inline" | "file" | "database" | "api";
+    dataFormat: "json" | "csv" | "xml" | "yaml";
+  };
+  parallelExecution: {
+    enabled: boolean;
+    maxConcurrency: number;
+    strategy: "thread" | "process" | "async";
+  };
+  reporting: {
+    format: "html" | "json" | "xml" | "junit" | "allure" | "custom";
+    includeScreenshots: boolean;
+    includeVideos: boolean;
+    includeLogs: boolean;
+  };
+  // Prompt configuration
+  promptConfig: {
+    preInstructions: string;
+    postInstructions: string;
+    customTemplates: Record<string, string>;
+    languageSpecificPrompts: Record<string, string>;
+    frameworkSpecificPrompts: Record<string, string>;
+    environmentSpecificPrompts: Record<string, string>;
+    qualityGates: {
+      minTestCases: number;
+      maxTestCases: number;
+      requiredAssertions: string[];
+      forbiddenPatterns: string[];
+    };
+  };
+  // Project storage
+  projectId?: string;
+  lastModified?: string;
+  version?: string;
 }
 
 // AI Response Types

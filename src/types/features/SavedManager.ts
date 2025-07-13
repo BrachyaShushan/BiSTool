@@ -89,11 +89,12 @@ export interface TestCase {
   queryOverrides?: Record<string, string>;
   expectedStatus: string;
   expectedResponse?: string;
-  expectedPartialResponse?: string;
+  expectedPartialResponse?: boolean;
   lastResult?: "pass" | "fail" | undefined;
   useToken?: boolean;
   serverResponse?: string;
   serverStatusCode?: number;
+  includeInAIPrompt?: boolean;
 }
 
 export interface SavedManagerProps {

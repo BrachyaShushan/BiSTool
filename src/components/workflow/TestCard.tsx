@@ -201,7 +201,7 @@ const TestCard: React.FC<TestCardProps> = ({
         <Card variant="elevated" padding="lg">
             {loading ? (
                 <div className="space-y-4 animate-pulse">
-                    <div className="flex items-center justify-between">
+                    <div className="flex justify-between items-center">
                         <div className="w-1/3 h-8 bg-gray-300 rounded dark:bg-gray-600"></div>
                         <div className="flex space-x-2">
                             <div className="w-20 h-8 bg-gray-300 rounded dark:bg-gray-600"></div>
@@ -215,9 +215,9 @@ const TestCard: React.FC<TestCardProps> = ({
             ) : (
                 <>
                     {/* Header Section */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex justify-between items-center mb-6">
                         <div className="flex items-center space-x-4">
-                            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600">
+                            <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
                                 <FiTarget className="w-4 h-4 text-white" />
                             </div>
                             <div className="flex-1">
@@ -237,6 +237,14 @@ const TestCard: React.FC<TestCardProps> = ({
                                 status={loading ? 'running' : test.lastResult || null}
                                 size="md"
                             />
+
+                            {/* AI Selection Indicator */}
+                            {test.includeInAIPrompt !== false && (
+                                <Badge variant="primary" size="sm">
+                                    <FiCode className="mr-1 w-3 h-3" />
+                                    AI
+                                </Badge>
+                            )}
 
                             {/* Action Buttons */}
                             <IconButton
@@ -305,6 +313,21 @@ const TestCard: React.FC<TestCardProps> = ({
                                     size="sm"
                                     position="left"
                                     data-testid={`test-use-token-${test.id}`}
+                                />
+                            </div>
+                        </Card>
+
+                        <Card variant="outlined" padding="sm">
+                            <div className="flex items-center space-x-2">
+                                <FiCode className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                <Toggle
+                                    checked={test.includeInAIPrompt !== false}
+                                    onChange={(checked) => handleUpdateTest(test.id, { includeInAIPrompt: checked })}
+                                    label="Include in AI Prompt"
+                                    colorScheme="blue"
+                                    size="sm"
+                                    position="left"
+                                    data-testid={`test-include-ai-${test.id}`}
                                 />
                             </div>
                         </Card>
@@ -433,14 +456,14 @@ const TestCard: React.FC<TestCardProps> = ({
 
                             {/* Expected Response */}
                             <Card variant="outlined" padding="md" className="border-teal-200 dark:border-teal-700">
-                                <div className="flex items-center justify-between mb-3">
+                                <div className="flex justify-between items-center mb-3">
                                     <div className="flex items-center space-x-2">
                                         <FiTarget className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                                         <h4 className="text-sm font-semibold text-teal-700 dark:text-teal-300">Expected Response (JSON)</h4>
                                     </div>
                                     <Toggle
                                         checked={!!test.expectedPartialResponse}
-                                        onChange={(checked) => handleUpdateTest(test.id, { expectedPartialResponse: checked ? test.expectedResponse ?? '' : '' })}
+                                        onChange={(checked) => handleUpdateTest(test.id, { expectedPartialResponse: checked })}
                                         label="Partial match"
                                         colorScheme="teal"
                                         size="sm"
@@ -499,7 +522,7 @@ const TestCard: React.FC<TestCardProps> = ({
                     )}
 
                     {/* Run Button */}
-                    <div className="flex items-center justify-between pt-4 mt-6 border-t border-gray-200 dark:border-gray-600">
+                    <div className="flex justify-between items-center pt-4 mt-6 border-t border-gray-200 dark:border-gray-600">
                         <div className="flex items-center space-x-2">
                             <TestStatusBadge
                                 status={loading ? 'running' : test.lastResult || null}

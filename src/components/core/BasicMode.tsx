@@ -26,7 +26,7 @@ const BasicMode: React.FC<BasicModeProps> = ({
         handleSaveSession,
     } = useAppContext();
 
-    const { globalVariables, sharedVariables, replaceVariables, updateSharedVariable, updateGlobalVariable, deleteGlobalVariable, deleteSharedVariable } = useVariablesContext();
+    const { globalVariables, sharedVariables, replaceVariables, updateSharedVariable, updateGlobalVariable, deleteGlobalVariable, deleteSharedVariable, getVariableValue } = useVariablesContext();
     const { generateAuthHeaders, isAuthenticated } = useTokenContext();
 
     // Get URL building functionality from URLBuilderContext
@@ -679,8 +679,7 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                 fullWidth
                                                 className="flex items-center space-x-2"
                                             >
-                                                <FiCode className="w-4 h-4" />
-                                                <span>Add Segment</span>
+                                                <span>Segment</span>
                                             </Button>
                                         </div>
                                     </div>
@@ -703,7 +702,7 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                                                             : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                                                             }`}>
-                                                            {globalVariables?.['base_url'] || "Not set"}
+                                                            {getVariableValue('base_url', environment) || "Not set"}
                                                         </span>
                                                     </div>
                                                 )}
@@ -1040,7 +1039,7 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                         <div className="flex justify-between items-center mb-4">
                                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                                 <div className="flex items-center space-x-2">
-                                                    <FiGlobe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                                    <FiGlobe className="w-5 h-5 text-green-600 dark:text-green-400" />
                                                     <span>Global Variables</span>
                                                 </div>
                                             </h3>
@@ -1060,7 +1059,7 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                         </div>
                                         <div className="space-y-3">
                                             {Object.entries(globalVariables).map(([key, value]) => (
-                                                <div key={key} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg dark:bg-gray-800">
+                                                <div key={key} className="flex justify-between items-center p-3 bg-green-50 rounded-lg dark:bg-green-800/20">
                                                     {editingGlobalKey === key ? (
                                                         <>
                                                             <div className="flex-1 space-y-2">
@@ -1095,20 +1094,21 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                                     />
                                                                 </div>
                                                             </div>
+                                                            <input type="button" value="Save" onClick={saveGlobalEdit} className='hidden' />
                                                             <div className="flex items-center space-x-2">
                                                                 <IconButton
                                                                     icon={FiCheck}
                                                                     variant="ghost"
                                                                     onClick={saveGlobalEdit}
                                                                     size="sm"
-                                                                    className="text-green-500 hover:text-green-700"
+                                                                    className="text-green-500 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
                                                                 />
                                                                 <IconButton
                                                                     icon={FiX}
                                                                     variant="ghost"
                                                                     onClick={cancelGlobalEdit}
                                                                     size="sm"
-                                                                    className="text-gray-500 hover:text-gray-700"
+                                                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                                                                 />
                                                             </div>
                                                         </>
@@ -1126,14 +1126,14 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                                     variant="ghost"
                                                                     onClick={() => startEditingGlobal(key)}
                                                                     size="sm"
-                                                                    className="text-blue-500 hover:text-blue-700"
+                                                                    className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                                                                 />
                                                                 <IconButton
                                                                     icon={FiTrash2}
                                                                     variant="ghost"
                                                                     onClick={() => removeGlobalVariable(key)}
                                                                     size="sm"
-                                                                    className="text-red-500 hover:text-red-700"
+                                                                    className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                                 />
                                                             </div>
                                                         </>
@@ -1156,7 +1156,7 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                     <div>
                                         <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
                                             <div className="flex items-center space-x-2">
-                                                <FiUser className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                                <FiUser className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                                 <span>Session Variables</span>
                                             </div>
                                         </h3>
@@ -1203,14 +1203,14 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                                     variant="ghost"
                                                                     onClick={saveSessionEdit}
                                                                     size="sm"
-                                                                    className="text-green-500 hover:text-green-700"
+                                                                    className="text-green-500 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
                                                                 />
                                                                 <IconButton
                                                                     icon={FiX}
                                                                     variant="ghost"
                                                                     onClick={cancelSessionEdit}
                                                                     size="sm"
-                                                                    className="text-gray-500 hover:text-gray-700"
+                                                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                                                                 />
                                                             </div>
                                                         </>
@@ -1228,14 +1228,14 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                                     variant="ghost"
                                                                     onClick={() => startEditingSession(variable.key)}
                                                                     size="sm"
-                                                                    className="text-blue-500 hover:text-blue-700"
+                                                                    className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                                                                 />
                                                                 <IconButton
                                                                     icon={FiTrash2}
                                                                     variant="ghost"
                                                                     onClick={() => removeSessionVariable(variable.key)}
                                                                     size="sm"
-                                                                    className="text-red-500 hover:text-red-700"
+                                                                    className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                                                 />
                                                             </div>
                                                         </>

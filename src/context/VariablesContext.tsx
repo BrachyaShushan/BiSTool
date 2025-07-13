@@ -205,6 +205,19 @@ export const VariablesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     // Get variable value for a specific parameter and environment
     const getVariableValue = useCallback((paramName: string, env: string): string | null => {
+
+        // Check environment-specific variables (e.g., {paramName}_{env})
+        const envSpecificKey = `${paramName}_${env}`;
+        if (globalVariables[envSpecificKey]) {
+            return globalVariables[envSpecificKey];
+        }
+
+
+        const envSpecificSharedVar = sharedVariables.find(v => v.key === envSpecificKey);
+        if (envSpecificSharedVar) {
+            return envSpecificSharedVar.value;
+        }
+
         // Check global variables first
         if (globalVariables[paramName]) {
             return globalVariables[paramName];
@@ -216,16 +229,6 @@ export const VariablesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             return sharedVar.value;
         }
 
-        // Check environment-specific variables (e.g., {paramName}_{env})
-        const envSpecificKey = `${paramName}_${env}`;
-        if (globalVariables[envSpecificKey]) {
-            return globalVariables[envSpecificKey];
-        }
-
-        const envSpecificSharedVar = sharedVariables.find(v => v.key === envSpecificKey);
-        if (envSpecificSharedVar) {
-            return envSpecificSharedVar.value;
-        }
 
         return null;
     }, [globalVariables, sharedVariables]);

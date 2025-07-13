@@ -26,7 +26,9 @@ import {
   FiActivity,
   FiWifi,
   FiServer,
-  FiArrowLeft
+  FiArrowLeft,
+  FiEye,
+  FiEyeOff
 } from "react-icons/fi";
 import {
   Button,
@@ -34,14 +36,15 @@ import {
   Badge,
   SectionHeader,
   MonacoEditor,
-  Toggle
+  Toggle,
+  TestStatusBadge
 } from "../ui";
 import { YAMLGeneratorProps } from "../../types/components/components.types";
 import {
   ResponseData,
 } from "../../types/components/yamlGenerator.types";
 import { RequestConfigData, ResponseCondition } from "../../types/core/app.types";
-import { ExtendedSession } from "../../types/features/SavedManager";
+import { ExtendedSession, TestCase } from "../../types/features/SavedManager";
 
 const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
   const { globalVariables, sharedVariables, replaceVariables } = useVariablesContext();
@@ -81,6 +84,8 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
   const [outputViewMode, setOutputViewMode] = useState<'yaml' | 'json'>('yaml');
   const [lastJsonResponse, setLastJsonResponse] = useState<any>(null);
   const [lastYamlOutput, setLastYamlOutput] = useState<string>("");
+  const [showTests, setShowTests] = useState<boolean>(true);
+  const [expandedTests, setExpandedTests] = useState<Set<string>>(new Set());
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -365,6 +370,11 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
     const category = activeSession?.category ?? "API";
     const description = activeSession?.urlData?.sessionDescription?.split("\n").map(line => line.trim()).join(". ") ?? "";
 
+    // Add test information to description
+    const tests = activeSession?.tests || [];
+    const testInfo = tests.length > 0 ? `\n\nTest Coverage: This endpoint has ${tests.length} test case(s) covering various scenarios including ${tests.filter(t => t.expectedStatus !== '200').map(t => `${t.expectedStatus} responses`).join(', ')}.` : "";
+    const finalDescription = description + testInfo;
+
     // Add authentication headers to YAML if authentication is configured
     const authHeaders = generateAuthHeaders();
     if (Object.keys(authHeaders).length > 0) {
@@ -422,13 +432,43 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
     example: ${field.value}`;
     });
 
+    // Generate test-based parameters
+    const generateTestBasedParameters = (): string => {
+      const tests = activeSession?.tests || [];
+      const testParameters: string[] = [];
+
+      tests.forEach((test: TestCase) => {
+        // Add path overrides as examples
+        if (test.pathOverrides) {
+          Object.entries(test.pathOverrides).forEach(([key, value]) => {
+            const existingParam = pathParameters?.find(p => p.includes(`name: ${key}`));
+            if (existingParam && value) {
+              testParameters.push(`  # Test override for ${test.name || 'unnamed test'}: ${key} = ${value}`);
+            }
+          });
+        }
+
+        // Add query overrides as examples
+        if (test.queryOverrides) {
+          Object.entries(test.queryOverrides).forEach(([key, value]) => {
+            const existingParam = queryParameters?.find(p => p.includes(`name: ${key}`));
+            if (existingParam && value) {
+              testParameters.push(`  # Test override for ${test.name || 'unnamed test'}: ${key} = ${value}`);
+            }
+          });
+        }
+      });
+
+      return testParameters.length > 0 ? `\n    # Test-based parameter examples:\n${testParameters.join('\n')}` : '';
+    };
+
     // Combine all parameters
     const allParameters = [
       ...(pathParameters || []),
       ...(headerParameters || []),
       ...(queryParameters || []),
       ...(formParameters || []),
-    ].join("\n");
+    ].join("\n") + generateTestBasedParameters();
 
     // Function to generate schema from response data
     const generateSchema = (data: any, indent: string = ""): string => {
@@ -504,10 +544,87 @@ ${config.formData.map(field => `      ${field.key}:
     // Generate responses section
     const generateResponses = (): string => {
       let responses = `  200:\n    description: Successful response\n    schema:\n${schema}`;
-      responseConditions.filter(c => c.include && c.status !== "200").forEach((condition) => {
-        responses += `\n  ${condition.status}:\n    description: ${condition.status} response\n    ${condition.condition ? `condition: ${condition.condition}` : ""
-          }`;
+
+      // Add test-based responses
+      const tests = activeSession?.tests || [];
+      const testResponses = new Map<string, {
+        description: string;
+        examples: string[];
+        testNames: string[];
+        partialMatch: boolean;
+      }>();
+
+      tests.forEach((test: TestCase) => {
+        const status = test.expectedStatus;
+        if (!testResponses.has(status)) {
+          testResponses.set(status, {
+            description: `Response for test: ${test.name || 'Unnamed test'}`,
+            examples: [],
+            testNames: [],
+            partialMatch: false
+          });
+        }
+
+        const response = testResponses.get(status)!;
+        response.testNames.push(test.name || `Test ${test.id.slice(0, 8)}`);
+
+        if (test.expectedResponse) {
+          response.examples.push(test.expectedResponse);
+        }
+
+        if (test.expectedPartialResponse) {
+          response.partialMatch = true;
+        }
+
+        // Update description to be more comprehensive
+        if (test.name) {
+          response.description = `Response based on tests: ${response.testNames.join(', ')}`;
+        }
       });
+
+      // Add test-based responses to the YAML
+      testResponses.forEach((response, status) => {
+        if (status !== "200") {
+          responses += `\n  ${status}:\n    description: ${response.description}`;
+
+          // Add schema if we have examples
+          if (response.examples.length > 0 && response.examples[0]) {
+            try {
+              const exampleData = JSON.parse(response.examples[0]);
+              const exampleSchema = generateSchema(exampleData, "      ");
+              responses += `\n    schema:\n${exampleSchema}`;
+            } catch (e) {
+              // If not valid JSON, add as string schema
+              responses += `\n    schema:\n      type: string\n      example: "${response.examples[0]}"`;
+            }
+          }
+
+          // Add examples
+          if (response.examples.length > 0) {
+            responses += `\n    examples:`;
+            response.examples.forEach((example, index) => {
+              const testName = response.testNames[index] || `test-${index + 1}`;
+              responses += `\n      ${testName.replace(/[^a-zA-Z0-9-_]/g, '-')}:\n        summary: ${response.testNames[index] || 'Test example'}`;
+              if (response.partialMatch) {
+                responses += `\n        description: Partial match expected`;
+              }
+              responses += `\n        value: ${example}`;
+            });
+          }
+        }
+      });
+
+      // Add response conditions
+      responseConditions.filter(c => c.include && c.status !== "200").forEach((condition) => {
+        // Only add if not already added by tests
+        if (!testResponses.has(condition.status)) {
+          responses += `\n  ${condition.status}:\n    description: ${condition.status} response`;
+          if (condition.condition) {
+            responses += `\n    x-condition: ${condition.condition}`;
+          }
+        }
+      });
+
       return responses;
     };
 
@@ -517,7 +634,7 @@ ${config.formData.map(field => `      ${field.key}:
 ---
 tags:
   - ${category}
-description: ${description}
+description: ${finalDescription}
 url: ${url}
 security:
   - ApiKeyAuth: []
@@ -531,11 +648,14 @@ ${generateResponses()}`;
 info:
         title: ${title}
   version: '1.0'
+  description: ${finalDescription}
 paths:
         ${url}:
         ${method.toLowerCase()}:
         tags:
         - ${title}
+      summary: ${title}
+      description: ${finalDescription}
       produces:
         - application/json
       parameters:
@@ -549,11 +669,14 @@ ${generateRequestBody()}
 info:
         title: ${title}
   version: '1.0'
+  description: ${finalDescription}
 paths:
         ${url}:
         ${method.toLowerCase()}:
         tags:
         - ${title}
+      summary: ${title}
+      description: ${finalDescription}
       parameters:
         ${allParameters}
 ${generateRequestBody()}
@@ -794,6 +917,43 @@ ${generateRequestBody()}
     { value: "500", label: "500 - Internal Server Error" },
   ];
 
+  // Test management functions
+  const toggleTestExpansion = (testId: string) => {
+    const newExpanded = new Set(expandedTests);
+    if (newExpanded.has(testId)) {
+      newExpanded.delete(testId);
+    } else {
+      newExpanded.add(testId);
+    }
+    setExpandedTests(newExpanded);
+  };
+
+  const getTestStatistics = () => {
+    const tests = activeSession?.tests || [];
+    return {
+      total: tests.length,
+      passed: tests.filter(test => test.lastResult === 'pass').length,
+      failed: tests.filter(test => test.lastResult === 'fail').length,
+      notRun: tests.filter(test => !test.lastResult).length,
+      selectedForAI: tests.filter(test => test.includeInAIPrompt !== false).length,
+      successRate: tests.length > 0 ? Math.round((tests.filter(test => test.lastResult === 'pass').length / tests.length) * 100) : 0
+    };
+  };
+
+  const getStatusCodeColor = (statusCode: string) => {
+    const colors = {
+      "200": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      "201": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      "204": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      "400": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+      "401": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+      "403": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+      "404": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+      "500": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+    };
+    return colors[statusCode as keyof typeof colors] || "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+  };
+
   // Output editor value
   const getOutputEditorValue = () => {
     if (outputViewMode === 'yaml') {
@@ -812,16 +972,16 @@ ${generateRequestBody()}
     return (
       <div className="space-y-6">
         {/* Header Section */}
-        <div className="relative p-6 overflow-hidden border border-indigo-100 shadow-lg bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+        <div className="overflow-hidden relative p-6 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-indigo-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-5 dark:opacity-10">
-            <div className="absolute top-0 right-0 w-32 h-32 translate-x-16 -translate-y-16 bg-indigo-500 rounded-full"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 -translate-x-12 translate-y-12 bg-purple-500 rounded-full"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full translate-x-16 -translate-y-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500 rounded-full -translate-x-12 translate-y-12"></div>
           </div>
 
-          <div className="relative flex items-center justify-between">
+          <div className="flex relative justify-between items-center">
             <div className="flex items-center space-x-4">
-              <div className="p-3 shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
+              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
                 <FiCode className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -848,22 +1008,22 @@ ${generateRequestBody()}
         </div>
 
         {/* No Active Session Warning */}
-        <div className="p-8 bg-white border border-gray-200 shadow-lg rounded-2xl dark:bg-gray-800 dark:border-gray-700">
+        <div className="p-8 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <div className="text-center">
-            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500">
+            <div className="flex justify-center items-center mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full">
               <FiCode className="w-8 h-8 text-white" />
             </div>
             <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
               No Active Session
             </h3>
-            <p className="max-w-md mx-auto mb-6 text-gray-600 dark:text-gray-300">
+            <p className="mx-auto mb-6 max-w-md text-gray-600 dark:text-gray-300">
               You need to create or select an active session before generating YAML specifications.
               Please go to the Session Manager to create a session first.
             </p>
             <div className="flex justify-center space-x-4">
               <Button
                 onClick={() => window.history.back()}
-                className="px-6 py-3 font-medium text-gray-700 transition-all duration-200 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
+                className="px-6 py-3 font-medium text-gray-700 bg-white rounded-lg border border-gray-300 transition-all duration-200 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
                 icon={FiArrowLeft}
                 variant="outline"
                 iconPosition="right"
@@ -876,7 +1036,7 @@ ${generateRequestBody()}
                   // Open session manager modal on sessions tab
                   openUnifiedManager('sessions');
                 }}
-                className="px-6 py-3 font-medium text-white transition-all duration-200 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:scale-105 hover:shadow-lg"
+                className="px-6 py-3 font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg"
                 icon={FiPlus}
                 iconPosition="right"
                 children="Create Session"
@@ -906,14 +1066,14 @@ ${generateRequestBody()}
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <Card variant="gradient" padding="lg" className="relative overflow-hidden">
+      <Card variant="gradient" padding="lg" className="overflow-hidden relative">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5 dark:opacity-10">
-          <div className="absolute top-0 right-0 w-32 h-32 translate-x-16 -translate-y-16 bg-indigo-500 rounded-full"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 -translate-x-12 translate-y-12 bg-purple-500 rounded-full"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full translate-x-16 -translate-y-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500 rounded-full -translate-x-12 translate-y-12"></div>
         </div>
 
-        <div className="relative flex items-center justify-between">
+        <div className="flex relative justify-between items-center">
           <SectionHeader
             title="YAML Generator"
             description="Generate OpenAPI specifications from your API responses"
@@ -923,11 +1083,11 @@ ${generateRequestBody()}
 
           <div className="flex items-center space-x-3">
             <Badge variant="info" className="px-4 py-2">
-              <FiCpu className="w-4 h-4 mr-2" />
+              <FiCpu className="mr-2 w-4 h-4" />
               OpenAPI
             </Badge>
             <Badge variant="success" className="px-4 py-2">
-              <FiLayers className="w-4 h-4 mr-2" />
+              <FiLayers className="mr-2 w-4 h-4" />
               Schema Generation
             </Badge>
           </div>
@@ -974,7 +1134,7 @@ ${generateRequestBody()}
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="flex items-center p-3 space-x-2 rounded-lg bg-gray-50 dark:bg-gray-700">
+              <div className="flex items-center p-3 space-x-2 bg-gray-50 rounded-lg dark:bg-gray-700">
                 <FiShield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 <Toggle
                   checked={includeToken && !!tokenExists}
@@ -987,12 +1147,12 @@ ${generateRequestBody()}
                 />
               </div>
 
-              <div className="flex items-center p-3 space-x-2 rounded-lg bg-gray-50 dark:bg-gray-700">
+              <div className="flex items-center p-3 space-x-2 bg-gray-50 rounded-lg dark:bg-gray-700">
                 <FiSettings className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <select
                   value={openApiVersion}
                   onChange={(e) => setOpenApiVersion(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm text-gray-900 transition-all duration-200 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                  className="flex-1 px-3 py-2 text-sm text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                 >
                   <option value="3.0.0">OpenAPI 3.0.0</option>
                   <option value="2.0.0">OpenAPI 2.0.0</option>
@@ -1054,7 +1214,7 @@ ${generateRequestBody()}
 
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {requestConfig?.queryParams?.map((param) => (
-                  <div key={param.key} className="flex items-center p-3 space-x-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+                  <div key={param.key} className="flex items-center p-3 space-x-3 bg-gray-50 rounded-lg dark:bg-gray-700">
                     <Toggle
                       checked={selectedQueries[param.key] || false}
                       disabled={param.required || false}
@@ -1088,7 +1248,7 @@ ${generateRequestBody()}
               className="mb-6"
             />
 
-            <div className="p-4 border border-gray-200 bg-gray-50 rounded-xl dark:bg-gray-700 dark:border-gray-600">
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
               <code className="text-sm text-gray-700 break-all dark:text-gray-300">
                 {getColoredUrl()}
               </code>
@@ -1109,7 +1269,7 @@ ${generateRequestBody()}
 
             <div className="space-y-3">
               {responseConditions.map((condition, idx) => (
-                <div key={`${idx}-${condition.status}`} className="p-3 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                <div key={`${idx}-${condition.status}`} className="p-3 bg-gray-50 rounded-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <select
@@ -1119,7 +1279,7 @@ ${generateRequestBody()}
                           updated[idx] = { ...condition, status: e.target.value };
                           setResponseConditions(updated);
                         }}
-                        className="flex-1 px-3 py-2 text-sm text-gray-900 transition-all duration-200 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                        className="flex-1 px-3 py-2 text-sm text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                       >
                         <option disabled value="">Select Status Code</option>
                         {statusOptions.map(opt => (
@@ -1135,7 +1295,7 @@ ${generateRequestBody()}
                         onClick={() => {
                           setResponseConditions(responseConditions.filter((_, i) => i !== idx));
                         }}
-                        className="p-2 text-red-600 transition-all duration-200 bg-red-100 rounded-lg dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800"
+                        className="p-2 text-red-600 bg-red-100 rounded-lg transition-all duration-200 dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800"
                       >
                         <FiTrash2 className="w-4 h-4" />
                       </button>
@@ -1147,7 +1307,7 @@ ${generateRequestBody()}
                           type="text"
                           id={`custom-status-${idx}`}
                           defaultValue={condition.status}
-                          className="flex-1 px-3 py-2 text-sm text-gray-900 transition-all duration-200 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                          className="flex-1 px-3 py-2 text-sm text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                         />
                         <button
                           type="button"
@@ -1157,7 +1317,7 @@ ${generateRequestBody()}
                             updated[idx] = { ...condition, status: input.value };
                             setResponseConditions(updated);
                           }}
-                          className="p-2 text-green-600 transition-all duration-200 bg-green-100 rounded-lg dark:bg-green-900 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800"
+                          className="p-2 text-green-600 bg-green-100 rounded-lg transition-all duration-200 dark:bg-green-900 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800"
                         >
                           <FiCheck className="w-4 h-4" />
                         </button>
@@ -1173,7 +1333,7 @@ ${generateRequestBody()}
                         setResponseConditions(updated);
                       }}
                       placeholder="Condition (optional)"
-                      className="w-full px-3 py-2 text-sm text-gray-900 transition-all duration-200 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                      className="px-3 py-2 w-full text-sm text-gray-900 bg-white rounded-lg border border-gray-300 transition-all duration-200 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                     />
 
                     <div className="flex items-center space-x-2">
@@ -1185,7 +1345,7 @@ ${generateRequestBody()}
                           updated[idx] = { ...condition, include: e.target.checked };
                           setResponseConditions(updated);
                         }}
-                        className="w-4 h-4 text-orange-600 bg-white border-gray-300 rounded focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800"
+                        className="w-4 h-4 text-orange-600 bg-white rounded border-gray-300 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-800"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">Include this response</span>
                     </div>
@@ -1229,10 +1389,285 @@ ${generateRequestBody()}
         </div>
       </div>
 
+      {/* Tests Section */}
+      {activeSession?.tests && activeSession.tests.length > 0 && (
+        <Card variant="elevated" padding="lg">
+          <div className="flex justify-between items-center mb-6">
+            <SectionHeader
+              title="Test Cases"
+              description="Review and manage your API test cases"
+              icon={FiTarget}
+              className="mb-0"
+            />
+
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={showTests ? FiEyeOff : FiEye}
+                onClick={() => setShowTests(!showTests)}
+              >
+                {showTests ? "Hide Tests" : "Show Tests"}
+              </Button>
+
+              <Button
+                variant="primary"
+                gradient
+                size="sm"
+                icon={FiArrowRight}
+                onClick={() => setActiveSection("tests")}
+              >
+                Edit Tests
+              </Button>
+            </div>
+          </div>
+
+          {showTests && (
+            <>
+              {/* Test Statistics */}
+              <div className="grid grid-cols-2 gap-4 mb-6 md:grid-cols-6">
+                <div className="p-4 text-center bg-blue-50 rounded-xl dark:bg-blue-900">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {getTestStatistics().total}
+                  </div>
+                  <div className="text-sm text-blue-700 dark:text-blue-300">Total Tests</div>
+                </div>
+                <div className="p-4 text-center bg-green-50 rounded-xl dark:bg-green-900">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {getTestStatistics().passed}
+                  </div>
+                  <div className="text-sm text-green-700 dark:text-green-300">Passed</div>
+                </div>
+                <div className="p-4 text-center bg-red-50 rounded-xl dark:bg-red-900">
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                    {getTestStatistics().failed}
+                  </div>
+                  <div className="text-sm text-red-700 dark:text-red-300">Failed</div>
+                </div>
+                <div className="p-4 text-center bg-yellow-50 rounded-xl dark:bg-yellow-900">
+                  <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                    {getTestStatistics().notRun}
+                  </div>
+                  <div className="text-sm text-yellow-700 dark:text-yellow-300">Not Run</div>
+                </div>
+                <div className="p-4 text-center bg-purple-50 rounded-xl dark:bg-purple-900">
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {getTestStatistics().selectedForAI}
+                  </div>
+                  <div className="text-sm text-purple-700 dark:text-purple-300">For AI</div>
+                </div>
+                <div className="p-4 text-center bg-indigo-50 rounded-xl dark:bg-indigo-900">
+                  <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                    {getTestStatistics().successRate}%
+                  </div>
+                  <div className="text-sm text-indigo-700 dark:text-indigo-300">Success Rate</div>
+                </div>
+              </div>
+
+              {/* Test Cards */}
+              <div className="space-y-4">
+                {activeSession.tests.map((test: TestCase) => (
+                  <Card key={test.id} variant="outlined" padding="md" className="border-gray-200 dark:border-gray-600">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                          <FiTarget className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 dark:text-white">
+                            {test.name || `Test ${test.id.slice(0, 8)}`}
+                          </h4>
+                          <div className="flex items-center mt-1 space-x-2">
+                            <TestStatusBadge
+                              status={test.lastResult || null}
+                              size="sm"
+                            />
+                            <Badge
+                              variant="primary"
+                              size="sm"
+                              className={getStatusCodeColor(test.expectedStatus)}
+                            >
+                              Expected: {test.expectedStatus}
+                            </Badge>
+                            {test.includeInAIPrompt !== false && (
+                              <Badge variant="primary" size="sm">
+                                <FiCode className="mr-1 w-3 h-3" />
+                                AI
+                              </Badge>
+                            )}
+                            {test.useToken !== false && (
+                              <Badge variant="info" size="sm">
+                                <FiShield className="mr-1 w-3 h-3" />
+                                Auth
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={expandedTests.has(test.id) ? FiEyeOff : FiEye}
+                          onClick={() => toggleTestExpansion(test.id)}
+                        >
+                          {expandedTests.has(test.id) ? "Hide" : "Details"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Expanded Test Details */}
+                    {expandedTests.has(test.id) && (
+                      <div className="pt-4 mt-4 space-y-4 border-t border-gray-200 dark:border-gray-600">
+                        {/* Path Overrides */}
+                        {test.pathOverrides && Object.keys(test.pathOverrides).length > 0 && (
+                          <div className="p-3 bg-blue-50 rounded-lg dark:bg-blue-900">
+                            <h5 className="mb-2 text-sm font-semibold text-blue-700 dark:text-blue-300">
+                              Path Variable Overrides
+                            </h5>
+                            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                              {Object.entries(test.pathOverrides).map(([key, value]) => (
+                                <div key={key} className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium text-blue-600 dark:text-blue-400">{key}:</span>
+                                  <span className="text-sm text-blue-800 dark:text-blue-200">{value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Query Overrides */}
+                        {test.queryOverrides && Object.keys(test.queryOverrides).length > 0 && (
+                          <div className="p-3 bg-green-50 rounded-lg dark:bg-green-900">
+                            <h5 className="mb-2 text-sm font-semibold text-green-700 dark:text-green-300">
+                              Query Parameter Overrides
+                            </h5>
+                            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                              {Object.entries(test.queryOverrides).map(([key, value]) => (
+                                <div key={key} className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium text-green-600 dark:text-green-400">{key}:</span>
+                                  <span className="text-sm text-green-800 dark:text-green-200">{value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Expected Response */}
+                        {test.expectedResponse && (
+                          <div className="p-3 bg-teal-50 rounded-lg dark:bg-teal-900">
+                            <div className="flex justify-between items-center mb-2">
+                              <h5 className="text-sm font-semibold text-teal-700 dark:text-teal-300">
+                                Expected Response
+                              </h5>
+                              {test.expectedPartialResponse && (
+                                <Badge variant="success" size="sm">Partial Match</Badge>
+                              )}
+                            </div>
+                            <div className="p-2 bg-white rounded border dark:bg-gray-800 dark:border-gray-600">
+                              <pre className="overflow-x-auto text-xs text-teal-800 dark:text-teal-200">
+                                {test.expectedResponse}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Server Response */}
+                        {test.serverResponse && (
+                          <div className="p-3 bg-gray-50 rounded-lg dark:bg-gray-700">
+                            <div className="flex justify-between items-center mb-2">
+                              <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                Server Response
+                              </h5>
+                              {test.serverStatusCode && (
+                                <Badge
+                                  variant={test.serverStatusCode >= 200 && test.serverStatusCode < 300 ? 'success' : 'danger'}
+                                  size="sm"
+                                >
+                                  {test.serverStatusCode}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="p-2 bg-white rounded border dark:bg-gray-800 dark:border-gray-600">
+                              <pre className="overflow-x-auto text-xs text-gray-800 dark:text-gray-200">
+                                {test.serverResponse}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Body Override */}
+                        {test.bodyOverride && (
+                          <div className="p-3 bg-purple-50 rounded-lg dark:bg-purple-900">
+                            <h5 className="mb-2 text-sm font-semibold text-purple-700 dark:text-purple-300">
+                              Request Body Override
+                            </h5>
+                            <div className="p-2 bg-white rounded border dark:bg-gray-800 dark:border-gray-600">
+                              <pre className="overflow-x-auto text-xs text-purple-800 dark:text-purple-200">
+                                {test.bodyOverride}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </Card>
+      )}
+
+      {/* No Tests Section */}
+      {activeSession && (!activeSession.tests || activeSession.tests.length === 0) && (
+        <Card variant="elevated" padding="lg">
+          <div className="flex justify-between items-center mb-6">
+            <SectionHeader
+              title="Test Cases"
+              description="Create test cases to validate your API endpoints"
+              icon={FiTarget}
+              className="mb-0"
+            />
+
+            <Button
+              variant="primary"
+              gradient
+              size="sm"
+              icon={FiPlus}
+              onClick={() => setActiveSection("tests")}
+            >
+              Create Tests
+            </Button>
+          </div>
+
+          <div className="py-12 text-center">
+            <div className="flex justify-center items-center mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full">
+              <FiTarget className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
+              No Test Cases Yet
+            </h3>
+            <p className="mb-6 text-gray-600 dark:text-gray-300">
+              Create test cases to validate your API endpoints and ensure they work correctly.
+            </p>
+            <Button
+              variant="primary"
+              gradient
+              icon={FiPlus}
+              onClick={() => setActiveSection("tests")}
+            >
+              Create Your First Test
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Error Display */}
       {
         error && (
-          <div className="p-4 border border-red-200 bg-gradient-to-r from-red-50 to-red-100 rounded-xl dark:from-red-900 dark:to-red-800 dark:border-red-700">
+          <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200 dark:from-red-900 dark:to-red-800 dark:border-red-700">
             <div className="flex items-center space-x-2">
               <FiAlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
               <span className="font-medium text-red-800 dark:text-red-200">{error}</span>
@@ -1243,7 +1678,7 @@ ${generateRequestBody()}
 
       {/* Generated Output */}
       <Card variant="elevated" padding="lg">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex justify-between items-center mb-6">
           <SectionHeader
             title="Generated Output"
             description="View the generated YAML or JSON specification"
@@ -1282,7 +1717,7 @@ ${generateRequestBody()}
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex justify-between items-center mb-4">
           <div className="flex items-center space-x-2">
             <Button
               variant="primary"

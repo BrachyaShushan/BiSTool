@@ -31,13 +31,20 @@ const SaveControls: React.FC<SaveControlsProps> = ({
 
     return (
         <div className="flex items-center space-x-2">
+
+            {/* Last saved timestamp */}
+            {lastSaved && !hasUnsavedChanges && (
+                <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {formatLastSaved(lastSaved)}
+                </span>
+            )}
             {/* Auto-save/status indicator */}
             {autoSave && (
                 <div className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs ${isSaving
-                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200'
+                    ? 'text-yellow-700 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-200'
                     : hasUnsavedChanges
-                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200'
-                        : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200'
+                        ? 'text-orange-700 bg-orange-100 dark:bg-orange-900 dark:text-orange-200'
+                        : 'text-green-700 bg-green-100 dark:bg-green-900 dark:text-green-200'
                     }`}>
                     {isSaving ? (
                         <>
@@ -61,8 +68,8 @@ const SaveControls: React.FC<SaveControlsProps> = ({
             {/* Manual mode indicator */}
             {!autoSave && (
                 <div className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs ${hasUnsavedChanges
-                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200'
-                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                    ? 'text-orange-700 bg-orange-100 dark:bg-orange-900 dark:text-orange-200'
+                    : 'text-gray-700 bg-gray-100 dark:bg-gray-700 dark:text-gray-300'
                     }`}>
                     {hasUnsavedChanges ? (
                         <>
@@ -78,12 +85,7 @@ const SaveControls: React.FC<SaveControlsProps> = ({
                 </div>
             )}
 
-            {/* Last saved timestamp */}
-            {lastSaved && !hasUnsavedChanges && (
-                <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {formatLastSaved(lastSaved)}
-                </span>
-            )}
+
         </div>
     );
 };

@@ -50,7 +50,8 @@ const TestManager: React.FC = () => {
         passed: tests.filter(test => test.lastResult === 'pass').length,
         failed: tests.filter(test => test.lastResult === 'fail').length,
         notRun: tests.filter(test => !test.lastResult).length,
-        successRate: tests.length > 0 ? Math.round((tests.filter(test => test.lastResult === 'pass').length / tests.length) * 100) : 0
+        successRate: tests.length > 0 ? Math.round((tests.filter(test => test.lastResult === 'pass').length / tests.length) * 100) : 0,
+        selectedForAI: tests.filter(test => test.includeInAIPrompt !== false).length
     };
 
     // Add Test handler
@@ -65,6 +66,7 @@ const TestManager: React.FC = () => {
             name: '',
             expectedStatus: '200',
             expectedResponse: '',
+            includeInAIPrompt: true,
         };
 
         const updatedSession = {
@@ -103,6 +105,22 @@ const TestManager: React.FC = () => {
                 handleRunTest(test);
             }
         });
+    };
+
+    const handleToggleAllForAI = () => {
+        if (!activeSession) return;
+
+        const allSelected = tests.every(test => test.includeInAIPrompt !== false);
+        const updatedTests = tests.map(test => ({
+            ...test,
+            includeInAIPrompt: !allSelected
+        }));
+
+        const updatedSession = {
+            ...activeSession,
+            tests: updatedTests,
+        };
+        handleSaveSession(activeSession.name, updatedSession);
     };
 
     const handleDuplicateTest = (id: string) => {
@@ -408,6 +426,12 @@ const TestManager: React.FC = () => {
                                 {testStats.notRun} tests not run
                             </Badge>
                         )}
+                        {testStats.selectedForAI > 0 && (
+                            <Badge variant="primary" size="sm">
+                                <FiCode className="w-3 h-3 mr-1" />
+                                {testStats.selectedForAI} tests for AI
+                            </Badge>
+                        )}
                     </div>
                 </div>
 
@@ -442,6 +466,17 @@ const TestManager: React.FC = () => {
                         fullWidth
                     >
                         Run Failed Tests
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        size="lg"
+                        icon={FiCode}
+                        onClick={handleToggleAllForAI}
+                        disabled={tests.length === 0}
+                        fullWidth
+                    >
+                        {testStats.selectedForAI === tests.length ? 'Deselect All for AI' : 'Select All for AI'}
                     </Button>
 
                     <Button
