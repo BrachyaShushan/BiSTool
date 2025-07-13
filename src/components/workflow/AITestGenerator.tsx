@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppContext } from "../../context/AppContext";
-import { useTokenContext } from "../../context/TokenContext";
 import { useAIConfigContext } from "../../context/AIConfigContext";
 import { useProjectContext } from "../../context/ProjectContext";
 import Editor from "@monaco-editor/react";
@@ -36,41 +35,21 @@ import {
   FiLayers,
   FiTarget,
   FiTrendingUp,
-  FiMonitor,
-  FiWifi,
-  FiCloud,
-  FiPackage,
-  FiGitBranch,
   FiShield,
   FiFileText,
-  FiPlus,
-  FiTrash2,
   FiCheckCircle,
   FiX,
-  FiArrowRight,
   FiClock,
   FiStar,
   FiAward,
-  FiBookOpen,
   FiCommand,
-  FiTerminal,
-  FiGrid,
   FiList,
-  FiHash,
-  FiTag,
-  FiKey,
-  FiMail,
-  FiType,
   FiExternalLink,
   FiInfo,
-  FiAlertTriangle,
   FiHelpCircle,
   FiTool,
-  FiBox,
   FiArchive,
-  FiFolder,
   FiFile,
-  FiHardDrive,
   FiShare,
 } from 'react-icons/fi';
 import { aiProviderRegistry, validateAIConfig } from "../../utils/aiProviders";
@@ -79,14 +58,11 @@ import PromptConfigPanel from "./PromptConfigPanel";
 import {
   Button,
   Card,
-  Input,
   Textarea,
   Badge,
   IconButton,
   Toggle,
-  Select,
-  SectionHeader,
-  MonacoEditor
+  Select
 } from "../ui";
 import {
   PROGRAMMING_LANGUAGES,
@@ -95,15 +71,12 @@ import {
   TEST_STYLES,
   CODE_STYLES,
   AUTHENTICATION_TYPES,
-  PROMPT_TEMPLATES,
-  STORAGE_KEYS,
-  DEFAULT_CONFIG_TEMPLATES
+  PROMPT_TEMPLATES
 } from "../../constants/aiTestGenerator";
 
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
   const { activeSession, handleSaveSession, openUnifiedManager } = useAppContext();
-  const { tokenConfig } = useTokenContext();
   const { aiConfig, setAIConfig } = useAIConfigContext();
   const { currentProject } = useProjectContext();
 

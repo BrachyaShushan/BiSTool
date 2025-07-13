@@ -3,8 +3,8 @@ import { useProjectContext, useProjectSwitch } from "../../context/ProjectContex
 import {
     FiFolder, FiPlus, FiGlobe, FiCode, FiZap, FiDatabase, FiUsers, FiArrowRight,
     FiCheckCircle, FiPlay, FiBookOpen, FiShield, FiTrendingUp, FiSettings,
-    FiMonitor, FiSmartphone, FiLayers, FiActivity, FiTarget, FiAward, FiStar,
-    FiClock, FiBarChart, FiGitBranch, FiCloud, FiLock, FiRefreshCw, FiGrid,
+    FiMonitor, FiLayers, FiActivity, FiTarget, FiAward, FiStar,
+    FiClock, FiBarChart, FiGitBranch, FiRefreshCw, FiGrid,
     FiCommand, FiTerminal, FiPackage, FiServer, FiCpu, FiWifi, FiEye, FiEdit3
 } from "react-icons/fi";
 import { Button, Badge, Card } from "../ui";
@@ -224,17 +224,17 @@ const WelcomeScreen: React.FC = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900">
             {/* Enhanced Background Pattern */}
-            <div className="overflow-hidden absolute inset-0">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-5 animate-pulse translate-x-48 -translate-y-48"></div>
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full opacity-5 animate-pulse -translate-x-48 translate-y-48" style={{ animationDelay: '2s' }}></div>
-                <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full opacity-5 animate-pulse -translate-x-32 -translate-y-32" style={{ animationDelay: '4s' }}></div>
-                <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-gradient-to-br from-orange-500 to-red-600 rounded-full opacity-5 animate-pulse" style={{ animationDelay: '1s' }}></div>
+            <div className="overflow-hidden fixed inset-0">
+                <div className="fixed top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-5 animate-pulse translate-x-48 -translate-y-48"></div>
+                <div className="fixed bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full opacity-5 animate-pulse -translate-x-48 translate-y-48" style={{ animationDelay: '2s' }}></div>
+                <div className="fixed top-1/2 left-1/2 w-64 h-64 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full opacity-5 animate-pulse -translate-x-32 -translate-y-32" style={{ animationDelay: '4s' }}></div>
+                <div className="fixed top-1/4 left-1/4 w-32 h-32 bg-gradient-to-br from-orange-500 to-red-600 rounded-full opacity-5 animate-pulse" style={{ animationDelay: '1s' }}></div>
             </div>
 
             <div className="relative px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 {/* Enhanced Header Section */}
                 <div className="mb-12 text-center">
-                    <div className="inline-flex justify-center items-center p-6 mb-8 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-3xl shadow-2xl animate-pulse">
+                    <div className="inline-flex justify-center items-center p-6 mb-8 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-3xl shadow-2xl">
                         <FiZap className="w-16 h-16 text-white" />
                     </div>
                     <h1 className="mb-6 text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
