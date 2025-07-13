@@ -3,6 +3,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useAppContext } from "../../context/AppContext";
 import { useAIConfigContext } from "../../context/AIConfigContext";
 import { useProjectContext } from "../../context/ProjectContext";
+import { usePromptConfigContext } from "../../context/PromptConfigContext";
 import Editor from "@monaco-editor/react";
 import {
   AITestGeneratorProps,
@@ -51,6 +52,8 @@ import {
   FiArchive,
   FiFile,
   FiShare,
+  FiBookmark,
+  FiBookOpen,
 } from 'react-icons/fi';
 import { aiProviderRegistry, validateAIConfig } from "../../utils/aiProviders";
 import AIConfigPanel from "./AIConfigPanel";
@@ -74,11 +77,14 @@ import {
   PROMPT_TEMPLATES
 } from "../../constants/aiTestGenerator";
 
+
+
 const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { isDarkMode } = useTheme();
   const { activeSession, handleSaveSession, openUnifiedManager } = useAppContext();
   const { aiConfig, setAIConfig } = useAIConfigContext();
   const { currentProject } = useProjectContext();
+  const { templates: customTemplates } = usePromptConfigContext();
 
   // Enhanced state management
   const [requirements, setRequirements] = useState<string>("");
@@ -99,6 +105,9 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const editorRef = useRef<EditorRef["current"]>(null);
   const [lastYamlData, setLastYamlData] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<{ id: string; name: string } | null>(null);
+
+  // Template management
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
 
   // Enhanced tracking
   const [generationHistory, setGenerationHistory] = useState<Array<{
@@ -199,6 +208,50 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
       }
     };
   }, []);
+
+  // Templates are now managed by PromptConfigContext
+  // No need to load them manually here
+
+  // Apply selected template to configuration
+  const applyTemplate = (templateId: string) => {
+    const template = customTemplates.find(t => t.id === templateId);
+    if (template) {
+      setTestConfig(prev => ({
+        ...prev,
+        language: template.language as any,
+        testFramework: template.framework as any,
+        apiEnvironment: template.environment as any,
+        promptConfig: {
+          ...prev.promptConfig,
+          customTemplates: {
+            ...prev.promptConfig.customTemplates,
+            [template.id]: template.content
+          }
+        }
+      }));
+      setSelectedTemplate(templateId);
+    }
+  };
+
+  // Get template options for selector
+  const getTemplateOptions = () => {
+    const options = [
+      { value: "", label: "No Template (Default)" }
+    ];
+
+    // Add custom templates
+    customTemplates.forEach(template => {
+      options.push({
+        value: template.id,
+        label: `${template.name} (${template.language}/${template.framework})`
+      });
+    });
+
+    return options;
+  };
+
+  // Templates are automatically managed by PromptConfigContext
+  // No need for manual refresh
 
   // Check if there's an active session
   if (!activeSession) {
@@ -326,6 +379,9 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
     const languageTemplate = PROMPT_TEMPLATES[testConfig.language as keyof typeof PROMPT_TEMPLATES];
     const frameworkTemplate = languageTemplate?.[testConfig.testFramework as keyof typeof languageTemplate];
 
+    // Get custom template if selected
+    const customTemplate = selectedTemplate ? testConfig.promptConfig.customTemplates[selectedTemplate] : null;
+
     const authInfo = selectedAuthType
       ? `\nAuthentication: This API uses ${selectedAuthType.name} authentication. ${selectedAuthType.implementation}`
       : '\nAuthentication: This API does not require authentication.';
@@ -357,6 +413,8 @@ IMPORTANT: Your generated tests should cover all the scenarios above and expand 
     // Build enhanced prompt with configuration
     const enhancedPrompt = `
 ${testConfig.promptConfig.preInstructions ? `PRE-INSTRUCTIONS:\n${testConfig.promptConfig.preInstructions}\n\n` : ''}
+
+${customTemplate ? `CUSTOM TEMPLATE:\n${customTemplate}\n\n` : ''}
 
 Create comprehensive ${testConfig.testStyle.toUpperCase()} tests for the following ${selectedEnvironment?.name || 'API'} endpoint using ${selectedLanguage?.name || 'Python'} and ${selectedFramework?.name || 'pytest'}:
 
@@ -1091,6 +1149,16 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                 </span>
               </div>
             )}
+
+            {/* Custom Template Indicator */}
+            {selectedTemplate && (
+              <div className="flex items-center px-4 py-2 space-x-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl dark:from-blue-900 dark:to-blue-800">
+                <FiBookmark className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                  {customTemplates.find(t => t.id === selectedTemplate)?.name || 'Custom Template'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1141,6 +1209,138 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
           </div>
 
           <div className="space-y-6">
+            {/* Template Selection */}
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <FiBookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                    Custom Template Selection
+                  </h4>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="secondary"
+                    icon={FiBookmark}
+                    onClick={() => setShowPromptConfig(true)}
+                    size="sm"
+                  >
+                    Manage Templates
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    icon={FiRefreshCw}
+                    onClick={() => {
+                      // Templates are automatically managed by context
+                      // Just show a success message
+                      console.log('Templates are automatically managed by PromptConfigContext');
+                    }}
+                    size="sm"
+                  >
+                    Refresh
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    icon={FiX}
+                    onClick={() => {
+                      setSelectedTemplate("");
+                      setTestConfig(prev => ({
+                        ...prev,
+                        promptConfig: {
+                          ...prev.promptConfig,
+                          customTemplates: {}
+                        }
+                      }));
+                    }}
+                    size="sm"
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-blue-700 dark:text-blue-300">
+                    Select Custom Template
+                  </label>
+                  <Select
+                    value={selectedTemplate}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        applyTemplate(value);
+                      } else {
+                        setSelectedTemplate("");
+                        setTestConfig(prev => ({
+                          ...prev,
+                          promptConfig: {
+                            ...prev.promptConfig,
+                            customTemplates: {}
+                          }
+                        }));
+                      }
+                    }}
+                    options={getTemplateOptions()}
+                    fullWidth
+                  />
+                  {selectedTemplate && (
+                    <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                      Template applied: {customTemplates.find(t => t.id === selectedTemplate)?.name}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-blue-700 dark:text-blue-300">
+                    Template Preview
+                  </label>
+                  <div className="p-3 bg-white dark:bg-gray-700 rounded-lg border border-blue-200 dark:border-blue-600 min-h-[60px]">
+                    {selectedTemplate ? (
+                      <div className="text-sm text-gray-700 dark:text-gray-300">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <FiBookmark className="w-4 h-4 text-blue-500" />
+                          <span className="font-medium">
+                            {customTemplates.find(t => t.id === selectedTemplate)?.name}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                          {customTemplates.find(t => t.id === selectedTemplate)?.description}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                        <FiBookOpen className="w-4 h-4 mr-2" />
+                        No template selected
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {selectedTemplate && (
+                <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FiInfo className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                      Template Configuration Applied
+                    </span>
+                  </div>
+                  <div className="grid gap-2 text-xs text-blue-700 dark:text-blue-300 md:grid-cols-3">
+                    <div>
+                      <span className="font-medium">Language:</span> {customTemplates.find(t => t.id === selectedTemplate)?.language}
+                    </div>
+                    <div>
+                      <span className="font-medium">Framework:</span> {customTemplates.find(t => t.id === selectedTemplate)?.framework}
+                    </div>
+                    <div>
+                      <span className="font-medium">Environment:</span> {customTemplates.find(t => t.id === selectedTemplate)?.environment}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Language and Framework Selection */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div>
@@ -1666,6 +1866,14 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                         </span>
                       </div>
                     )}
+                    {selectedTemplate && (
+                      <div className="flex items-center space-x-2">
+                        <FiBookmark className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm text-blue-700 dark:text-blue-300">
+                          Custom Template
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Code Quality Indicator */}
@@ -1736,12 +1944,14 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
         {/* Prompt Configuration Panel */}
         <PromptConfigPanel
           isOpen={showPromptConfig}
-          onClose={() => setShowPromptConfig(false)}
+          onClose={() => {
+            setShowPromptConfig(false);
+            // Templates are automatically managed by PromptConfigContext
+          }}
           onConfigChange={(config) => setTestConfig(prev => ({
             ...prev,
             promptConfig: config
           }))}
-          currentConfig={testConfig.promptConfig}
         />
 
         {/* Status Dashboard */}

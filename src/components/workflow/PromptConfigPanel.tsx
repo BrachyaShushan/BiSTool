@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useProjectContext } from '../../context/ProjectContext';
+import { usePromptConfigContext } from '../../context/PromptConfigContext';
 import {
-    FiSettings, FiSave, FiEdit3, FiEye, FiEyeOff, FiPlus, FiTrash2,
+    FiSettings, FiEdit3, FiEye, FiEyeOff, FiPlus, FiTrash2,
     FiCode, FiFileText, FiDatabase, FiGlobe, FiShield, FiZap,
     FiCheck, FiX, FiCopy, FiDownload, FiUpload
 } from 'react-icons/fi';
@@ -9,6 +10,7 @@ import {
     Button, Card, Input, Textarea, Badge, IconButton,
     SectionHeader, Toggle, Select
 } from '../ui';
+import Modal from '../core/Modal';
 import {
     PROGRAMMING_LANGUAGES,
     TEST_FRAMEWORKS,
@@ -16,60 +18,40 @@ import {
     TEST_STYLES,
     CODE_STYLES,
     AUTHENTICATION_TYPES,
-    PROMPT_TEMPLATES,
-    STORAGE_KEYS
+    PROMPT_TEMPLATES
 } from '../../constants/aiTestGenerator';
 
 interface PromptConfigPanelProps {
     isOpen: boolean;
     onClose: () => void;
     onConfigChange: (config: any) => void;
-    currentConfig?: any;
-}
-
-interface PromptTemplate {
-    id: string;
-    name: string;
-    description: string;
-    language: string;
-    framework: string;
-    environment: string;
-    content: string;
-    isDefault: boolean;
-    createdAt: string;
-    updatedAt: string;
 }
 
 const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
     isOpen,
     onClose,
-    onConfigChange,
-    currentConfig
+    onConfigChange
 }) => {
     const { currentProject } = useProjectContext();
+    const {
+        config,
+        templates,
+        updateConfig,
+        addTemplate,
+        updateTemplate,
+        deleteTemplate,
+        exportConfig: exportConfigFromContext,
+        importConfig: importConfigFromContext,
+        isLoading,
+        error
+    } = usePromptConfigContext();
+
     const [activeTab, setActiveTab] = useState<'general' | 'templates' | 'advanced'>('general');
     const [isEditing, setIsEditing] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
 
-    // Configuration state
-    const [config, setConfig] = useState({
-        preInstructions: currentConfig?.promptConfig?.preInstructions || '',
-        postInstructions: currentConfig?.promptConfig?.postInstructions || '',
-        languageSpecificPrompts: currentConfig?.promptConfig?.languageSpecificPrompts || {},
-        frameworkSpecificPrompts: currentConfig?.promptConfig?.frameworkSpecificPrompts || {},
-        environmentSpecificPrompts: currentConfig?.promptConfig?.environmentSpecificPrompts || {},
-        qualityGates: {
-            minTestCases: currentConfig?.promptConfig?.qualityGates?.minTestCases || 5,
-            maxTestCases: currentConfig?.promptConfig?.qualityGates?.maxTestCases || 50,
-            requiredAssertions: currentConfig?.promptConfig?.qualityGates?.requiredAssertions || ['status_code', 'response_time'],
-            forbiddenPatterns: currentConfig?.promptConfig?.qualityGates?.forbiddenPatterns || ['sleep', 'hardcoded_values']
-        },
-        customTemplates: currentConfig?.promptConfig?.customTemplates || {}
-    });
-
     // Template management
-    const [templates, setTemplates] = useState<PromptTemplate[]>([]);
-    const [editingTemplate, setEditingTemplate] = useState<PromptTemplate | null>(null);
+    const [editingTemplate, setEditingTemplate] = useState<any>(null);
     const [newTemplate, setNewTemplate] = useState({
         name: '',
         description: '',
@@ -82,43 +64,9 @@ const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
         content: ''
     });
 
-    // Load saved configuration from project storage
-    useEffect(() => {
-        if (currentProject) {
-            const savedConfig = localStorage.getItem(`${STORAGE_KEYS.PROMPT_TEMPLATES}_${currentProject.id}`);
-            if (savedConfig) {
-                try {
-                    const parsed = JSON.parse(savedConfig);
-                    setConfig(prev => ({ ...prev, ...parsed }));
-                } catch (error) {
-                    console.error('Failed to load saved prompt config:', error);
-                }
-            }
-        }
-    }, [currentProject]);
-
-    // Save configuration to project storage
-    const saveConfig = () => {
-        if (currentProject) {
-            try {
-                localStorage.setItem(
-                    `${STORAGE_KEYS.PROMPT_TEMPLATES}_${currentProject.id}`,
-                    JSON.stringify(config)
-                );
-                onConfigChange({
-                    ...currentConfig,
-                    promptConfig: config
-                });
-                setIsEditing(false);
-            } catch (error) {
-                console.error('Failed to save prompt config:', error);
-            }
-        }
-    };
-
     // Export configuration
     const exportConfig = () => {
-        const dataStr = JSON.stringify(config, null, 2);
+        const dataStr = exportConfigFromContext();
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
         const link = document.createElement('a');
@@ -135,8 +83,8 @@ const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const imported = JSON.parse(e.target?.result as string);
-                    setConfig(imported);
+                    const configData = e.target?.result as string;
+                    importConfigFromContext(configData);
                 } catch (error) {
                     console.error('Failed to import config:', error);
                 }
@@ -146,9 +94,9 @@ const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
     };
 
     // Add new template
-    const addTemplate = () => {
+    const handleAddTemplate = () => {
         if (newTemplate.name && newTemplate.content) {
-            const template: PromptTemplate = {
+            const template = {
                 id: `template_${Date.now()}`,
                 name: newTemplate.name,
                 description: newTemplate.description,
@@ -161,14 +109,7 @@ const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
                 updatedAt: new Date().toISOString()
             };
 
-            setTemplates(prev => [...prev, template]);
-            setConfig(prev => ({
-                ...prev,
-                customTemplates: {
-                    ...prev.customTemplates,
-                    [template.id]: template.content
-                }
-            }));
+            addTemplate(template);
 
             // Reset form
             setNewTemplate({
@@ -186,12 +127,8 @@ const PromptConfigPanel: React.FC<PromptConfigPanelProps> = ({
     };
 
     // Delete template
-    const deleteTemplate = (templateId: string) => {
-        setTemplates(prev => prev.filter(t => t.id !== templateId));
-        setConfig(prev => {
-            const { [templateId]: removed, ...rest } = prev.customTemplates;
-            return { ...prev, customTemplates: rest };
-        });
+    const handleDeleteTemplate = (templateId: string) => {
+        deleteTemplate(templateId);
     };
 
     // Get available frameworks for selected language
@@ -214,68 +151,97 @@ Template Content:
 ${newTemplate.content}`;
     };
 
-    if (!isOpen) return null;
+    // Modal title component
+    const modalTitle = (
+        <div className="flex items-center space-x-3">
+            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl">
+                <FiSettings className="w-6 h-6 text-white" />
+            </div>
+            <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Prompt Configuration
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">
+                    Configure AI test generation prompts and templates
+                </p>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="flex fixed inset-0 z-50 justify-center items-center backdrop-blur-sm bg-black/50">
-            <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl dark:bg-gray-800">
-                {/* Header */}
-                <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl">
-                            <FiSettings className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                Prompt Configuration
-                            </h2>
-                            <p className="text-gray-600 dark:text-gray-400">
-                                Configure AI test generation prompts and templates
-                            </p>
-                        </div>
+        <>
+            <Modal
+                isOpen={isOpen}
+                onClose={onClose}
+                onSave={() => {
+                    onConfigChange(config);
+                    setIsEditing(false);
+                }}
+                title={modalTitle}
+                size="6xl"
+                showSaveButton={isEditing}
+                showCancelButton={true}
+                saveButtonText="Save Configuration"
+                cancelButtonText="Cancel"
+            >
+                {/* Header Actions */}
+                <div className="flex justify-end items-center mb-4 space-x-2">
+                    <div className="flex items-center px-3 py-1 space-x-1 bg-blue-50 rounded-lg dark:bg-blue-900/20">
+                        <FiDatabase className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                            {currentProject?.name || 'Default'} Config
+                        </span>
                     </div>
-
-                    <div className="flex items-center space-x-2">
-                        <div className="flex items-center px-3 py-1 space-x-1 bg-blue-50 rounded-lg dark:bg-blue-900/20">
-                            <FiDatabase className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                                {currentProject?.name || 'Default'} Config
-                            </span>
-                        </div>
+                    <Button
+                        variant="secondary"
+                        icon={FiDownload}
+                        onClick={exportConfig}
+                        size="sm"
+                    >
+                        Export
+                    </Button>
+                    <label className="cursor-pointer">
+                        <input
+                            type="file"
+                            accept=".json"
+                            onChange={importConfig}
+                            className="hidden"
+                        />
                         <Button
                             variant="secondary"
-                            icon={FiDownload}
-                            onClick={exportConfig}
+                            icon={FiUpload}
                             size="sm"
                         >
-                            Export
+                            Import
                         </Button>
-                        <label className="cursor-pointer">
-                            <input
-                                type="file"
-                                accept=".json"
-                                onChange={importConfig}
-                                className="hidden"
-                            />
-                            <Button
-                                variant="secondary"
-                                icon={FiUpload}
-                                size="sm"
-                            >
-                                Import
-                            </Button>
-                        </label>
-                        <IconButton
-                            icon={FiX}
-                            onClick={onClose}
-                            variant="ghost"
-                            size="lg"
-                        />
-                    </div>
+                    </label>
                 </div>
 
+                {/* Error Display */}
+                {error && (
+                    <div className="p-4 mb-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl border border-red-200 dark:from-red-900 dark:to-red-800 dark:border-red-700">
+                        <div className="flex items-center space-x-3">
+                            <FiX className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            <div>
+                                <h4 className="text-sm font-semibold text-red-800 dark:text-red-200">Configuration Error</h4>
+                                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Loading Indicator */}
+                {isLoading && (
+                    <div className="p-4 mb-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
+                        <div className="flex items-center space-x-3">
+                            <FiSettings className="w-5 h-5 text-blue-600 animate-spin dark:text-blue-400" />
+                            <span className="text-sm text-blue-700 dark:text-blue-300">Loading configuration...</span>
+                        </div>
+                    </div>
+                )}
+
                 {/* Tab Navigation */}
-                <div className="flex border-b border-gray-200 dark:border-gray-700">
+                <div className="flex mb-6 border-b border-gray-200 dark:border-gray-700">
                     {[
                         { id: 'general', label: 'General', icon: FiSettings },
                         { id: 'templates', label: 'Templates', icon: FiFileText },
@@ -296,7 +262,7 @@ ${newTemplate.content}`;
                 </div>
 
                 {/* Content */}
-                <div className="p-6">
+                <div className="space-y-6">
                     {activeTab === 'general' && (
                         <div className="space-y-6">
                             {/* Pre-Instructions */}
@@ -317,10 +283,9 @@ ${newTemplate.content}`;
                                     </div>
                                     <Textarea
                                         value={config.preInstructions}
-                                        onChange={(e) => setConfig(prev => ({
-                                            ...prev,
+                                        onChange={(e) => updateConfig({
                                             preInstructions: e.target.value
-                                        }))}
+                                        })}
                                         placeholder="Enter pre-instructions that will be included before the main AI prompt..."
                                         rows={4}
                                         fullWidth
@@ -350,10 +315,9 @@ ${newTemplate.content}`;
                                     </div>
                                     <Textarea
                                         value={config.postInstructions}
-                                        onChange={(e) => setConfig(prev => ({
-                                            ...prev,
+                                        onChange={(e) => updateConfig({
                                             postInstructions: e.target.value
-                                        }))}
+                                        })}
                                         placeholder="Enter post-instructions that will be included after the main AI prompt..."
                                         rows={4}
                                         fullWidth
@@ -390,13 +354,12 @@ ${newTemplate.content}`;
                                             <Input
                                                 type="number"
                                                 value={config.qualityGates.minTestCases}
-                                                onChange={(e) => setConfig(prev => ({
-                                                    ...prev,
+                                                onChange={(e) => updateConfig({
                                                     qualityGates: {
-                                                        ...prev.qualityGates,
+                                                        ...config.qualityGates,
                                                         minTestCases: parseInt(e.target.value) || 0
                                                     }
-                                                }))}
+                                                })}
                                                 min="1"
                                                 max="100"
                                                 disabled={!isEditing}
@@ -410,13 +373,12 @@ ${newTemplate.content}`;
                                             <Input
                                                 type="number"
                                                 value={config.qualityGates.maxTestCases}
-                                                onChange={(e) => setConfig(prev => ({
-                                                    ...prev,
+                                                onChange={(e) => updateConfig({
                                                     qualityGates: {
-                                                        ...prev.qualityGates,
+                                                        ...config.qualityGates,
                                                         maxTestCases: parseInt(e.target.value) || 0
                                                     }
-                                                }))}
+                                                })}
                                                 min="1"
                                                 max="200"
                                                 disabled={!isEditing}
@@ -434,15 +396,14 @@ ${newTemplate.content}`;
                                                     key={assertion}
                                                     checked={config.qualityGates.requiredAssertions.includes(assertion)}
                                                     onChange={(checked) => {
-                                                        setConfig(prev => ({
-                                                            ...prev,
+                                                        updateConfig({
                                                             qualityGates: {
-                                                                ...prev.qualityGates,
+                                                                ...config.qualityGates,
                                                                 requiredAssertions: checked
-                                                                    ? [...prev.qualityGates.requiredAssertions, assertion]
-                                                                    : prev.qualityGates.requiredAssertions.filter((a: string) => a !== assertion)
+                                                                    ? [...config.qualityGates.requiredAssertions, assertion]
+                                                                    : config.qualityGates.requiredAssertions.filter((a: string) => a !== assertion)
                                                             }
-                                                        }));
+                                                        });
                                                     }}
                                                     label={assertion.replace('_', ' ')}
                                                     disabled={!isEditing}
@@ -670,7 +631,7 @@ ${newTemplate.content}`;
                                         <Button
                                             variant="primary"
                                             icon={FiPlus}
-                                            onClick={addTemplate}
+                                            onClick={handleAddTemplate}
                                             disabled={!newTemplate.name || !newTemplate.content}
                                         >
                                             Create Template
@@ -759,7 +720,7 @@ ${newTemplate.content}`;
                                                             />
                                                             <IconButton
                                                                 icon={FiTrash2}
-                                                                onClick={() => deleteTemplate(template.id)}
+                                                                onClick={() => handleDeleteTemplate(template.id)}
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 className="text-red-500 hover:text-red-700"
@@ -804,13 +765,12 @@ ${newTemplate.content}`;
                                                 </div>
                                                 <Textarea
                                                     value={config.languageSpecificPrompts[language.id] || ''}
-                                                    onChange={(e) => setConfig(prev => ({
-                                                        ...prev,
+                                                    onChange={(e) => updateConfig({
                                                         languageSpecificPrompts: {
-                                                            ...prev.languageSpecificPrompts,
+                                                            ...config.languageSpecificPrompts,
                                                             [language.id]: e.target.value
                                                         }
-                                                    }))}
+                                                    })}
                                                     placeholder={`Enter custom prompts for ${language.name}...`}
                                                     rows={3}
                                                     fullWidth
@@ -846,13 +806,12 @@ ${newTemplate.content}`;
                                                 </div>
                                                 <Textarea
                                                     value={config.frameworkSpecificPrompts[id] || ''}
-                                                    onChange={(e) => setConfig(prev => ({
-                                                        ...prev,
+                                                    onChange={(e) => updateConfig({
                                                         frameworkSpecificPrompts: {
-                                                            ...prev.frameworkSpecificPrompts,
+                                                            ...config.frameworkSpecificPrompts,
                                                             [id]: e.target.value
                                                         }
-                                                    }))}
+                                                    })}
                                                     placeholder={`Enter custom prompts for ${framework.name}...`}
                                                     rows={3}
                                                     fullWidth
@@ -867,121 +826,80 @@ ${newTemplate.content}`;
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="flex justify-between items-center p-6 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center space-x-2">
-                        <Toggle
-                            checked={isEditing}
-                            onChange={setIsEditing}
-                            label="Edit Mode"
-                            colorScheme="purple"
-                        />
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                        <Button
-                            variant="secondary"
-                            onClick={onClose}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="primary"
-                            icon={FiSave}
-                            onClick={saveConfig}
-                            disabled={!isEditing}
-                        >
-                            Save Configuration
-                        </Button>
-                    </div>
+                {/* Edit Mode Toggle */}
+                <div className="flex justify-start items-center pt-4 mt-6 border-t border-gray-200 dark:border-gray-700">
+                    <Toggle
+                        checked={isEditing}
+                        onChange={setIsEditing}
+                        label="Edit Mode"
+                        colorScheme="purple"
+                    />
                 </div>
-            </div>
+            </Modal>
 
             {/* Edit Template Modal */}
             {editingTemplate && (
-                <div className="flex fixed inset-0 justify-center items-center backdrop-blur-sm z-60 bg-black/50">
-                    <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl dark:bg-gray-800">
-                        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Edit Template: {editingTemplate.name}
-                            </h3>
-                            <IconButton
-                                icon={FiX}
-                                onClick={() => setEditingTemplate(null)}
-                                variant="ghost"
-                                size="lg"
+                <Modal
+                    isOpen={!!editingTemplate}
+                    onClose={() => setEditingTemplate(null)}
+                    onSave={() => {
+                        if (editingTemplate) {
+                            updateTemplate(editingTemplate.id, editingTemplate);
+                            setEditingTemplate(null);
+                        }
+                    }}
+                    title={`Edit Template: ${editingTemplate?.name}`}
+                    size="2xl"
+                    showSaveButton={true}
+                    showCancelButton={true}
+                    saveButtonText="Save Changes"
+                    cancelButtonText="Cancel"
+                >
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Template Name
+                            </label>
+                            <Input
+                                value={editingTemplate?.name || ''}
+                                onChange={(e) => setEditingTemplate((prev: any) => prev ? {
+                                    ...prev,
+                                    name: e.target.value
+                                } : null)}
+                                fullWidth
                             />
                         </div>
-                        <div className="p-6">
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Template Name
-                                    </label>
-                                    <Input
-                                        value={editingTemplate.name}
-                                        onChange={(e) => setEditingTemplate(prev => prev ? {
-                                            ...prev,
-                                            name: e.target.value
-                                        } : null)}
-                                        fullWidth
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Description
-                                    </label>
-                                    <Input
-                                        value={editingTemplate.description}
-                                        onChange={(e) => setEditingTemplate(prev => prev ? {
-                                            ...prev,
-                                            description: e.target.value
-                                        } : null)}
-                                        fullWidth
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Content
-                                    </label>
-                                    <Textarea
-                                        value={editingTemplate.content}
-                                        onChange={(e) => setEditingTemplate(prev => prev ? {
-                                            ...prev,
-                                            content: e.target.value
-                                        } : null)}
-                                        rows={6}
-                                        fullWidth
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex justify-end mt-6 space-x-2">
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => setEditingTemplate(null)}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    variant="primary"
-                                    icon={FiSave}
-                                    onClick={() => {
-                                        if (editingTemplate) {
-                                            setTemplates(prev => prev.map(t =>
-                                                t.id === editingTemplate.id ? editingTemplate : t
-                                            ));
-                                            setEditingTemplate(null);
-                                        }
-                                    }}
-                                >
-                                    Save Changes
-                                </Button>
-                            </div>
+                        <div>
+                            <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Description
+                            </label>
+                            <Input
+                                value={editingTemplate?.description || ''}
+                                onChange={(e) => setEditingTemplate((prev: any) => prev ? {
+                                    ...prev,
+                                    description: e.target.value
+                                } : null)}
+                                fullWidth
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Content
+                            </label>
+                            <Textarea
+                                value={editingTemplate?.content || ''}
+                                onChange={(e) => setEditingTemplate((prev: any) => prev ? {
+                                    ...prev,
+                                    content: e.target.value
+                                } : null)}
+                                rows={6}
+                                fullWidth
+                            />
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
-        </div>
+        </>
     );
 };
 

@@ -20,6 +20,7 @@ import UnifiedManager from "./components/navigation/UnifiedManager";
 import { VariablesProvider } from "./context/VariablesContext";
 import { TokenProvider } from "./context/TokenContext";
 import { URLBuilderProvider } from "./context/URLBuilderContext";
+import { PromptConfigProvider } from "./context/PromptConfigContext";
 
 const AppContent: React.FC = () => {
     const {
@@ -209,9 +210,11 @@ const AppContentWrapper: React.FC = () => {
                         currentProjectId={currentProject?.id || null}
                         forceReload={forceReload}
                     >
-                        <URLBuilderProvider>
-                            <AppContent />
-                        </URLBuilderProvider>
+                        <PromptConfigProvider>
+                            <URLBuilderProvider>
+                                <AppContent />
+                            </URLBuilderProvider>
+                        </PromptConfigProvider>
                     </TokenProvider>
                 </VariablesProvider>
             </AppProvider>
