@@ -84,7 +84,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const { activeSession, handleSaveSession, openUnifiedManager } = useAppContext();
   const { aiConfig, setAIConfig } = useAIConfigContext();
   const { currentProject } = useProjectContext();
-  const { templates: customTemplates } = usePromptConfigContext();
+  const { templates: customTemplates, selectedTemplate, setSelectedTemplate } = usePromptConfigContext();
 
   // Enhanced state management
   const [requirements, setRequirements] = useState<string>("");
@@ -106,8 +106,7 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
   const [lastYamlData, setLastYamlData] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<{ id: string; name: string } | null>(null);
 
-  // Template management
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  // Template management is now handled by PromptConfigContext
 
   // Enhanced tracking
   const [generationHistory, setGenerationHistory] = useState<Array<{
@@ -249,6 +248,13 @@ const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
 
     return options;
   };
+
+  // Apply selected template when it changes
+  useEffect(() => {
+    if (selectedTemplate) {
+      applyTemplate(selectedTemplate);
+    }
+  }, [selectedTemplate, customTemplates]);
 
   // Templates are automatically managed by PromptConfigContext
   // No need for manual refresh
@@ -1211,7 +1217,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
           <div className="space-y-6">
             {/* Template Selection */}
             <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 dark:from-blue-900 dark:to-blue-800 dark:border-blue-700">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center space-x-3">
                   <FiBookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200">
@@ -1298,7 +1304,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                   <div className="p-3 bg-white dark:bg-gray-700 rounded-lg border border-blue-200 dark:border-blue-600 min-h-[60px]">
                     {selectedTemplate ? (
                       <div className="text-sm text-gray-700 dark:text-gray-300">
-                        <div className="flex items-center space-x-2 mb-2">
+                        <div className="flex items-center mb-2 space-x-2">
                           <FiBookmark className="w-4 h-4 text-blue-500" />
                           <span className="font-medium">
                             {customTemplates.find(t => t.id === selectedTemplate)?.name}
@@ -1309,8 +1315,8 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                         </p>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                        <FiBookOpen className="w-4 h-4 mr-2" />
+                      <div className="flex justify-center items-center text-sm text-gray-500 dark:text-gray-400">
+                        <FiBookOpen className="mr-2 w-4 h-4" />
                         No template selected
                       </div>
                     )}
@@ -1319,8 +1325,8 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
               </div>
 
               {selectedTemplate && (
-                <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
-                  <div className="flex items-center space-x-2 mb-2">
+                <div className="p-3 mt-4 bg-blue-100 rounded-lg border border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
+                  <div className="flex items-center mb-2 space-x-2">
                     <FiInfo className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
                       Template Configuration Applied
@@ -1558,7 +1564,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
 
             {/* Quick Actions Panel */}
             <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 dark:from-gray-700 dark:to-gray-800 dark:border-gray-600">
-              <div className="flex items-center space-x-3 mb-4">
+              <div className="flex items-center mb-4 space-x-3">
                 <FiCommand className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                   Quick Actions
@@ -1956,10 +1962,10 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
 
         {/* Status Dashboard */}
         {showStatusDashboard && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex fixed inset-0 z-50 justify-center items-center backdrop-blur-sm bg-black/50">
             <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl dark:bg-gray-800">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
                     <FiTrendingUp className="w-6 h-6 text-white" />
@@ -1987,7 +1993,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                   {/* Total Generations */}
                   <Card variant="elevated" className="overflow-hidden">
                     <div className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex justify-between items-center">
                         <div>
                           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                             Total Generations
@@ -2006,7 +2012,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                   {/* Success Rate */}
                   <Card variant="elevated" className="overflow-hidden">
                     <div className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex justify-between items-center">
                         <div>
                           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                             Success Rate
@@ -2027,7 +2033,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                   {/* Average Response Time */}
                   <Card variant="elevated" className="overflow-hidden">
                     <div className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex justify-between items-center">
                         <div>
                           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                             Avg Response Time
@@ -2046,7 +2052,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                   {/* Total Cost */}
                   <Card variant="elevated" className="overflow-hidden">
                     <div className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex justify-between items-center">
                         <div>
                           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                             Total Cost
@@ -2067,7 +2073,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                 <div className="mt-6">
                   <Card variant="elevated" className="overflow-hidden">
                     <div className="p-6">
-                      <div className="flex items-center space-x-3 mb-4">
+                      <div className="flex items-center mb-4 space-x-3">
                         <FiLayers className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                           Language Distribution
@@ -2080,10 +2086,10 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                             return acc;
                           }, {} as Record<string, number>)
                         ).map(([language, count]) => (
-                          <div key={language} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <div key={language} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg dark:bg-gray-700">
                             <div className="flex items-center space-x-2">
                               <FiCode className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                              <span className="font-medium text-gray-900 dark:text-white capitalize">
+                              <span className="font-medium text-gray-900 capitalize dark:text-white">
                                 {language}
                               </span>
                             </div>
@@ -2101,7 +2107,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                 <div className="mt-6">
                   <Card variant="elevated" className="overflow-hidden">
                     <div className="p-6">
-                      <div className="flex items-center space-x-3 mb-4">
+                      <div className="flex items-center mb-4 space-x-3">
                         <FiList className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                           Recent Generations
@@ -2109,7 +2115,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                       </div>
                       <div className="space-y-3">
                         {generationHistory.slice(0, 5).map((gen) => (
-                          <div key={gen.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <div key={gen.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg dark:bg-gray-700">
                             <div className="flex items-center space-x-3">
                               <div className={`p-1 rounded ${gen.success ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
                                 {gen.success ? (
@@ -2151,10 +2157,10 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
 
         {/* Help Panel */}
         {showHelp && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex fixed inset-0 z-50 justify-center items-center backdrop-blur-sm bg-black/50">
             <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl dark:bg-gray-800">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
                     <FiHelpCircle className="w-6 h-6 text-white" />
@@ -2182,7 +2188,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                   {/* Quick Start */}
                   <Card variant="elevated" className="overflow-hidden">
                     <div className="p-6">
-                      <div className="flex items-center space-x-3 mb-4">
+                      <div className="flex items-center mb-4 space-x-3">
                         <FiPlay className="w-5 h-5 text-green-600 dark:text-green-400" />
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                           Quick Start Guide
@@ -2190,7 +2196,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                       </div>
                       <div className="space-y-3">
                         <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                          <div className="flex flex-shrink-0 justify-center items-center w-6 h-6 bg-blue-100 rounded-full dark:bg-blue-900">
                             <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">1</span>
                           </div>
                           <div>
@@ -2201,7 +2207,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                           </div>
                         </div>
                         <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                          <div className="flex flex-shrink-0 justify-center items-center w-6 h-6 bg-blue-100 rounded-full dark:bg-blue-900">
                             <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">2</span>
                           </div>
                           <div>
@@ -2212,7 +2218,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                           </div>
                         </div>
                         <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                          <div className="flex flex-shrink-0 justify-center items-center w-6 h-6 bg-blue-100 rounded-full dark:bg-blue-900">
                             <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">3</span>
                           </div>
                           <div>
@@ -2223,7 +2229,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                           </div>
                         </div>
                         <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                          <div className="flex flex-shrink-0 justify-center items-center w-6 h-6 bg-blue-100 rounded-full dark:bg-blue-900">
                             <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">4</span>
                           </div>
                           <div>
@@ -2240,7 +2246,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                   {/* Features */}
                   <Card variant="elevated" className="overflow-hidden">
                     <div className="p-6">
-                      <div className="flex items-center space-x-3 mb-4">
+                      <div className="flex items-center mb-4 space-x-3">
                         <FiStar className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                           Key Features
@@ -2290,7 +2296,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                   {/* Tips */}
                   <Card variant="elevated" className="overflow-hidden">
                     <div className="p-6">
-                      <div className="flex items-center space-x-3 mb-4">
+                      <div className="flex items-center mb-4 space-x-3">
                         <FiInfo className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                           Pro Tips
@@ -2298,25 +2304,25 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                       </div>
                       <div className="space-y-3">
                         <div className="flex items-start space-x-3">
-                          <FiCheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-1" />
+                          <FiCheckCircle className="mt-1 w-4 h-4 text-green-600 dark:text-green-400" />
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             Use specific requirements to get more targeted test generation.
                           </p>
                         </div>
                         <div className="flex items-start space-x-3">
-                          <FiCheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-1" />
+                          <FiCheckCircle className="mt-1 w-4 h-4 text-green-600 dark:text-green-400" />
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             Enable different test features based on your testing needs.
                           </p>
                         </div>
                         <div className="flex items-start space-x-3">
-                          <FiCheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-1" />
+                          <FiCheckCircle className="mt-1 w-4 h-4 text-green-600 dark:text-green-400" />
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             Save your configurations for consistent test generation across projects.
                           </p>
                         </div>
                         <div className="flex items-start space-x-3">
-                          <FiCheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mt-1" />
+                          <FiCheckCircle className="mt-1 w-4 h-4 text-green-600 dark:text-green-400" />
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             Monitor your generation statistics to optimize costs and performance.
                           </p>

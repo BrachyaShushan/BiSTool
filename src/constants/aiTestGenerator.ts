@@ -1015,6 +1015,7 @@ describe('API Endpoint Tests', () => {
 export const STORAGE_KEYS = {
   AI_TEST_CONFIG: "bistool_ai_test_config",
   PROMPT_TEMPLATES: "bistool_prompt_templates",
+  SELECTED_TEMPLATE: "bistool_selected_template",
   LANGUAGE_CONFIGS: "bistool_language_configs",
   FRAMEWORK_CONFIGS: "bistool_framework_configs",
 };

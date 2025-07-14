@@ -346,4 +346,81 @@ test.describe("LocalStorage Functionality", () => {
     );
     expect(updatedData.settings.mode).toBe("expert");
   });
+
+  test("should persist selected template across page refreshes", async ({
+    page,
+  }) => {
+    const testTemplateId = "template-123";
+
+    // Set this project as the active project
+    await localStorageHelper.setItem("bistool_active_project", testProjectId);
+
+    // Set a selected template for the project
+    await localStorageHelper.setItem(
+      `${testProjectId}_bistool_selected_template`,
+      testTemplateId
+    );
+
+    // Reload page to test persistence
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // Verify selected template persisted
+    const savedTemplateId = await localStorageHelper.getItem(
+      `${testProjectId}_bistool_selected_template`
+    );
+    expect(savedTemplateId).toBe(testTemplateId);
+
+    // Test changing the selected template
+    const newTemplateId = "template-456";
+    await localStorageHelper.setItem(
+      `${testProjectId}_bistool_selected_template`,
+      newTemplateId
+    );
+
+    // Reload again
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // Verify new template persisted
+    const updatedTemplateId = await localStorageHelper.getItem(
+      `${testProjectId}_bistool_selected_template`
+    );
+    expect(updatedTemplateId).toBe(newTemplateId);
+  });
+
+  test("should handle project-specific template selection", async ({
+    page,
+  }) => {
+    const project1Id = "project-1";
+    const project2Id = "project-2";
+    const template1Id = "template-project1";
+    const template2Id = "template-project2";
+
+    // Set different selected templates for different projects
+    await localStorageHelper.setItem(
+      `${project1Id}_bistool_selected_template`,
+      template1Id
+    );
+    await localStorageHelper.setItem(
+      `${project2Id}_bistool_selected_template`,
+      template2Id
+    );
+
+    // Verify each project has its own selected template
+    const project1Template = await localStorageHelper.getItem(
+      `${project1Id}_bistool_selected_template`
+    );
+    const project2Template = await localStorageHelper.getItem(
+      `${project2Id}_bistool_selected_template`
+    );
+
+    expect(project1Template).toBe(template1Id);
+    expect(project2Template).toBe(template2Id);
+
+    // Verify templates are independent
+    expect(project1Template).not.toBe(project2Template);
+  });
 });

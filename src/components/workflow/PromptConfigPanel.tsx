@@ -151,6 +151,13 @@ Template Content:
 ${newTemplate.content}`;
     };
 
+    // Handle save and notify parent
+    const handleSave = () => {
+        onConfigChange(config);
+        setIsEditing(false);
+        onClose();
+    };
+
     // Modal title component
     const modalTitle = (
         <div className="flex items-center space-x-3">
@@ -173,10 +180,7 @@ ${newTemplate.content}`;
             <Modal
                 isOpen={isOpen}
                 onClose={onClose}
-                onSave={() => {
-                    onConfigChange(config);
-                    setIsEditing(false);
-                }}
+                onSave={handleSave}
                 title={modalTitle}
                 size="6xl"
                 showSaveButton={isEditing}
