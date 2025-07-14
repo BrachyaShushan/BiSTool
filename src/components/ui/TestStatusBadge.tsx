@@ -1,5 +1,6 @@
 import React from 'react';
 import { FiCheck, FiX, FiClock, FiRefreshCw } from 'react-icons/fi';
+import IconWrapper from './IconWrapper';
 
 export interface TestStatusBadgeProps {
     status: 'pass' | 'fail' | 'pending' | 'running' | null;
@@ -21,11 +22,7 @@ const TestStatusBadge: React.FC<TestStatusBadgeProps> = ({
         lg: 'px-4 py-1.5 text-base space-x-2'
     };
 
-    const iconSizeClasses = {
-        sm: 'w-3 h-3',
-        md: 'w-4 h-4',
-        lg: 'w-5 h-5'
-    };
+
 
     const getStatusConfig = () => {
         switch (status) {
@@ -73,7 +70,11 @@ const TestStatusBadge: React.FC<TestStatusBadgeProps> = ({
     return (
         <div className={`inline-flex items-center font-semibold rounded-lg ${sizeClasses[size]} ${statusConfig.bgColor} ${statusConfig.textColor} ${className}`}>
             {showIcon && (
-                <Icon className={`${iconSizeClasses[size]} ${status === 'running' ? 'animate-spin' : ''}`} />
+                <IconWrapper
+                    icon={Icon}
+                    size={size}
+                    className={status === 'running' ? 'animate-spin' : ''}
+                />
             )}
             <span>{statusConfig.label}</span>
         </div>

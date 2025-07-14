@@ -18,7 +18,8 @@
     "test:e2e:localStorage": "playwright test tests/localStorage.test.ts",
     "test:e2e:workflow": "playwright test tests/app-workflow.test.ts",
     "test:e2e:mobile-only": "playwright test tests/mobile.test.ts",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "devtools": "react-devtools"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",
@@ -52,6 +53,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.1",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.0.0",
+    "react-devtools": "^6.1.5",
     "terser": "^5.43.1",
     "typescript": "^5.8.3",
     "vite": "^7.0.2"

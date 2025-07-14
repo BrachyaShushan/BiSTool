@@ -133,7 +133,7 @@ const TokenStatusDisplay: React.FC<TokenStatusDisplayProps> = ({
             {/* Token Expiration Display */}
             {tokenExpiration !== null && (
                 <div
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 ${getTokenExpirationStyle()}`}
+                    className={`flex items-center px-4 py-2 space-x-2 text-sm font-semibold rounded-xl ${getTokenExpirationStyle()}`}
                     data-testid="token-expiration"
                 >
                     <FiClock className="w-4 h-4" />
@@ -155,7 +155,7 @@ const TokenStatusDisplay: React.FC<TokenStatusDisplayProps> = ({
                             {decodedToken.error}
                         </div>
                     ) : (
-                        <pre className="p-4 overflow-x-auto text-xs text-left bg-gray-100 rounded dark:bg-gray-900">
+                        <pre className="overflow-x-auto p-4 text-xs text-left bg-gray-100 rounded dark:bg-gray-900">
                             {JSON.stringify(decodedToken, null, 2)}
                         </pre>
                     )

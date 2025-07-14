@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import URLBuilder from "./components/workflow/URLBuilder";
 import RequestConfig from "./components/workflow/RequestConfig";
 import TestManager from "./components/workflow/TestManager";
@@ -21,6 +21,7 @@ import { VariablesProvider } from "./context/VariablesContext";
 import { TokenProvider } from "./context/TokenContext";
 import { URLBuilderProvider } from "./context/URLBuilderContext";
 import { PromptConfigProvider } from "./context/PromptConfigContext";
+import { initializeDevTools } from "./utils/devtools";
 
 const AppContent: React.FC = () => {
     const {
@@ -181,6 +182,11 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+    // Initialize React DevTools in development mode
+    useEffect(() => {
+        initializeDevTools();
+    }, []);
+
     return (
         <ThemeProvider>
             <ProjectProvider>

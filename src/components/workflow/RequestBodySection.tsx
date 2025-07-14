@@ -3,12 +3,11 @@ import { FiZap, FiTrash2, FiPlus } from "react-icons/fi";
 import { useTheme } from "../../context/ThemeContext";
 import { OnMount } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
-import { Button, Input, IconButton, Textarea, Toggle, MonacoEditor } from "../ui";
+import { Button, Input, IconButton, Textarea, Toggle, MonacoEditor, OptionButton } from "../ui";
 import { FormDataField } from "../../types";
 import {
     BODY_TYPE_OPTIONS,
     BODY_CONTENT_CONFIG,
-    COLOR_CLASSES,
     EDITOR_OPTIONS,
 } from "../../constants/requestConfig";
 
@@ -90,7 +89,7 @@ const RequestBodySection: React.FC<RequestBodySectionProps> = ({
                 const jsonConfig = BODY_CONTENT_CONFIG.json;
                 return (
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex justify-between items-center">
                             <div className="flex items-center space-x-2">
                                 <div className={`p-2 bg-gradient-to-br ${jsonConfig.bgGradient} rounded-lg`}>
                                     <jsonConfig.icon className="w-4 h-4 text-white" />
@@ -117,7 +116,7 @@ const RequestBodySection: React.FC<RequestBodySectionProps> = ({
                         </div>
                         <div
                             ref={jsonEditorContainerRef}
-                            className="relative overflow-hidden border border-gray-200 shadow-sm rounded-xl dark:border-gray-600"
+                            className="overflow-hidden relative rounded-xl border border-gray-200 shadow-sm dark:border-gray-600"
                         >
                             <MonacoEditor
                                 height="200px"
@@ -236,8 +235,8 @@ const RequestBodySection: React.FC<RequestBodySectionProps> = ({
             default:
                 const noneConfig = BODY_CONTENT_CONFIG.none;
                 return (
-                    <div className="p-8 text-center border-2 border-gray-300 border-dashed bg-gray-50 rounded-xl dark:border-gray-600 dark:bg-gray-700">
-                        <noneConfig.icon className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                    <div className="p-8 text-center bg-gray-50 rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600 dark:bg-gray-700">
+                        <noneConfig.icon className="mx-auto mb-4 w-12 h-12 text-gray-400 dark:text-gray-500" />
                         <p className="mb-2 text-gray-500 dark:text-gray-400">No body content for this request</p>
                         <p className="text-sm text-gray-400 dark:text-gray-500">This HTTP method doesn't support a request body</p>
                     </div>
@@ -248,9 +247,9 @@ const RequestBodySection: React.FC<RequestBodySectionProps> = ({
     return (
         <div className={`space-y-6 ${className}`}>
             {showHeader && (
-                <div className="flex items-center justify-between">
+                <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
-                        <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600">
+                        <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
                             <FiZap className="w-4 h-4 text-white" />
                         </div>
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Request Body</span>
@@ -260,68 +259,25 @@ const RequestBodySection: React.FC<RequestBodySectionProps> = ({
                     <div className={`grid gap-2 ${compact ? 'grid-cols-2' : 'grid-cols-4'}`}>
                         {BODY_TYPE_OPTIONS.map((option) => {
                             const isSelected = bodyType === option.id;
-                            const colorClass = COLOR_CLASSES[option.color as keyof typeof COLOR_CLASSES];
-                            const selectedClass = colorClass.selected;
-                            const unselectedClass = colorClass.unselected;
-
                             return (
-                                <button
+                                <OptionButton
                                     key={option.id}
+                                    icon={option.icon}
+                                    label={option.label}
+                                    description={option.description}
+                                    color={option.color}
+                                    selected={isSelected}
+                                    compact={compact}
+                                    className={className}
                                     onClick={() => onBodyTypeChange(option.id as "none" | "json" | "form" | "text")}
-                                    className={`relative ${compact ? 'p-2' : 'p-3'} rounded-lg border-2 transition-all duration-300 transform hover:scale-105 group overflow-hidden ${isSelected ? selectedClass : unselectedClass
-                                        }`}
-                                    data-testid={`body-type-${option.id}`}
-                                >
-                                    {/* Background Pattern */}
-                                    <div className={`absolute inset-0 opacity-5 transition-opacity duration-300 ${isSelected ? 'opacity-10' : 'opacity-0 group-hover:opacity-5'
-                                        }`}>
-                                        <div className={`absolute top-0 right-0 w-8 h-8 rounded-full translate-x-4 -translate-y-4 ${option.color === 'gray' ? 'bg-gray-500' :
-                                            option.color === 'purple' ? 'bg-purple-500' :
-                                                option.color === 'green' ? 'bg-green-500' : 'bg-blue-500'
-                                            }`}></div>
-                                    </div>
-
-                                    <div className="relative z-10 flex flex-col items-center space-y-1 text-center">
-                                        <div className={`${compact ? 'text-sm' : 'text-lg'} transition-transform duration-300 ${isSelected ? 'scale-110' : 'group-hover:scale-105'
-                                            }`}>
-                                            {option.icon}
-                                        </div>
-                                        <div>
-                                            <h4 className={`font-semibold ${compact ? 'text-xs' : 'text-xs'} ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'
-                                                }`}>
-                                                {option.label}
-                                            </h4>
-                                            {!compact && (
-                                                <p className={`text-xs ${isSelected
-                                                    ? 'text-gray-100 dark:text-gray-200'
-                                                    : 'text-gray-500 dark:text-gray-400'
-                                                    }`}>
-                                                    {option.description}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Selection Indicator */}
-                                    {isSelected && (
-                                        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${option.color === 'gray' ? 'bg-gray-200' :
-                                            option.color === 'purple' ? 'bg-purple-200' :
-                                                option.color === 'green' ? 'bg-green-200' : 'bg-blue-200'
-                                            } flex items-center justify-center`}>
-                                            <div className={`w-1 h-1 rounded-full ${option.color === 'gray' ? 'bg-gray-600' :
-                                                option.color === 'purple' ? 'bg-purple-600' :
-                                                    option.color === 'green' ? 'bg-green-600' : 'bg-blue-600'
-                                                }`}></div>
-                                        </div>
-                                    )}
-                                </button>
+                                />
                             );
                         })}
                     </div>
                 </div>
             )}
 
-            <div className="p-6 border border-gray-200 bg-gray-50 rounded-xl dark:bg-gray-700 dark:border-gray-600">
+            <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
                 {getBodyContent()}
             </div>
         </div>

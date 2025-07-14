@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fi';
 import { Card, Toggle } from './index';
 import { EDITOR_OPTIONS } from '../../constants/requestConfig';
+import IconWrapper from './IconWrapper';
 
 // Dynamically import Monaco Editor to reduce initial bundle size
 const MonacoEditorEditor = lazy(() => import('@monaco-editor/react').then(module => ({ default: module.Editor })));
@@ -687,7 +688,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
             {/* Header */}
             {(label || description || Icon) && (
                 <div className="flex items-center mb-2 space-x-2">
-                    {Icon && <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
+                    {Icon && <IconWrapper icon={Icon} size="sm" className="text-gray-500 dark:text-gray-400" />}
                     <div>
                         {label && (
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -769,7 +770,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                                     }`}
                                                 title={action.label}
                                             >
-                                                <action.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                <IconWrapper icon={action.icon} size="xs" />
                                             </button>
                                         ))}
 
@@ -789,7 +790,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                                 className="p-1.5 sm:p-2 text-gray-500 transition-all duration-200 rounded-lg hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 backdrop-blur-sm"
                                                 title="Download code"
                                             >
-                                                <FiDownload className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                <IconWrapper icon={FiDownload} size="xs" />
                                             </button>
                                         )}
 
@@ -803,7 +804,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                                         }`}
                                                     title="Settings"
                                                 >
-                                                    <FiSettings className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                    <IconWrapper icon={FiSettings} size="xs" />
                                                 </button>
                                             </div>
                                         )}
@@ -814,7 +815,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                                 className="p-1.5 sm:p-2 text-gray-500 transition-all duration-200 rounded-lg hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 backdrop-blur-sm"
                                                 title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                                             >
-                                                {isFullscreen ? <FiMinimize2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <FiMaximize2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+                                                {isFullscreen ? <IconWrapper icon={FiMinimize2} size="xs" /> : <IconWrapper icon={FiMaximize2} size="xs" />}
                                             </button>
                                         )}
                                     </div>
@@ -881,7 +882,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                                 <div className="relative flex items-center justify-between">
                                     <div className="flex items-center space-x-3">
                                         <div className="p-2 rounded-lg bg-white/20 backdrop-blur-sm">
-                                            <FiSettings className="w-4 h-4 text-white" />
+                                            <IconWrapper icon={FiSettings} size="sm" className="text-white" />
                                         </div>
                                         <div>
                                             <h3 className="text-sm font-bold text-white">Editor Settings</h3>

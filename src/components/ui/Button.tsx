@@ -2,6 +2,7 @@ import React from 'react';
 import { IconType } from 'react-icons';
 import { FiCheck } from 'react-icons/fi';
 import { useTheme } from '../../context/ThemeContext';
+import IconWrapper from './IconWrapper';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'ghost' | 'outline';
@@ -127,24 +128,28 @@ const Button: React.FC<ButtonProps> = ({
         >
             {/* Checkmark indicator for checked state */}
             {isChecked && showCheckmark && (
-                <div className="absolute top-1 right-1 w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-sm">
-                    <FiCheck className="w-2 h-2 text-gray-800" />
+                <div className="flex absolute top-1 right-1 justify-center items-center w-3 h-3 bg-white rounded-full shadow-sm">
+                    <IconWrapper icon={FiCheck} size="xs" className="text-gray-800" />
                 </div>
             )}
 
             {/* Shimmer effect for gradient buttons */}
             {gradient && (
-                <div className="absolute inset-0 transition-transform duration-700 transform -translate-x-full -skew-x-12 bg-gradient-to-r from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
+                <div className="absolute inset-0 bg-gradient-to-r transition-transform duration-700 transform -translate-x-full -skew-x-12 from-white/0 via-white/20 to-white/0 group-hover:translate-x-full"></div>
             )}
 
             {/* Loading spinner */}
             {loading && (
-                <div className="relative z-10 w-4 h-4 border-2 border-current rounded-full border-t-transparent animate-spin"></div>
+                <div className="relative z-10 w-4 h-4 rounded-full border-2 border-current animate-spin border-t-transparent"></div>
             )}
 
             {/* Icon */}
             {Icon && !loading && iconPosition === 'left' && (
-                <Icon className="relative z-10 w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
+                <IconWrapper
+                    icon={Icon}
+                    size="sm"
+                    className="relative z-10 transition-transform duration-200 group-hover:scale-110"
+                />
             )}
 
             {/* Content */}
@@ -152,7 +157,11 @@ const Button: React.FC<ButtonProps> = ({
 
             {/* Icon */}
             {Icon && !loading && iconPosition === 'right' && (
-                <Icon className="relative z-10 w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
+                <IconWrapper
+                    icon={Icon}
+                    size="sm"
+                    className="relative z-10 transition-transform duration-200 group-hover:scale-110"
+                />
             )}
         </button>
     );

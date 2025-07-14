@@ -471,7 +471,7 @@ ${newTemplate.content}`;
                                             <Select
                                                 value={newTemplate.language}
                                                 onChange={(e) => {
-                                                    const value = e.target.value;
+                                                    const value = e;
                                                     setNewTemplate(prev => ({
                                                         ...prev,
                                                         language: value,
@@ -494,7 +494,7 @@ ${newTemplate.content}`;
                                                 value={newTemplate.framework}
                                                 onChange={(e) => setNewTemplate(prev => ({
                                                     ...prev,
-                                                    framework: e.target.value
+                                                    framework: e
                                                 }))}
                                                 options={getFrameworksForLanguage(newTemplate.language).map(fw => ({
                                                     value: fw,
@@ -512,7 +512,7 @@ ${newTemplate.content}`;
                                                 value={newTemplate.environment}
                                                 onChange={(e) => setNewTemplate(prev => ({
                                                     ...prev,
-                                                    environment: e.target.value
+                                                    environment: e
                                                 }))}
                                                 options={API_ENVIRONMENTS.map(env => ({
                                                     value: env.id,
@@ -530,11 +530,12 @@ ${newTemplate.content}`;
                                                 value={newTemplate.testStyle || 'bdd'}
                                                 onChange={(e) => setNewTemplate(prev => ({
                                                     ...prev,
-                                                    testStyle: e.target.value
+                                                    testStyle: e
                                                 }))}
                                                 options={TEST_STYLES.map(style => ({
                                                     value: style.id,
-                                                    label: `${style.icon} ${style.name}`
+                                                    label: style.name,
+                                                    icon: style.icon
                                                 }))}
                                                 fullWidth
                                             />
@@ -548,7 +549,7 @@ ${newTemplate.content}`;
                                                 value={newTemplate.codeStyle || 'functional'}
                                                 onChange={(e) => setNewTemplate(prev => ({
                                                     ...prev,
-                                                    codeStyle: e.target.value
+                                                    codeStyle: e
                                                 }))}
                                                 options={CODE_STYLES.map(style => ({
                                                     value: style.id,
@@ -566,7 +567,7 @@ ${newTemplate.content}`;
                                                 value={newTemplate.authentication || 'bearer'}
                                                 onChange={(e) => setNewTemplate(prev => ({
                                                     ...prev,
-                                                    authentication: e.target.value
+                                                    authentication: e
                                                 }))}
                                                 options={AUTHENTICATION_TYPES.map(auth => ({
                                                     value: auth.id,

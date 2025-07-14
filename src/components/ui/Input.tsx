@@ -1,6 +1,7 @@
 import React from 'react';
 import { IconType } from 'react-icons';
 import { useTheme } from '../../context/ThemeContext';
+import IconWrapper from './IconWrapper';
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
     variant?: 'default' | 'outlined' | 'filled';
@@ -88,7 +89,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(({
             <div className="relative">
                 {Icon && iconPosition === 'left' && (
                     <div className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        <Icon className="w-4 h-4" />
+                        <IconWrapper icon={Icon} size="sm" />
                     </div>
                 )}
 
@@ -101,7 +102,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(({
 
                 {Icon && iconPosition === 'right' && (
                     <div className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        <Icon className="w-4 h-4" />
+                        <IconWrapper icon={Icon} size="sm" />
                     </div>
                 )}
             </div>

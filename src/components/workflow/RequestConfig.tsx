@@ -245,14 +245,14 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
     return (
       <div className="space-y-6">
         {/* Header Section */}
-        <div className="relative p-6 overflow-hidden border border-indigo-100 shadow-lg bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+        <div className="overflow-hidden relative p-6 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-indigo-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
           <div className="absolute inset-0 opacity-5 dark:opacity-10">
-            <div className="absolute top-0 right-0 w-32 h-32 translate-x-16 -translate-y-16 bg-indigo-500 rounded-full"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 -translate-x-12 translate-y-12 bg-purple-500 rounded-full"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full translate-x-16 -translate-y-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500 rounded-full -translate-x-12 translate-y-12"></div>
           </div>
 
-          <div className="relative flex items-center space-x-4">
-            <div className="p-3 shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
+          <div className="flex relative items-center space-x-4">
+            <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
               <FiSettings className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -267,15 +267,15 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
         </div>
 
         {/* No Active Session Warning */}
-        <div className="p-8 bg-white border border-gray-200 shadow-lg rounded-2xl dark:bg-gray-800 dark:border-gray-700">
+        <div className="p-8 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <div className="text-center">
-            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500">
+            <div className="flex justify-center items-center mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full">
               <FiSettings className="w-8 h-8 text-white" />
             </div>
             <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
               No Active Session
             </h3>
-            <p className="max-w-md mx-auto mb-6 text-gray-600 dark:text-gray-300">
+            <p className="mx-auto mb-6 max-w-md text-gray-600 dark:text-gray-300">
               You need to create or select an active session before configuring request settings.
               Please go back to the URL Builder or Session Manager to create a session first.
             </p>
@@ -307,15 +307,15 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="relative p-6 overflow-hidden border border-indigo-100 shadow-lg bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
+      <div className="overflow-hidden relative p-6 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-indigo-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600">
         <div className="absolute inset-0 opacity-5 dark:opacity-10">
-          <div className="absolute top-0 right-0 w-32 h-32 translate-x-16 -translate-y-16 bg-indigo-500 rounded-full"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 -translate-x-12 translate-y-12 bg-purple-500 rounded-full"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full translate-x-16 -translate-y-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500 rounded-full -translate-x-12 translate-y-12"></div>
         </div>
 
-        <div className="relative flex items-center justify-between">
+        <div className="flex relative justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="p-3 shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
+            <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
               <FiSettings className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -328,7 +328,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
             </div>
           </div>
 
-          <div className="flex items-center justify-end w-8/12 space-x-3">
+          <div className="flex justify-end items-center space-x-3 w-8/12">
             {/* Token Status Display */}
             <TokenStatusDisplay
               compact={false}
@@ -346,8 +346,8 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="p-6 bg-white border border-gray-200 shadow-lg rounded-2xl dark:bg-gray-800 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">Request Configuration</h3>
           <div className="flex items-center p-1 space-x-1 bg-gray-100 rounded-xl dark:bg-gray-700">
             {TAB_CONFIG.map((tab) => {

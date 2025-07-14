@@ -1,5 +1,6 @@
 import React from 'react';
 import { IconType } from 'react-icons';
+import IconWrapper from './IconWrapper';
 
 export interface SectionHeaderProps {
     icon: IconType;
@@ -97,14 +98,14 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
                     {/* Title and Description */}
                     <div className="flex items-center space-x-4">
                         <div className={`p-3 bg-gradient-to-br ${colorTheme.iconBg} rounded-xl shadow-lg`}>
-                            <Icon className="w-6 h-6 text-white" />
+                            <IconWrapper icon={Icon} size="lg" className="text-white" />
                         </div>
                         <div>
                             <h2 className={`text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${colorTheme.titleGradient}`}>
                                 {title}
                             </h2>
                             {description && (
-                                <p className="text-gray-600 dark:text-gray-300 mt-1">
+                                <p className="mt-1 text-gray-600 dark:text-gray-300">
                                     {description}
                                 </p>
                             )}
@@ -133,14 +134,14 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
                 {/* Title and Description */}
                 <div className="flex items-center space-x-4">
                     <div className={`p-3 bg-gradient-to-br ${colorTheme.iconBg} rounded-xl shadow-lg`}>
-                        <Icon className="w-6 h-6 text-white" />
+                        <IconWrapper icon={Icon} size="lg" className="text-white" />
                     </div>
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                             {title}
                         </h2>
                         {description && (
-                            <p className="text-gray-600 dark:text-gray-300 mt-1">
+                            <p className="mt-1 text-gray-600 dark:text-gray-300">
                                 {description}
                             </p>
                         )}

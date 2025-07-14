@@ -8,7 +8,8 @@ import {
   Input,
   IconButton,
   Textarea,
-  Toggle
+  Toggle,
+  IconWrapper
 } from "../ui";
 import {
   PROTOCOL_OPTIONS,
@@ -79,11 +80,16 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
           `}
           aria-pressed={isSelected}
         >
-          <span className="mb-1 text-2xl filter drop-shadow-sm">{option.icon}</span>
+          <IconWrapper
+            icon={option.icon}
+            size="2xl"
+            className="mb-1 filter drop-shadow-sm"
+            variant="colored"
+          />
           <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>{option.label}</span>
           <span className={`text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>{option.description}</span>
           {isSelected && (
-            <span className="absolute w-3 h-3 bg-blue-500 border-2 border-white rounded-full top-2 right-2 dark:border-gray-900"></span>
+            <span className="absolute top-2 right-2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white dark:border-gray-900"></span>
           )}
         </button>
       );
@@ -98,11 +104,11 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         <div className={`overflow-hidden relative p-6 bg-gradient-to-r ${SECTION_CONFIG.header.bgGradient} rounded-2xl border border-blue-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600`}>
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-5 dark:opacity-10">
-            <div className="absolute top-0 right-0 w-32 h-32 translate-x-16 -translate-y-16 bg-blue-500 rounded-full"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 -translate-x-12 translate-y-12 bg-indigo-500 rounded-full"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full translate-x-16 -translate-y-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 rounded-full -translate-x-12 translate-y-12"></div>
           </div>
 
-          <div className="relative flex items-center space-x-4">
+          <div className="flex relative items-center space-x-4">
             <div className={`p-3 bg-gradient-to-br ${SECTION_CONFIG.header.iconBgGradient} rounded-xl shadow-lg`}>
               <SECTION_CONFIG.header.icon className="w-6 h-6 text-white" />
             </div>
@@ -118,15 +124,15 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         </div>
 
         {/* No Active Session Warning */}
-        <div className="p-8 bg-white border border-gray-200 shadow-lg rounded-2xl dark:bg-gray-800 dark:border-gray-700">
+        <div className="p-8 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <div className="text-center">
-            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500">
+            <div className="flex justify-center items-center mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full">
               <SECTION_CONFIG.header.icon className="w-8 h-8 text-white" />
             </div>
             <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
               No Active Session
             </h3>
-            <p className="max-w-md mx-auto mb-6 text-gray-600 dark:text-gray-300">
+            <p className="mx-auto mb-6 max-w-md text-gray-600 dark:text-gray-300">
               You need to create or select an active session before building URLs.
               Please go to the Session Manager to create a session first.
             </p>
@@ -163,11 +169,11 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
       <div className={`overflow-hidden relative p-6 bg-gradient-to-r ${SECTION_CONFIG.header.bgGradient} rounded-2xl border border-blue-100 shadow-lg dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 dark:border-gray-600`}>
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5 dark:opacity-10">
-          <div className="absolute top-0 right-0 w-32 h-32 translate-x-16 -translate-y-16 bg-blue-500 rounded-full"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 -translate-x-12 translate-y-12 bg-indigo-500 rounded-full"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full translate-x-16 -translate-y-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 rounded-full -translate-x-12 translate-y-12"></div>
         </div>
 
-        <div className="relative flex items-center space-x-4">
+        <div className="flex relative items-center space-x-4">
           <div className={`p-3 bg-gradient-to-br ${SECTION_CONFIG.header.iconBgGradient} rounded-xl shadow-lg`}>
             <SECTION_CONFIG.header.icon className="w-6 h-6 text-white" />
           </div>
@@ -184,7 +190,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
       <div className="space-y-6">
         {/* Configuration Section */}
-        <div className="p-6 bg-white border border-gray-200 shadow-lg rounded-2xl dark:bg-gray-800 dark:border-gray-700">
+        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
           <div className="flex items-center mb-6 space-x-3">
             <div className={`p-2 bg-gradient-to-br ${SECTION_CONFIG.configuration.iconBgGradient} rounded-lg`}>
               <SECTION_CONFIG.configuration.icon className="w-5 h-5 text-white" />
@@ -210,7 +216,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
               </label>
               <div className="relative">
                 {/* Domain Type Indicator */}
-                <div className="absolute z-10 transform -translate-y-1/2 left-3 top-1/2">
+                <div className="absolute left-3 top-1/2 z-10 transform -translate-y-1/2">
                   <div className={`flex items-center space-x-2 px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ${domain.includes('{') && domain.includes('}')
                     ? 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 dark:from-purple-900/50 dark:to-purple-800/50 dark:text-purple-300'
                     : 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 dark:from-blue-900/50 dark:to-blue-800/50 dark:text-blue-300'
@@ -230,7 +236,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                 </div>
 
                 {/* Enhanced Input */}
-                <div className="relative overflow-hidden transition-all duration-200 border-2 border-gray-200 shadow-sm rounded-xl dark:border-gray-600 bg-gradient-to-r from-white via-gray-50 to-white dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:shadow-md">
+                <div className="overflow-hidden relative bg-gradient-to-r from-white via-gray-50 to-white rounded-xl border-2 border-gray-200 shadow-sm transition-all duration-200 dark:border-gray-600 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:shadow-md">
                   <Input
                     type="text"
                     value={domain}
@@ -238,19 +244,19 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                     placeholder={INPUT_PLACEHOLDERS.domain}
                     fullWidth
                     data-testid="urlbuilder-domain"
-                    className="py-3 pl-24 pr-12 font-mono text-sm text-gray-900 placeholder-gray-500 bg-transparent border-none focus:ring-0 dark:text-gray-100 dark:placeholder-gray-400"
+                    className="py-3 pr-12 pl-24 font-mono text-sm placeholder-gray-500 text-gray-900 bg-transparent border-none focus:ring-0 dark:text-gray-100 dark:placeholder-gray-400"
                   />
 
                   {/* Globe Icon */}
-                  <div className="absolute transform -translate-y-1/2 right-3 top-1/2">
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                     <FiGlobe className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                   </div>
                 </div>
 
                 {/* Domain Suggestions */}
                 {domain === '' && (
-                  <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden bg-white border border-gray-200 shadow-lg top-full dark:bg-gray-800 dark:border-gray-600 rounded-xl">
-                    <div className="p-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 dark:border-gray-600">
+                  <div className="overflow-hidden absolute right-0 left-0 top-full z-20 mt-2 bg-white rounded-xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-600">
+                    <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 dark:from-blue-900/20 dark:to-indigo-900/20 dark:border-gray-600">
                       <h4 className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Quick Options</h4>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Choose a common domain pattern</p>
                     </div>
@@ -263,14 +269,18 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                         <button
                           key={index}
                           onClick={() => setDomain(suggestion.value)}
-                          className="flex items-center w-full p-2 space-x-3 text-left transition-colors duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                          className="flex items-center p-2 space-x-3 w-full text-left rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
-                          <span className="text-lg">{suggestion.icon}</span>
+                          <IconWrapper
+                            icon={suggestion.icon}
+                            size="lg"
+                            variant="colored"
+                          />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{suggestion.label}</div>
                             <div className="text-xs text-gray-500 truncate dark:text-gray-400">{suggestion.description}</div>
                           </div>
-                          <code className="px-2 py-1 text-xs text-blue-600 rounded dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20">
+                          <code className="px-2 py-1 text-xs text-blue-600 bg-blue-50 rounded dark:text-blue-400 dark:bg-blue-900/20">
                             {suggestion.value}
                           </code>
                         </button>
@@ -281,7 +291,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
                 {/* Variable Value Preview */}
                 {domain === '{base_url}' && globalVariables?.['base_url'] && (
-                  <div className="absolute left-0 right-0 p-3 mt-2 border border-green-200 shadow-md top-full bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 dark:border-green-700 rounded-xl">
+                  <div className="absolute right-0 left-0 top-full p-3 mt-2 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200 shadow-md dark:from-green-900/20 dark:to-green-800/20 dark:border-green-700">
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                       <span className="text-sm font-medium text-green-700 dark:text-green-300">Current Value:</span>
@@ -321,8 +331,8 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         </div>
 
         {/* Path Segments Section */}
-        <div className="p-6 bg-white border border-gray-200 shadow-lg rounded-2xl dark:bg-gray-800 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+          <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-3">
               <div className={`p-2 bg-gradient-to-br ${SECTION_CONFIG.pathSegments.iconBgGradient} rounded-lg`}>
                 <SECTION_CONFIG.pathSegments.icon className="w-5 h-5 text-white" />
@@ -342,16 +352,16 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
           </div>
 
           {segments.length === 0 ? (
-            <div className="p-8 text-center border-2 border-gray-300 border-dashed rounded-xl dark:border-gray-600">
-              <SECTION_CONFIG.pathSegments.icon className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+            <div className="p-8 text-center rounded-xl border-2 border-gray-300 border-dashed dark:border-gray-600">
+              <SECTION_CONFIG.pathSegments.icon className="mx-auto mb-4 w-12 h-12 text-gray-400 dark:text-gray-500" />
               <p className="mb-4 text-gray-500 dark:text-gray-400">{LABELS.noSegments}</p>
               <p className="text-sm text-gray-400 dark:text-gray-500">{LABELS.noSegmentsDescription}</p>
             </div>
           ) : (
             <div className="space-y-4">
               {segments.map((segment, index) => (
-                <div key={index} className="p-4 border border-gray-200 bg-gray-50 rounded-xl dark:bg-gray-700 dark:border-gray-600">
-                  <div className="grid items-center gap-4 md:grid-cols-12">
+                <div key={index} className="p-4 bg-gray-50 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                  <div className="grid gap-4 items-center md:grid-cols-12">
                     {/* Segment Type Toggle */}
                     <div className="md:col-span-2">
                       <Toggle
@@ -450,8 +460,8 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
         </div>
 
         {/* URL Preview Section */}
-        <div className="p-6 bg-white border border-gray-200 shadow-lg rounded-2xl dark:bg-gray-800 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+          <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-3">
               <div className={`p-2 bg-gradient-to-br ${SECTION_CONFIG.urlPreview.iconBgGradient} rounded-lg`}>
                 <SECTION_CONFIG.urlPreview.icon className="w-5 h-5 text-white" />
@@ -480,14 +490,14 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
           {showPreview && (
             <div className="space-y-4">
               {/* Generated URL */}
-              <div className="p-4 border border-gray-200 bg-gray-50 rounded-xl dark:bg-gray-700 dark:border-gray-600">
-                <div className="flex items-center justify-between mb-2">
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+                <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{LABELS.generatedUrl}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{LABELS.clickToCopy}</span>
                 </div>
                 <div
                   onClick={copyToClipboard}
-                  className="p-3 transition-all duration-200 bg-white border border-gray-200 rounded-lg cursor-pointer dark:bg-gray-600 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500"
+                  className="p-3 bg-white rounded-lg border border-gray-200 transition-all duration-200 cursor-pointer dark:bg-gray-600 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500"
                 >
                   <code className="text-sm text-gray-900 break-all dark:text-gray-100">
                     {builtUrl}
@@ -497,7 +507,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
               {/* Variable Values */}
               {(segments.some((s) => s.isDynamic) || domain === "{base_url}") && (
-                <div className="p-4 border border-blue-200 bg-blue-50 rounded-xl dark:bg-blue-900/20 dark:border-blue-700">
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 dark:bg-blue-900/20 dark:border-blue-700">
                   <div className="flex items-center mb-3 space-x-2">
                     <FiInfo className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{LABELS.variableValues}</span>
@@ -505,7 +515,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                   <div className="grid gap-2 md:grid-cols-2">
                     {/* Show base_url variable if it's being used */}
                     {domain === "{base_url}" && (
-                      <div className="flex items-center justify-between p-2 bg-white rounded-lg dark:bg-gray-700">
+                      <div className="flex justify-between items-center p-2 bg-white rounded-lg dark:bg-gray-700">
                         <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
                           base_url:
                         </span>
@@ -523,7 +533,7 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
                       .map((segment, i) => {
                         const value = getVariableValue(segment.paramName, environment) || "Not set";
                         return (
-                          <div key={i} className="flex items-center justify-between p-2 bg-white rounded-lg dark:bg-gray-700">
+                          <div key={i} className="flex justify-between items-center p-2 bg-white rounded-lg dark:bg-gray-700">
                             <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
                               {segment.paramName}:
                             </span>

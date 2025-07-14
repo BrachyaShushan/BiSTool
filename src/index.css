@@ -174,3 +174,37 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+
+/* Icon Wrapper Styles */
+.emoji-colored {
+  /* Force emoji to display with original colors */
+  color: initial !important;
+  filter: none !important;
+  -webkit-text-fill-color: initial !important;
+  font-variant-emoji: emoji;
+  font-feature-settings: "emoji";
+  /* Ensure proper emoji rendering */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.emoji-monochrome {
+  /* Force emoji to be monochrome (inherit text color) */
+  filter: grayscale(100%);
+  -webkit-filter: grayscale(100%);
+}
+
+/* Ensure emoji icons maintain their colors even in dark mode */
+.dark .emoji-colored {
+  color: initial !important;
+  filter: none !important;
+  -webkit-text-fill-color: initial !important;
+}
+
+/* Emoji color preservation for different contexts */
+.emoji-colored[data-emoji="true"] {
+  /* Additional specificity for emoji elements */
+  color: initial !important;
+  -webkit-text-fill-color: initial !important;
+}

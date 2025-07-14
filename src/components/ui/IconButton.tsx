@@ -1,5 +1,6 @@
 import React from 'react';
 import { IconType } from 'react-icons';
+import IconWrapper from './IconWrapper';
 
 export interface IconButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'size'> {
     variant?: 'default' | 'ghost' | 'outline' | 'primary' | 'success' | 'danger' | 'warning';
@@ -62,7 +63,11 @@ const IconButton: React.FC<IconButtonProps> = ({
             {loading ? (
                 <div className={`${iconSizeClasses[size]} border-2 border-current border-t-transparent rounded-full animate-spin`} />
             ) : (
-                <Icon className={`${iconSizeClasses[size]} transition-transform duration-200 group-hover:scale-110`} />
+                <IconWrapper
+                    icon={Icon}
+                    size={size}
+                    className="transition-transform duration-200 group-hover:scale-110"
+                />
             )}
             {children}
         </button>

@@ -1272,8 +1272,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                   </label>
                   <Select
                     value={selectedTemplate}
-                    onChange={(e) => {
-                      const value = e.target.value;
+                    onChange={(value) => {
                       if (value) {
                         applyTemplate(value);
                       } else {
@@ -1355,18 +1354,18 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                 </label>
                 <Select
                   value={testConfig.language}
-                  onChange={(e) => {
-                    const value = e.target.value;
+                  onChange={(value) => {
                     const language = PROGRAMMING_LANGUAGES.find(l => l.id === value);
                     setTestConfig(prev => ({
                       ...prev,
-                      language: value as any,
-                      testFramework: (language?.defaultFramework || 'pytest') as any
+                      language: value as "python" | "javascript" | "typescript" | "java" | "csharp" | "go" | "ruby" | "php" | "rust" | "kotlin" | "swift" | "dart" | "scala" | "elixir" | "clojure" | "fsharp",
+                      testFramework: (language?.defaultFramework || 'pytest') as "pytest" | "unittest" | "jest" | "mocha" | "cypress" | "playwright" | "rest-assured" | "junit" | "nunit" | "xunit" | "go-test" | "rspec" | "phpunit" | "dotnet-test"
                     }));
                   }}
                   options={PROGRAMMING_LANGUAGES.map(lang => ({
                     value: lang.id,
-                    label: `${lang.icon} ${lang.name}`
+                    label: lang.name,
+                    icon: lang.icon
                   }))}
                   fullWidth
                 />
@@ -1378,9 +1377,9 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                 </label>
                 <Select
                   value={testConfig.testFramework}
-                  onChange={(e) => setTestConfig(prev => ({
+                  onChange={(value) => setTestConfig(prev => ({
                     ...prev,
-                    testFramework: e.target.value as any
+                    testFramework: value as "pytest" | "unittest" | "jest" | "mocha" | "cypress" | "playwright" | "rest-assured" | "junit" | "nunit" | "xunit" | "go-test" | "rspec" | "phpunit" | "dotnet-test"
                   }))}
                   options={getFrameworksForLanguage(testConfig.language).map(fw => ({
                     value: fw,
@@ -1396,13 +1395,14 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                 </label>
                 <Select
                   value={testConfig.testStyle}
-                  onChange={(e) => setTestConfig(prev => ({
+                  onChange={(value) => setTestConfig(prev => ({
                     ...prev,
-                    testStyle: e.target.value as any
+                    testStyle: value as "bdd" | "tdd" | "functional" | "integration" | "e2e" | "unit" | "api"
                   }))}
                   options={TEST_STYLES.map(style => ({
                     value: style.id,
-                    label: `${style.icon} ${style.name}`
+                    label: style.name,
+                    icon: style.icon
                   }))}
                   fullWidth
                 />
@@ -1414,13 +1414,14 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                 </label>
                 <Select
                   value={testConfig.codeStyle}
-                  onChange={(e) => setTestConfig(prev => ({
+                  onChange={(value) => setTestConfig(prev => ({
                     ...prev,
-                    codeStyle: e.target.value as any
+                    codeStyle: value as "oop" | "functional" | "procedural" | "declarative"
                   }))}
                   options={CODE_STYLES.map(style => ({
                     value: style.id,
-                    label: `${style.icon} ${style.name}`
+                    label: style.name,
+                    icon: style.icon
                   }))}
                   fullWidth
                 />
@@ -1435,13 +1436,14 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                 </label>
                 <Select
                   value={testConfig.apiEnvironment}
-                  onChange={(e) => setTestConfig(prev => ({
+                  onChange={(value) => setTestConfig(prev => ({
                     ...prev,
-                    apiEnvironment: e.target.value as any
+                    apiEnvironment: value as "rest" | "graphql" | "soap" | "grpc" | "websocket" | "event-driven" | "microservices"
                   }))}
                   options={API_ENVIRONMENTS.map(env => ({
                     value: env.id,
-                    label: `${env.icon} ${env.name}`
+                    label: env.name,
+                    icon: env.icon
                   }))}
                   fullWidth
                 />
@@ -1453,13 +1455,14 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
                 </label>
                 <Select
                   value={testConfig.authenticationType}
-                  onChange={(e) => setTestConfig(prev => ({
+                  onChange={(value) => setTestConfig(prev => ({
                     ...prev,
-                    authenticationType: e.target.value as any
+                    authenticationType: value as "none" | "basic" | "bearer" | "api-key" | "oauth2" | "jwt" | "session" | "custom"
                   }))}
                   options={AUTHENTICATION_TYPES.map(auth => ({
                     value: auth.id,
-                    label: `${auth.icon} ${auth.name}`
+                    label: auth.name,
+                    icon: auth.icon
                   }))}
                   fullWidth
                 />

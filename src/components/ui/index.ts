@@ -15,6 +15,9 @@ export { default as MonacoEditor } from "./MonacoEditor";
 export { default as LazyMonacoEditor } from "./LazyMonacoEditor";
 export { default as Toggle } from "./Toggle";
 export { default as ModeSwitcher } from "./ModeSwitcher";
+export { default as IconWrapper } from "./IconWrapper";
+export { default as IconWrapperDemo } from "./IconWrapperDemo";
+export { default as OptionButton } from "./OptionButton";
 
 export type { ButtonProps } from "./Button";
 export type { CardProps } from "./Card";
@@ -32,3 +35,4 @@ export type { SectionHeaderProps } from "./SectionHeader";
 export type { MonacoEditorProps } from "./MonacoEditor";
 export type { ToggleProps } from "./Toggle";
 export type { ModeSwitcherProps } from "./ModeSwitcher";
+export type { IconWrapperProps } from "./IconWrapper";

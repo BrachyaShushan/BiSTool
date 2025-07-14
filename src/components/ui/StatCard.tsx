@@ -1,5 +1,6 @@
 import React from 'react';
 import { IconType } from 'react-icons';
+import IconWrapper from './IconWrapper';
 
 export interface StatCardProps {
     icon: IconType;
@@ -67,7 +68,7 @@ const StatCard: React.FC<StatCardProps> = ({
     return (
         <div className={`p-4 bg-gradient-to-r ${colorTheme.gradient} rounded-xl border ${colorTheme.border} transition-all duration-200 hover:shadow-md ${className}`}>
             <div className="flex items-center space-x-2">
-                <Icon className={`w-4 h-4 ${colorTheme.icon}`} />
+                <IconWrapper icon={Icon} size="sm" className={colorTheme.icon} />
                 <span className={`text-sm font-semibold ${colorTheme.label}`}>{label}</span>
             </div>
             <p className={`text-2xl font-bold ${colorTheme.value} mt-1`}>{value}</p>
