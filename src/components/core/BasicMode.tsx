@@ -552,9 +552,27 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                         </label>
                                         <div className="grid grid-cols-3 gap-3">
                                             {[
-                                                { id: 'dev', name: 'Development', color: 'green', icon: GiTrafficLightsRed },
-                                                { id: 'staging', name: 'Staging', color: 'yellow', icon: GiTrafficLightsOrange },
-                                                { id: 'prod', name: 'Production', color: 'red', icon: GiTrafficLightsReadyToGo }
+                                                {
+                                                    id: 'dev',
+                                                    name: 'Development',
+                                                    color: 'green',
+                                                    icon: GiTrafficLightsRed,
+                                                    tooltip: 'Use for local testing and development work. Variables will be resolved using the pattern: {variable}_dev'
+                                                },
+                                                {
+                                                    id: 'staging',
+                                                    name: 'Staging',
+                                                    color: 'yellow',
+                                                    icon: GiTrafficLightsOrange,
+                                                    tooltip: 'Use for pre-production testing. Variables will be resolved using the pattern: {variable}_staging'
+                                                },
+                                                {
+                                                    id: 'prod',
+                                                    name: 'Production',
+                                                    color: 'red',
+                                                    icon: GiTrafficLightsReadyToGo,
+                                                    tooltip: 'Use for live production APIs. Variables will be resolved using the pattern: {variable}_prod'
+                                                }
                                             ].map((env) => {
                                                 const isActive = environment === env.id;
                                                 const colorClasses = {
@@ -564,15 +582,23 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                 };
 
                                                 return (
-                                                    <Button
+                                                    <Tooltip
                                                         key={env.id}
-                                                        onClick={() => setEnvironment(env.id)}
-                                                        className={`relative p-3 rounded-lg border-2 transition-all duration-200 group ${colorClasses[env.color as keyof typeof colorClasses]}`}
-                                                        variant="secondary"
-                                                        icon={env.icon}
-                                                        isChecked={isActive}
-                                                        children={env.name}
-                                                    />
+                                                        content={env.tooltip}
+                                                        position="top"
+                                                        multiline
+                                                    >
+                                                        <div>
+                                                            <Button
+                                                                onClick={() => setEnvironment(env.id)}
+                                                                className={` w-full relative p-3 rounded-lg border-2 transition-all duration-200 group ${colorClasses[env.color as keyof typeof colorClasses]}`}
+                                                                variant="secondary"
+                                                                icon={env.icon}
+                                                                isChecked={isActive}
+                                                                children={env.name}
+                                                            />
+                                                        </div>
+                                                    </Tooltip>
                                                 );
                                             })}
                                         </div>
@@ -999,8 +1025,8 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                                 fullWidth
                                                                 className="flex items-center space-x-2"
                                                             >
-                                                                <FiMail className="w-4 h-4" />
-                                                                <span>Add Field</span>
+
+                                                                <span>Field</span>
                                                             </Button>
                                                         </div>
                                                     )}
