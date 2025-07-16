@@ -30,7 +30,7 @@ const ModeSwitcher: React.FC<ModeSwitcherProps> = ({
             >
                 <FiZap className={`w-3 h-3 sm:w-4 sm:h-4 transition-all duration-200 flex-shrink-0 ${mode === 'basic' ? 'text-blue-500' : 'text-gray-500'
                     }`} />
-                <span className="truncate">Basic</span>
+                <span >Basic</span>
             </button>
 
             {/* Expert Mode Button */}
@@ -43,7 +43,7 @@ const ModeSwitcher: React.FC<ModeSwitcherProps> = ({
             >
                 <FiSettings className={`w-3 h-3 sm:w-4 sm:h-4 transition-all duration-200 flex-shrink-0 ${mode === 'expert' ? 'text-purple-500' : 'text-gray-500'
                     }`} />
-                <span className="truncate">Expert</span>
+                <span >Expert</span>
             </button>
         </div>
     );

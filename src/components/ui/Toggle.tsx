@@ -297,6 +297,7 @@ const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(({
                                 htmlFor={id}
                                 className={labelClasses}
                                 data-testid={dataTestId ? `${dataTestId}-label` : undefined}
+                                onClick={handleToggle}
                             >
                                 {label}
                             </label>
@@ -305,6 +306,7 @@ const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(({
                             <span
                                 className={descriptionClasses}
                                 data-testid={dataTestId ? `${dataTestId}-description` : undefined}
+                                onClick={handleToggle}
                             >
                                 {description}
                             </span>
@@ -321,6 +323,7 @@ const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(({
                                 htmlFor={id}
                                 className={labelClasses}
                                 data-testid={dataTestId ? `${dataTestId}-label` : undefined}
+                                onClick={handleToggle}
                             >
                                 {label}
                             </label>
@@ -329,6 +332,7 @@ const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(({
                             <span
                                 className={descriptionClasses}
                                 data-testid={dataTestId ? `${dataTestId}-description` : undefined}
+                                onClick={handleToggle}
                             >
                                 {description}
                             </span>

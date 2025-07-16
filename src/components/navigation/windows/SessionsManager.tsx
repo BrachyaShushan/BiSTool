@@ -1676,7 +1676,7 @@ const SessionsManager = () => {
                                                 </p>
                                                 <div className="flex flex-wrap gap-1">
                                                     {pattern.features.map((feature, index) => (
-                                                        <Badge key={index} variant="default" size="sm">
+                                                        <Badge key={index} variant="default" size="sm" className="bg-opacity-60">
                                                             {feature}
                                                         </Badge>
                                                     ))}
