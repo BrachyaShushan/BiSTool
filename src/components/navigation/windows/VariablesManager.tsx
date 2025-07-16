@@ -1,4 +1,4 @@
-import { FiKey, FiGlobe, FiFolder, FiCheck, FiEdit2, FiCopy, FiTrash2 } from "react-icons/fi";
+import { FiKey, FiGlobe, FiFolder, FiCheck, FiEdit2, FiCopy, FiTrash2, FiPlus } from "react-icons/fi";
 import { useVariablesContext } from '../../../context/VariablesContext';
 import { useEffect, useRef, useState } from "react";
 import { ExtendedVariable, ModalType } from "../../../types/features/SavedManager";
@@ -324,6 +324,7 @@ const VariablesManager = () => {
                         ? `New ${selectedVariable.isGlobal ? "Global" : "Session"} Variable`
                         : `Edit ${selectedVariable.isGlobal ? "Global" : "Session"} Variable`
                 }
+                titleIcon={modalType === "new" ? <FiPlus className="w-5 h-5 text-blue-500" /> : <FiEdit2 className="w-5 h-5 text-blue-500" />}
             >
                 <div className="space-y-4">
                     <div>

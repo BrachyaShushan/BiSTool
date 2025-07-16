@@ -559,15 +559,13 @@ const TokenGenerator: React.FC = () => {
                 onSave={generateToken}
                 title={
                     <div className="flex items-center space-x-3">
-                        <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600">
-                            <FiKey className="w-6 h-6 text-white" />
-                        </div>
                         <div>
                             <h2 className="text-xl font-bold">Token Configuration</h2>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Configure authentication and token extraction</p>
                         </div>
                     </div>
                 }
+                titleIcon={<FiKey className="w-5 h-5 text-blue-500" />}
                 saveButtonText={isGenerating ? "Generating..." : "Generate Token"}
                 showSaveButton={true}
             >

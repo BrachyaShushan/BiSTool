@@ -22,6 +22,7 @@ import { TokenProvider } from "./context/TokenContext";
 import { URLBuilderProvider } from "./context/URLBuilderContext";
 import { PromptConfigProvider } from "./context/PromptConfigContext";
 import { initializeDevTools } from "./utils/devtools";
+import ResponsiveWorkflowSelector from "./components/ui/ResponsiveWorkflowSelector";
 
 const AppContent: React.FC = () => {
     const {
@@ -146,20 +147,11 @@ const AppContent: React.FC = () => {
                         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                             {/* Navigation - Only show in Expert Mode */}
                             <nav className="mt-6 overflow-hidden bg-white border border-gray-200 shadow-lg rounded-xl dark:bg-gray-800 dark:border-gray-700">
-                                <div className="flex p-2 space-x-1">
-                                    {sections.map((section) => (
-                                        <button
-                                            key={section.id}
-                                            onClick={() => setActiveSection(section.id)}
-                                            className={`px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-105 ${activeSection === section.id
-                                                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25"
-                                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
-                                                }`}
-                                        >
-                                            {section.label}
-                                        </button>
-                                    ))}
-                                </div>
+                                <ResponsiveWorkflowSelector
+                                    sections={sections}
+                                    activeSection={activeSection}
+                                    onSectionChange={setActiveSection}
+                                />
                             </nav>
 
                             {/* Main Content */}

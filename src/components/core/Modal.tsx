@@ -7,6 +7,7 @@ export interface ModalProps {
     onClose: () => void;
     onSave?: () => void;
     title: string | React.ReactNode;
+    titleIcon?: React.ReactNode;
     children: React.ReactNode;
     showSaveButton?: boolean;
     showCancelButton?: boolean;
@@ -20,6 +21,7 @@ const Modal: React.FC<ModalProps> = ({
     onClose,
     onSave,
     title,
+    titleIcon,
     children,
     showSaveButton = true,
     showCancelButton = true,
@@ -136,9 +138,9 @@ const Modal: React.FC<ModalProps> = ({
                         <div className="relative flex items-center justify-between">
                             {typeof title === 'string' ? (
                                 <div className="flex items-center flex-1 min-w-0 space-x-2 sm:space-x-3">
-                                    <div className="p-1.5 sm:p-2 rounded-lg shadow-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex-shrink-0">
-                                        <div className="w-3 h-3 bg-white rounded-sm sm:w-4 sm:h-4"></div>
-                                    </div>
+                                    {titleIcon && (
+                                        titleIcon
+                                    )}
                                     <h2 className="text-lg font-bold text-transparent truncate sm:text-xl bg-clip-text bg-gradient-to-r from-gray-800 to-gray-600 dark:from-white dark:to-gray-300">
                                         {title}
                                     </h2>

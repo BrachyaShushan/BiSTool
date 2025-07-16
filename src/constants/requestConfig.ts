@@ -11,13 +11,17 @@ import { FormDataField } from "../types";
 import monaco from "monaco-editor";
 
 export const HTTP_METHODS = [
-  { value: "GET", label: "GET", color: "bg-green-500 text-white" },
-  { value: "POST", label: "POST", color: "bg-blue-500 text-white" },
-  { value: "PUT", label: "PUT", color: "bg-yellow-500 text-white" },
-  { value: "PATCH", label: "PATCH", color: "bg-orange-500 text-white" },
-  { value: "DELETE", label: "DELETE", color: "bg-red-500 text-white" },
-  { value: "HEAD", label: "HEAD", color: "bg-purple-500 text-white" },
-  { value: "OPTIONS", label: "OPTIONS", color: "bg-indigo-500 text-white" },
+  { value: "GET", label: "GET", color: "!bg-green-500 text-white" },
+  { value: "POST", label: "POST", color: "!bg-blue-500 text-white" },
+  { value: "PUT", label: "PUT", color: "!bg-yellow-500 text-white" },
+  { value: "PATCH", label: "PATCH", color: "!bg-orange-500 text-white" },
+  { value: "DELETE", label: "DELETE", color: "!bg-red-500 text-white" },
+  { value: "HEAD", label: "HEAD", color: "!bg-purple-500 text-white" },
+  {
+    value: "OPTIONS",
+    label: "OPTIONS",
+    color: "!bg-indigo-500 text-white",
+  },
 ];
 
 export const METHOD_ICONS: Record<string, string> = {

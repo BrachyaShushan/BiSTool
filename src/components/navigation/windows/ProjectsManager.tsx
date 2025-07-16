@@ -286,6 +286,7 @@ const ProjectsManager = ({ onClose }: { onClose: () => void }) => {
                 onClose={() => setShowCreateProjectModal(false)}
                 onSave={handleCreateProject}
                 title="Create New Project"
+                titleIcon={<FiPlus className="w-5 h-5 text-blue-500" />}
             >
                 <div className="space-y-4">
                     <div>
@@ -323,6 +324,7 @@ const ProjectsManager = ({ onClose }: { onClose: () => void }) => {
                 onClose={() => setShowEditProjectModal(false)}
                 onSave={handleEditProject}
                 title="Edit Project"
+                titleIcon={<FiEdit2 className="w-5 h-5 text-blue-500" />}
             >
                 <div className="space-y-4">
                     <div>
@@ -359,6 +361,7 @@ const ProjectsManager = ({ onClose }: { onClose: () => void }) => {
                 onSave={confirmDeleteProject}
                 title="Delete Project"
                 saveButtonText="Delete"
+                titleIcon={<FiTrash2 className="w-5 h-5 text-blue-500" />}
             >
                 <p className={`dark:text-gray-300 text-gray-700`}>
                     Are you sure you want to delete the project "{deletingProject?.name}"? This action cannot be undone.

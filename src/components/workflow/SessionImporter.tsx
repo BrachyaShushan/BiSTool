@@ -1357,7 +1357,8 @@ const SessionImporter: React.FC<SessionImporterProps> = ({ onImportSessions }) =
                 <Modal
                     isOpen={showStructureModal}
                     onClose={() => setShowStructureModal(false)}
-                    title={<span className="flex items-center gap-2"><FiInfo className="w-5 h-5 text-indigo-500" /> Storage Structure & Import Guide</span>}
+                    title="Storage Structure & Import Guide"
+                    titleIcon={<FiInfo className="w-5 h-5 text-indigo-500" />}
                     showSaveButton={false}
                     showCancelButton={true}
                     cancelButtonText="Close"

@@ -39,6 +39,7 @@ const UnifiedManager: React.FC<UnifiedManagerProps> = ({
             <Modal
                 isOpen={isOpen}
                 onClose={onClose}
+                titleIcon={<FiSettings className="w-5 h-5 text-blue-500" />}
                 title="Manager"
                 showSaveButton={false}
                 showCancelButton={false}

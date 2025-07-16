@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { ExtendedSession } from "../types/features/SavedManager";
 import { URLData, RequestConfigData, Variable } from "../types";
 import { DEFAULT_URL_DATA } from "../utils/storage";
@@ -32,7 +32,7 @@ export const useSessionManager = () => {
   // Function to listen for session manager open requests
   const useSessionManagerListener = useCallback(
     (callback: (options?: SessionManagerOpenOptions) => void) => {
-      useMemo(() => {
+      useEffect(() => {
         const handleOpenSessionManager = (event: CustomEvent) => {
           callback(event.detail);
         };

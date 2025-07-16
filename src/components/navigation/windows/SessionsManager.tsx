@@ -2,8 +2,13 @@ import { ExtendedSession, ModalType } from "../../../types/features/SavedManager
 import { useAppContext } from "../../../context/AppContext";
 import React, { useEffect, useState } from "react";
 import Modal from "../../core/Modal";
-import { FiEdit2, FiCopy, FiTrash2, FiFolder, FiPlus, FiDownload, FiUpload, FiChevronDown, FiCheckSquare, FiSquare, FiKey } from "react-icons/fi";
+import { FiEdit2, FiCopy, FiTrash2, FiFolder, FiPlus, FiDownload, FiUpload, FiChevronDown, FiCheckSquare, FiSquare, FiKey, FiGlobe, FiDatabase, FiWifi, FiSettings } from "react-icons/fi";
 import { useVariablesContext } from '../../../context/VariablesContext';
+import { HTTP_METHODS, METHOD_ICONS } from '../../../constants/requestConfig';
+import Card from '../../ui/Card';
+import Button from '../../ui/Button';
+import Badge from '../../ui/Badge';
+import { IconWrapper } from "../../ui";
 
 const SessionsManager = () => {
     const [divideBy, setDivideBy] = useState<'none' | 'category'>("category");
@@ -27,6 +32,51 @@ const SessionsManager = () => {
     const toggleCategory = (cat: string) => {
         setOpenCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
     };
+    // Duplicate modal state
+    const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+    const [duplicateMethods, setDuplicateMethods] = useState<string[]>([]);
+
+    // New session modal states
+    const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+    const [selectedApiPattern, setSelectedApiPattern] = useState<'rest' | 'graphql' | 'websocket' | 'custom' | null>(null);
+    const [restApiConfig, setRestApiConfig] = useState({
+        baseUrl: '',
+        resourceName: '',
+        hasAuth: false,
+        authType: 'bearer' as 'bearer' | 'basic' | 'api-key',
+        endpoints: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as string[]
+    });
+
+    // GraphQL API configuration
+    const [graphqlApiConfig, setGraphqlApiConfig] = useState({
+        endpoint: '/graphql',
+        operations: ['query', 'mutation', 'subscription'] as string[],
+        hasAuth: false,
+        authType: 'bearer' as 'bearer' | 'basic' | 'api-key',
+        selectedQueries: [] as string[],
+        selectedMutations: [] as string[],
+        selectedSubscriptions: [] as string[]
+    });
+
+    // WebSocket API configuration
+    const [websocketApiConfig, setWebsocketApiConfig] = useState({
+        endpoint: '/ws',
+        events: ['connect', 'message', 'disconnect', 'error'] as string[],
+        hasAuth: false,
+        authType: 'bearer' as 'bearer' | 'basic' | 'api-key',
+        selectedEvents: [] as string[]
+    });
+
+    // Custom API configuration
+    const [customApiConfig, setCustomApiConfig] = useState({
+        name: '',
+        method: 'GET',
+        path: '',
+        hasAuth: false,
+        authType: 'bearer' as 'bearer' | 'basic' | 'api-key',
+        bodyType: 'none' as 'none' | 'json' | 'form' | 'text'
+    });
+
     useEffect(() => {
         return () => {
             setShowSessionModal(false);
@@ -55,11 +105,14 @@ const SessionsManager = () => {
         if (action === "duplicate" && session) {
             setSessionName(`${session.name} (Copy)`);
             setSessionCategory(session.category || "");
+            setDuplicateMethods([session.requestConfig?.method || 'GET']); // default to current method
+            setShowDuplicateModal(true);
+            setShowSessionModal(false);
         } else {
             setSessionName(action === "rename" && session ? session.name : "");
             setSessionCategory(action === "rename" && session ? session.category || "" : "");
+            setShowSessionModal(true);
         }
-        setShowSessionModal(true);
     };
 
     const handleSessionModalSubmit = (): void => {
@@ -238,7 +291,7 @@ const SessionsManager = () => {
 
                         {/* Metadata */}
                         <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                            <span>📅 {new Date(session.timestamp).toLocaleDateString()}</span>
+                            <span><IconWrapper icon="📅" variant="colored" /> {new Date(session.timestamp).toLocaleDateString()}</span>
                             {session.urlData?.environment && (
                                 <span className={`px-2 py-1 rounded-full text-xs ${session.urlData.environment === 'production'
                                     ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
@@ -367,6 +420,553 @@ const SessionsManager = () => {
     const toggleSession = (id: string) => {
         setSelectedImportSessions(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
+
+    // Handle duplicate modal confirm
+    const handleDuplicateConfirm = () => {
+        if (!selectedSession || duplicateMethods.length === 0) return;
+        duplicateMethods.forEach(method => {
+            // Ensure all required fields for requestConfig
+            const origReq = selectedSession.requestConfig || {
+                method: method,
+                queryParams: [],
+                headers: [],
+                bodyType: 'none',
+                jsonBody: '',
+                formData: [],
+                textBody: '',
+            };
+            const newSession: ExtendedSession = {
+                ...selectedSession,
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: `${sessionName} [${method}]`,
+                category: sessionCategory,
+                timestamp: new Date().toISOString(),
+                requestConfig: {
+                    ...origReq,
+                    method,
+                    queryParams: origReq.queryParams || [],
+                    headers: origReq.headers || [],
+                    bodyType: origReq.bodyType || 'none',
+                    jsonBody: origReq.jsonBody || '',
+                    formData: origReq.formData || [],
+                    textBody: origReq.textBody || '',
+                },
+            };
+            handleSaveSession(newSession.name, newSession);
+        });
+        setShowDuplicateModal(false);
+        setDuplicateMethods([]);
+        setSessionName("");
+        setSessionCategory("");
+        setSelectedSession(null);
+        setError(null);
+    };
+
+    // Handle new session button click
+    const handleNewSessionClick = () => {
+        setShowNewSessionModal(true);
+        setSelectedApiPattern(null);
+        setRestApiConfig({
+            baseUrl: '',
+            resourceName: '',
+            hasAuth: false,
+            authType: 'bearer',
+            endpoints: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+        });
+    };
+
+    // Handle REST API creation
+    const handleRestApiCreation = () => {
+        if (!restApiConfig.resourceName) {
+            setError('Resource Name is required');
+            return;
+        }
+
+        const baseUrl = '{base_url}';
+        const resourcePath = `/${restApiConfig.resourceName}`;
+
+        restApiConfig.endpoints.forEach(method => {
+            let endpointPath = resourcePath;
+            let sessionName = `${restApiConfig.resourceName} ${method}`;
+
+            // Adjust path and name based on method
+            switch (method) {
+                case 'GET':
+                    // List all resources
+                    break;
+                case 'POST':
+                    // Create new resource
+                    break;
+                case 'PUT':
+                case 'PATCH':
+                    // Update specific resource
+                    endpointPath = `${resourcePath}/{id}`;
+                    sessionName = `${restApiConfig.resourceName} ${method} by ID`;
+                    break;
+                case 'DELETE':
+                    // Delete specific resource
+                    endpointPath = `${resourcePath}/{id}`;
+                    sessionName = `${restApiConfig.resourceName} ${method} by ID`;
+                    break;
+            }
+
+            const newSession: ExtendedSession = {
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: sessionName,
+                category: `REST API - ${restApiConfig.resourceName}`,
+                timestamp: new Date().toISOString(),
+                urlData: {
+                    baseURL: baseUrl,
+                    segments: endpointPath,
+                    parsedSegments: endpointPath.includes('{id}') ? [{
+                        paramName: 'id',
+                        description: 'Resource ID',
+                        required: true,
+                        value: '',
+                        isDynamic: true
+                    }] : [],
+                    queryParams: [],
+                    segmentVariables: [],
+                    processedURL: `${baseUrl}${endpointPath}`,
+                    domain: '',
+                    protocol: 'https',
+                    builtUrl: `${baseUrl}${endpointPath}`,
+                    environment: 'development',
+                },
+                requestConfig: {
+                    method,
+                    queryParams: [],
+                    headers: restApiConfig.hasAuth ? [
+                        {
+                            key: restApiConfig.authType === 'bearer' ? 'Authorization' :
+                                restApiConfig.authType === 'basic' ? 'Authorization' : 'X-API-Key',
+                            value: restApiConfig.authType === 'bearer' ? 'Bearer {token}' :
+                                restApiConfig.authType === 'basic' ? 'Basic {credentials}' : '{api_key}',
+                            description: 'Authentication header',
+                            required: true,
+                            type: 'string',
+                            in: 'header' as const
+                        }
+                    ] : [],
+                    bodyType: ['POST', 'PUT', 'PATCH'].includes(method) ? 'json' : 'none',
+                    jsonBody: ['POST', 'PUT', 'PATCH'].includes(method) ? `{\n  "name": "",\n  "description": ""\n}` : '',
+                    formData: [],
+                    textBody: '',
+                },
+                yamlOutput: '',
+                segmentVariables: {},
+                sharedVariables: {},
+                activeSection: 'url',
+            };
+
+            handleSaveSession(sessionName, newSession);
+        });
+
+        setShowNewSessionModal(false);
+        setSelectedApiPattern(null);
+        setRestApiConfig({
+            baseUrl: '',
+            resourceName: '',
+            hasAuth: false,
+            authType: 'bearer',
+            endpoints: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+        });
+        setError(null);
+    };
+
+    // Handle GraphQL API creation
+    const handleGraphqlApiCreation = () => {
+        if (!graphqlApiConfig.endpoint) {
+            setError('GraphQL endpoint is required');
+            return;
+        }
+
+        const baseUrl = '{base_url}';
+        const endpoint = graphqlApiConfig.endpoint.startsWith('/') ? graphqlApiConfig.endpoint : `/${graphqlApiConfig.endpoint}`;
+
+        // Create Query session
+        if (graphqlApiConfig.operations.includes('query')) {
+            const querySession: ExtendedSession = {
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: 'GraphQL Query',
+                category: 'GraphQL API',
+                timestamp: new Date().toISOString(),
+                urlData: {
+                    baseURL: baseUrl,
+                    segments: endpoint,
+                    parsedSegments: [],
+                    queryParams: [],
+                    segmentVariables: [],
+                    processedURL: `${baseUrl}${endpoint}`,
+                    domain: '',
+                    protocol: 'https',
+                    builtUrl: `${baseUrl}${endpoint}`,
+                    environment: 'development',
+                },
+                requestConfig: {
+                    method: 'POST',
+                    queryParams: [],
+                    headers: [
+                        {
+                            key: 'Content-Type',
+                            value: 'application/json',
+                            description: 'GraphQL content type',
+                            required: true,
+                            type: 'string',
+                            in: 'header' as const
+                        },
+                        ...(graphqlApiConfig.hasAuth ? [{
+                            key: graphqlApiConfig.authType === 'bearer' ? 'Authorization' :
+                                graphqlApiConfig.authType === 'basic' ? 'Authorization' : 'X-API-Key',
+                            value: graphqlApiConfig.authType === 'bearer' ? 'Bearer {token}' :
+                                graphqlApiConfig.authType === 'basic' ? 'Basic {credentials}' : '{api_key}',
+                            description: 'Authentication header',
+                            required: true,
+                            type: 'string',
+                            in: 'header' as const
+                        }] : [])
+                    ],
+                    bodyType: 'json',
+                    jsonBody: `{\n  "query": "query {\\n    # Your GraphQL query here\\n  }",\n  "variables": {}\n}`,
+                    formData: [],
+                    textBody: '',
+                },
+                yamlOutput: '',
+                segmentVariables: {},
+                sharedVariables: {},
+                activeSection: 'url',
+            };
+            handleSaveSession('GraphQL Query', querySession);
+        }
+
+        // Create Mutation session
+        if (graphqlApiConfig.operations.includes('mutation')) {
+            const mutationSession: ExtendedSession = {
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: 'GraphQL Mutation',
+                category: 'GraphQL API',
+                timestamp: new Date().toISOString(),
+                urlData: {
+                    baseURL: baseUrl,
+                    segments: endpoint,
+                    parsedSegments: [],
+                    queryParams: [],
+                    segmentVariables: [],
+                    processedURL: `${baseUrl}${endpoint}`,
+                    domain: '',
+                    protocol: 'https',
+                    builtUrl: `${baseUrl}${endpoint}`,
+                    environment: 'development',
+                },
+                requestConfig: {
+                    method: 'POST',
+                    queryParams: [],
+                    headers: [
+                        {
+                            key: 'Content-Type',
+                            value: 'application/json',
+                            description: 'GraphQL content type',
+                            required: true,
+                            type: 'string',
+                            in: 'header' as const
+                        },
+                        ...(graphqlApiConfig.hasAuth ? [{
+                            key: graphqlApiConfig.authType === 'bearer' ? 'Authorization' :
+                                graphqlApiConfig.authType === 'basic' ? 'Authorization' : 'X-API-Key',
+                            value: graphqlApiConfig.authType === 'bearer' ? 'Bearer {token}' :
+                                graphqlApiConfig.authType === 'basic' ? 'Basic {credentials}' : '{api_key}',
+                            description: 'Authentication header',
+                            required: true,
+                            type: 'string',
+                            in: 'header' as const
+                        }] : [])
+                    ],
+                    bodyType: 'json',
+                    jsonBody: `{\n  "query": "mutation {\\n    # Your GraphQL mutation here\\n  }",\n  "variables": {}\n}`,
+                    formData: [],
+                    textBody: '',
+                },
+                yamlOutput: '',
+                segmentVariables: {},
+                sharedVariables: {},
+                activeSection: 'url',
+            };
+            handleSaveSession('GraphQL Mutation', mutationSession);
+        }
+
+        // Create Subscription session
+        if (graphqlApiConfig.operations.includes('subscription')) {
+            const subscriptionSession: ExtendedSession = {
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: 'GraphQL Subscription',
+                category: 'GraphQL API',
+                timestamp: new Date().toISOString(),
+                urlData: {
+                    baseURL: baseUrl.replace('https', 'wss').replace('http', 'ws'),
+                    segments: endpoint,
+                    parsedSegments: [],
+                    queryParams: [],
+                    segmentVariables: [],
+                    processedURL: `${baseUrl.replace('https', 'wss').replace('http', 'ws')}${endpoint}`,
+                    domain: '',
+                    protocol: 'wss',
+                    builtUrl: `${baseUrl.replace('https', 'wss').replace('http', 'ws')}${endpoint}`,
+                    environment: 'development',
+                },
+                requestConfig: {
+                    method: 'GET',
+                    queryParams: [],
+                    headers: [
+                        {
+                            key: 'Sec-WebSocket-Protocol',
+                            value: 'graphql-ws',
+                            description: 'GraphQL WebSocket protocol',
+                            required: true,
+                            type: 'string',
+                            in: 'header' as const
+                        },
+                        ...(graphqlApiConfig.hasAuth ? [{
+                            key: graphqlApiConfig.authType === 'bearer' ? 'Authorization' :
+                                graphqlApiConfig.authType === 'basic' ? 'Authorization' : 'X-API-Key',
+                            value: graphqlApiConfig.authType === 'bearer' ? 'Bearer {token}' :
+                                graphqlApiConfig.authType === 'basic' ? 'Basic {credentials}' : '{api_key}',
+                            description: 'Authentication header',
+                            required: true,
+                            type: 'string',
+                            in: 'header' as const
+                        }] : [])
+                    ],
+                    bodyType: 'json',
+                    jsonBody: `{\n  "type": "start",\n  "id": "1",\n  "payload": {\n    "query": "subscription {\\n      # Your GraphQL subscription here\\n    }",\n    "variables": {}\n  }\n}`,
+                    formData: [],
+                    textBody: '',
+                },
+                yamlOutput: '',
+                segmentVariables: {},
+                sharedVariables: {},
+                activeSection: 'url',
+            };
+            handleSaveSession('GraphQL Subscription', subscriptionSession);
+        }
+
+        setShowNewSessionModal(false);
+        setSelectedApiPattern(null);
+        setGraphqlApiConfig({
+            endpoint: '/graphql',
+            operations: ['query', 'mutation', 'subscription'],
+            hasAuth: false,
+            authType: 'bearer',
+            selectedQueries: [],
+            selectedMutations: [],
+            selectedSubscriptions: []
+        });
+        setError(null);
+    };
+
+    // Handle WebSocket API creation
+    const handleWebsocketApiCreation = () => {
+        if (!websocketApiConfig.endpoint) {
+            setError('WebSocket endpoint is required');
+            return;
+        }
+
+        const baseUrl = '{base_url}'.replace('https', 'wss').replace('http', 'ws');
+        const endpoint = websocketApiConfig.endpoint.startsWith('/') ? websocketApiConfig.endpoint : `/${websocketApiConfig.endpoint}`;
+
+        websocketApiConfig.selectedEvents.forEach(event => {
+            const sessionName = `WebSocket ${event.charAt(0).toUpperCase() + event.slice(1)}`;
+            const newSession: ExtendedSession = {
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: sessionName,
+                category: 'WebSocket API',
+                timestamp: new Date().toISOString(),
+                urlData: {
+                    baseURL: baseUrl,
+                    segments: endpoint,
+                    parsedSegments: [],
+                    queryParams: [],
+                    segmentVariables: [],
+                    processedURL: `${baseUrl}${endpoint}`,
+                    domain: '',
+                    protocol: 'wss',
+                    builtUrl: `${baseUrl}${endpoint}`,
+                    environment: 'development',
+                },
+                requestConfig: {
+                    method: 'GET',
+                    queryParams: [],
+                    headers: [
+                        {
+                            key: 'Upgrade',
+                            value: 'websocket',
+                            description: 'WebSocket upgrade header',
+                            required: true,
+                            type: 'string',
+                            in: 'header' as const
+                        },
+                        {
+                            key: 'Connection',
+                            value: 'Upgrade',
+                            description: 'Connection upgrade header',
+                            required: true,
+                            type: 'string',
+                            in: 'header' as const
+                        },
+                        ...(websocketApiConfig.hasAuth ? [{
+                            key: websocketApiConfig.authType === 'bearer' ? 'Authorization' :
+                                websocketApiConfig.authType === 'basic' ? 'Authorization' : 'X-API-Key',
+                            value: websocketApiConfig.authType === 'bearer' ? 'Bearer {token}' :
+                                websocketApiConfig.authType === 'basic' ? 'Basic {credentials}' : '{api_key}',
+                            description: 'Authentication header',
+                            required: true,
+                            type: 'string',
+                            in: 'header' as const
+                        }] : [])
+                    ],
+                    bodyType: 'json',
+                    jsonBody: `{\n  "event": "${event}",\n  "data": {}\n}`,
+                    formData: [],
+                    textBody: '',
+                },
+                yamlOutput: '',
+                segmentVariables: {},
+                sharedVariables: {},
+                activeSection: 'url',
+            };
+            handleSaveSession(sessionName, newSession);
+        });
+
+        setShowNewSessionModal(false);
+        setSelectedApiPattern(null);
+        setWebsocketApiConfig({
+            endpoint: '/ws',
+            events: ['connect', 'message', 'disconnect', 'error'],
+            hasAuth: false,
+            authType: 'bearer',
+            selectedEvents: []
+        });
+        setError(null);
+    };
+
+    // Handle Custom API creation
+    const handleCustomApiCreation = () => {
+        if (!customApiConfig.name || !customApiConfig.path) {
+            setError('Name and Path are required');
+            return;
+        }
+
+        const baseUrl = '{base_url}';
+        const path = customApiConfig.path.startsWith('/') ? customApiConfig.path : `/${customApiConfig.path}`;
+
+        const newSession: ExtendedSession = {
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: customApiConfig.name,
+            category: 'Custom API',
+            timestamp: new Date().toISOString(),
+            urlData: {
+                baseURL: baseUrl,
+                segments: path,
+                parsedSegments: [],
+                queryParams: [],
+                segmentVariables: [],
+                processedURL: `${baseUrl}${path}`,
+                domain: '',
+                protocol: 'https',
+                builtUrl: `${baseUrl}${path}`,
+                environment: 'development',
+            },
+            requestConfig: {
+                method: customApiConfig.method,
+                queryParams: [],
+                headers: [
+                    ...(customApiConfig.bodyType === 'json' ? [{
+                        key: 'Content-Type',
+                        value: 'application/json',
+                        description: 'JSON content type',
+                        required: true,
+                        type: 'string',
+                        in: 'header' as const
+                    }] : []),
+                    ...(customApiConfig.hasAuth ? [{
+                        key: customApiConfig.authType === 'bearer' ? 'Authorization' :
+                            customApiConfig.authType === 'basic' ? 'Authorization' : 'X-API-Key',
+                        value: customApiConfig.authType === 'bearer' ? 'Bearer {token}' :
+                            customApiConfig.authType === 'basic' ? 'Basic {credentials}' : '{api_key}',
+                        description: 'Authentication header',
+                        required: true,
+                        type: 'string',
+                        in: 'header' as const
+                    }] : [])
+                ],
+                bodyType: customApiConfig.bodyType,
+                jsonBody: customApiConfig.bodyType === 'json' ? `{\n  "data": ""\n}` : '',
+                formData: customApiConfig.bodyType === 'form' ? [{ key: '', value: '', type: 'text', required: false }] : [],
+                textBody: customApiConfig.bodyType === 'text' ? '' : '',
+            },
+            yamlOutput: '',
+            segmentVariables: {},
+            sharedVariables: {},
+            activeSection: 'url',
+        };
+
+        handleSaveSession(customApiConfig.name, newSession);
+        setShowNewSessionModal(false);
+        setSelectedApiPattern(null);
+        setCustomApiConfig({
+            name: '',
+            method: 'GET',
+            path: '',
+            hasAuth: false,
+            authType: 'bearer',
+            bodyType: 'none'
+        });
+        setError(null);
+    };
+
+    // API Pattern configurations
+    const apiPatterns = [
+        {
+            id: 'rest',
+            name: 'REST API',
+            description: 'Create CRUD endpoints for a resource',
+            icon: FiGlobe,
+            color: 'from-blue-500 to-indigo-600 dark:from-blue-700 dark:to-indigo-600',
+            bgColor: 'from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900',
+            borderColor: 'border-blue-200 dark:border-blue-600',
+            features: ['CRUD Operations', 'Resource-based URLs', 'HTTP Methods', 'JSON Responses']
+        },
+        {
+            id: 'graphql',
+            name: 'GraphQL API',
+            description: 'Create GraphQL queries and mutations',
+            icon: FiDatabase,
+            color: 'from-purple-500 to-pink-600 dark:from-purple-700 dark:to-pink-600',
+            bgColor: 'from-purple-50 to-pink-50 dark:from-purple-900 dark:to-pink-900',
+            borderColor: 'border-purple-200 dark:border-purple-600',
+            features: ['Single Endpoint', 'Queries & Mutations', 'Type System', 'Introspection']
+        },
+        {
+            id: 'websocket',
+            name: 'WebSocket API',
+            description: 'Create real-time communication endpoints',
+            icon: FiWifi,
+            color: 'from-green-500 to-emerald-600 dark:from-green-700 dark:to-emerald-600',
+            bgColor: 'from-green-50 to-emerald-50 dark:from-green-900 dark:to-emerald-900',
+            borderColor: 'border-green-200 dark:border-green-600',
+            features: ['Real-time Events', 'Bidirectional', 'Connection Management', 'Message Types']
+        },
+        {
+            id: 'custom',
+            name: 'Custom API',
+            description: 'Create a custom API endpoint manually',
+            icon: FiSettings,
+            color: 'from-gray-500 to-slate-600 dark:from-gray-700 dark:to-slate-600',
+            bgColor: 'from-gray-50 to-slate-50 dark:from-gray-900 dark:to-slate-900',
+            borderColor: 'border-gray-200 dark:border-gray-600',
+            features: ['Manual Configuration', 'Custom Headers', 'Flexible Body', 'Any Protocol']
+        }
+    ];
+
     return (
         <>
             <div className="space-y-6">
@@ -414,7 +1014,7 @@ const SessionsManager = () => {
                         {/* Action Button */}
                         <div className="flex items-center space-x-3">
                             <button
-                                onClick={() => handleSessionAction('new')}
+                                onClick={handleNewSessionClick}
                                 className={`group relative px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all duration-300 transform hover:scale-105 shadow-lg overflow-hidden text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/25`}
                                 data-testid="session-create"
                             >
@@ -471,10 +1071,10 @@ const SessionsManager = () => {
                                         data-category-count={Object.keys(groupByCategory(savedSessions)).length}
                                     >
                                         <option value="none" className={`dark:text-white dark:bg-gray-700 text-gray-900 bg-white`}>
-                                            📋 No grouping
+                                            <IconWrapper icon="📋" preserveColors={true} variant="colored" /> No grouping
                                         </option>
                                         <option value="category" className={`dark:text-white dark:bg-gray-700 text-gray-900 bg-white`}>
-                                            📁 By category
+                                            <IconWrapper icon="📁" preserveColors={true} variant="colored" /> By category
                                         </option>
                                     </select>
                                     <div className={`absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none dark:text-gray-400 text-gray-500`}>
@@ -508,7 +1108,7 @@ const SessionsManager = () => {
                                             ? 'dark:bg-gradient-to-r dark:from-blue-600 dark:to-indigo-600 dark:text-white dark:shadow-lg dark:shadow-blue-500/25 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
                                             : 'dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white dark:border dark:border-gray-600 bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200'}`}
                                     >
-                                        <span className="text-xs">{icon}</span>
+                                        <IconWrapper icon={icon} variant="colored" />
                                         <span>{label}</span>
                                     </button>
                                 ))}
@@ -571,6 +1171,7 @@ const SessionsManager = () => {
                             ? "Rename Session"
                             : "Duplicate Session"
                 }
+                titleIcon={modalType === "new" ? <FiPlus className="w-5 h-5 text-blue-500" /> : modalType === "rename" ? <FiEdit2 className="w-5 h-5 text-blue-500" /> : <FiCopy className="w-5 h-5 text-blue-500" />}
             >
                 <input
                     type="text"
@@ -606,6 +1207,7 @@ const SessionsManager = () => {
                     isOpen={showImportModal}
                     onClose={() => setShowImportModal(false)}
                     title={importStep === 'options' ? 'Import Data' : 'Select Items to Import'}
+                    titleIcon={<FiUpload className="w-5 h-5 text-blue-500" />}
                     showSaveButton={false}
                     size="2xl"
                 >
@@ -926,6 +1528,767 @@ const SessionsManager = () => {
                     {error && (
                         <div className="p-3 mt-4 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/20 dark:border-red-800">
                             <p className={`text-sm dark:text-red-300 text-red-600`}>
+                                {error}
+                            </p>
+                        </div>
+                    )}
+                </Modal>
+            )}
+
+            {/* Duplicate Modal */}
+            {showDuplicateModal && (
+                <Modal
+                    isOpen={showDuplicateModal}
+                    onClose={() => {
+                        setShowDuplicateModal(false);
+                        setDuplicateMethods([]);
+                        setSessionName("");
+                        setSessionCategory("");
+                        setSelectedSession(null);
+                    }}
+                    onSave={handleDuplicateConfirm}
+                    title="Duplicate Session"
+                    titleIcon={<FiCopy className="w-5 h-5 text-blue-500" />}
+                    saveButtonText="Duplicate"
+                    showSaveButton={true}
+                    showCancelButton={true}
+                    size="lg"
+                >
+                    <div className="mb-4">
+                        <label className="block mb-2 font-semibold text-gray-700 dark:text-gray-200">Session Name</label>
+                        <input
+                            type="text"
+                            value={sessionName}
+                            onChange={e => setSessionName(e.target.value)}
+                            placeholder="Session name"
+                            className="w-full px-3 py-2 rounded-md border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300 mb-2"
+                        />
+                        <input
+                            type="text"
+                            value={sessionCategory}
+                            onChange={e => setSessionCategory(e.target.value)}
+                            placeholder="Category (optional)"
+                            list="category-list"
+                            className="w-full px-3 py-2 rounded-md border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                        />
+                        <datalist id="category-list">
+                            {existingCategories.map((cat) => (
+                                <option key={cat} value={cat} />
+                            ))}
+                        </datalist>
+                    </div>
+                    <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="font-semibold text-gray-700 dark:text-gray-200">Select HTTP Methods</label>
+                            <div className="flex gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setDuplicateMethods(HTTP_METHODS.map(m => m.value))}
+                                >Select All</Button>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setDuplicateMethods([])}
+                                >Clear</Button>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {HTTP_METHODS.map(method => {
+                                const isSelected = duplicateMethods.includes(method.value);
+                                return (
+                                    <Card
+                                        key={method.value}
+                                        variant={isSelected ? 'elevated' : 'default'}
+                                        padding="md"
+                                        interactive
+                                        onClick={() => {
+                                            setDuplicateMethods(prev =>
+                                                prev.includes(method.value)
+                                                    ? prev.filter(m => m !== method.value)
+                                                    : [...prev, method.value]
+                                            );
+                                        }}
+                                        className={`flex items-center space-x-3 border-2 transition-all duration-200 ${isSelected ? method.color + ' ring-2 ring-blue-400/50' : ''}`}
+                                    >
+                                        <Badge variant={isSelected ? 'primary' : 'default'} size="sm" className="mr-2">
+                                            <IconWrapper icon={METHOD_ICONS[method.value] || '🔗'} variant="colored" />
+                                        </Badge>
+                                        <span className={`font-semibold ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>{method.label}</span>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    {error && (
+                        <p className="text-sm dark:text-red-400 text-red-600 mb-4">{error}</p>
+                    )}
+                </Modal>
+            )}
+
+            {/* New Session Modal */}
+            {showNewSessionModal && (
+                <Modal
+                    isOpen={showNewSessionModal}
+                    onClose={() => {
+                        setShowNewSessionModal(false);
+                        setSelectedApiPattern(null);
+                        setError(null);
+                    }}
+                    title="Create New Session"
+                    titleIcon={<FiPlus className="w-5 h-5 text-blue-500" />}
+                    showSaveButton={false}
+                    showCancelButton={true}
+                    size="2xl"
+                >
+                    {!selectedApiPattern ? (
+                        // API Pattern Selection
+                        <div className="space-y-6">
+                            <div className="text-center mb-6">
+                                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                                    Choose API Pattern
+                                </h3>
+                                <p className="text-gray-600 dark:text-gray-400">
+                                    Select the type of API you want to create
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {apiPatterns.map((pattern) => (
+                                    <Card
+                                        key={pattern.id}
+                                        variant="elevated"
+                                        padding="lg"
+                                        interactive
+                                        onClick={() => setSelectedApiPattern(pattern.id as any)}
+                                        className={`border-2 hover:border-blue-300 transition-all duration-300 ${pattern.borderColor} bg-gradient-to-br ${pattern.bgColor}`}
+                                    >
+                                        <div className="flex items-start space-x-4">
+                                            <div className={`p-3 rounded-xl bg-gradient-to-br ${pattern.color} shadow-lg`}>
+                                                <pattern.icon className="w-6 h-6 text-white" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                                                    {pattern.name}
+                                                </h4>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                                    {pattern.description}
+                                                </p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {pattern.features.map((feature, index) => (
+                                                        <Badge key={index} variant="default" size="sm">
+                                                            {feature}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        </div>
+                    ) : selectedApiPattern === 'rest' ? (
+                        // REST API Configuration
+                        <div className="space-y-6">
+                            <div className="flex items-center space-x-3 mb-6">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setSelectedApiPattern(null)}
+                                    icon={FiChevronDown}
+                                    iconPosition="left"
+                                >
+                                    Back
+                                </Button>
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
+                                        <FiGlobe className="w-4 h-4 text-white" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                                        REST API Configuration
+                                    </h3>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Resource Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={restApiConfig.resourceName}
+                                        onChange={(e) => setRestApiConfig(prev => ({ ...prev, resourceName: e.target.value }))}
+                                        placeholder="users, products, orders"
+                                        className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        This will create endpoints like /{restApiConfig.resourceName || 'resource'}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Authentication
+                                    </label>
+                                    <div className="space-y-3">
+                                        <label className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={restApiConfig.hasAuth}
+                                                onChange={(e) => setRestApiConfig(prev => ({ ...prev, hasAuth: e.target.checked }))}
+                                                className="rounded border-gray-300"
+                                            />
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                Include authentication headers
+                                            </span>
+                                        </label>
+
+                                        {restApiConfig.hasAuth && (
+                                            <select
+                                                value={restApiConfig.authType}
+                                                onChange={(e) => setRestApiConfig(prev => ({ ...prev, authType: e.target.value as any }))}
+                                                className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                            >
+                                                <option value="bearer">Bearer Token</option>
+                                                <option value="basic">Basic Auth</option>
+                                                <option value="api-key">API Key</option>
+                                            </select>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                            Select HTTP Methods
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => setRestApiConfig(prev => ({ ...prev, endpoints: HTTP_METHODS.map(m => m.value) }))}
+                                            >Select All</Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => setRestApiConfig(prev => ({ ...prev, endpoints: [] }))}
+                                            >Clear</Button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {HTTP_METHODS.map(method => {
+                                            const isSelected = restApiConfig.endpoints.includes(method.value);
+                                            return (
+                                                <Card
+                                                    key={method.value}
+                                                    variant={isSelected ? 'elevated' : 'default'}
+                                                    padding="md"
+                                                    interactive
+                                                    onClick={() => {
+                                                        setRestApiConfig(prev => ({
+                                                            ...prev,
+                                                            endpoints: prev.endpoints.includes(method.value)
+                                                                ? prev.endpoints.filter(ep => ep !== method.value)
+                                                                : [...prev.endpoints, method.value]
+                                                        }));
+                                                    }}
+                                                    className={`flex items-center space-x-3 border-2 transition-all duration-200 ${isSelected ? method.color + ' ring-2 ring-blue-400/50' : ''}`}
+                                                >
+                                                    <Badge variant={isSelected ? 'primary' : 'default'} size="sm" className="mr-2">
+                                                        <IconWrapper icon={METHOD_ICONS[method.value] || '🔗'} variant="colored" />
+                                                    </Badge>
+                                                    <span className={`font-semibold ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>{method.label}</span>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-600">
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setSelectedApiPattern(null)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    gradient
+                                    onClick={handleRestApiCreation}
+                                    disabled={!restApiConfig.resourceName || restApiConfig.endpoints.length === 0}
+                                >
+                                    Create REST API Sessions
+                                </Button>
+                            </div>
+                        </div>
+                    ) : selectedApiPattern === 'graphql' ? (
+                        // GraphQL API Configuration
+                        <div className="space-y-6">
+                            <div className="flex items-center space-x-3 mb-6">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setSelectedApiPattern(null)}
+                                    icon={FiChevronDown}
+                                    iconPosition="left"
+                                >
+                                    Back
+                                </Button>
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg">
+                                        <FiDatabase className="w-4 h-4 text-white" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                                        GraphQL API Configuration
+                                    </h3>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        GraphQL Endpoint
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={graphqlApiConfig.endpoint}
+                                        onChange={(e) => setGraphqlApiConfig(prev => ({ ...prev, endpoint: e.target.value }))}
+                                        placeholder="/graphql"
+                                        className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Usually /graphql or /api/graphql
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Authentication
+                                    </label>
+                                    <div className="space-y-3">
+                                        <label className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={graphqlApiConfig.hasAuth}
+                                                onChange={(e) => setGraphqlApiConfig(prev => ({ ...prev, hasAuth: e.target.checked }))}
+                                                className="rounded border-gray-300"
+                                            />
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                Include authentication headers
+                                            </span>
+                                        </label>
+
+                                        {graphqlApiConfig.hasAuth && (
+                                            <select
+                                                value={graphqlApiConfig.authType}
+                                                onChange={(e) => setGraphqlApiConfig(prev => ({ ...prev, authType: e.target.value as any }))}
+                                                className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                            >
+                                                <option value="bearer">Bearer Token</option>
+                                                <option value="basic">Basic Auth</option>
+                                                <option value="api-key">API Key</option>
+                                            </select>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                            GraphQL Operations
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => setGraphqlApiConfig(prev => ({ ...prev, operations: ['query', 'mutation', 'subscription'] }))}
+                                            >Select All</Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => setGraphqlApiConfig(prev => ({ ...prev, operations: [] }))}
+                                            >Clear</Button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        {[
+                                            { id: 'query', name: 'Query', icon: '🔍', color: 'from-blue-500 to-blue-600', description: 'Read data' },
+                                            { id: 'mutation', name: 'Mutation', icon: '✏️', color: 'from-green-500 to-green-600', description: 'Modify data' },
+                                            { id: 'subscription', name: 'Subscription', icon: '📡', color: 'from-purple-500 to-purple-600', description: 'Real-time updates' }
+                                        ].map(operation => {
+                                            const isSelected = graphqlApiConfig.operations.includes(operation.id);
+                                            return (
+                                                <Card
+                                                    key={operation.id}
+                                                    variant={isSelected ? 'elevated' : 'default'}
+                                                    padding="md"
+                                                    interactive
+                                                    onClick={() => {
+                                                        setGraphqlApiConfig(prev => ({
+                                                            ...prev,
+                                                            operations: prev.operations.includes(operation.id)
+                                                                ? prev.operations.filter(op => op !== operation.id)
+                                                                : [...prev.operations, operation.id]
+                                                        }));
+                                                    }}
+                                                    className={`border-2 transition-all duration-200 ${isSelected ? operation.color + ' ring-2 ring-purple-400/50' : ''}`}
+                                                >
+                                                    <div className="flex items-center space-x-3">
+                                                        <Badge variant={isSelected ? 'primary' : 'default'} size="sm">
+                                                            <span className="text-lg">{operation.icon}</span>
+                                                        </Badge>
+                                                        <div>
+                                                            <span className={`font-semibold ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>
+                                                                {operation.name}
+                                                            </span>
+                                                            <p className={`text-xs ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                                {operation.description}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-600">
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setSelectedApiPattern(null)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    gradient
+                                    onClick={handleGraphqlApiCreation}
+                                    disabled={!graphqlApiConfig.endpoint || graphqlApiConfig.operations.length === 0}
+                                >
+                                    Create GraphQL Sessions
+                                </Button>
+                            </div>
+                        </div>
+                    ) : selectedApiPattern === 'websocket' ? (
+                        // WebSocket API Configuration
+                        <div className="space-y-6">
+                            <div className="flex items-center space-x-3 mb-6">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setSelectedApiPattern(null)}
+                                    icon={FiChevronDown}
+                                    iconPosition="left"
+                                >
+                                    Back
+                                </Button>
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
+                                        <FiWifi className="w-4 h-4 text-white" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                                        WebSocket API Configuration
+                                    </h3>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        WebSocket Endpoint
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={websocketApiConfig.endpoint}
+                                        onChange={(e) => setWebsocketApiConfig(prev => ({ ...prev, endpoint: e.target.value }))}
+                                        placeholder="/ws"
+                                        className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        WebSocket connection endpoint
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Authentication
+                                    </label>
+                                    <div className="space-y-3">
+                                        <label className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={websocketApiConfig.hasAuth}
+                                                onChange={(e) => setWebsocketApiConfig(prev => ({ ...prev, hasAuth: e.target.checked }))}
+                                                className="rounded border-gray-300"
+                                            />
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                Include authentication headers
+                                            </span>
+                                        </label>
+
+                                        {websocketApiConfig.hasAuth && (
+                                            <select
+                                                value={websocketApiConfig.authType}
+                                                onChange={(e) => setWebsocketApiConfig(prev => ({ ...prev, authType: e.target.value as any }))}
+                                                className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                            >
+                                                <option value="bearer">Bearer Token</option>
+                                                <option value="basic">Basic Auth</option>
+                                                <option value="api-key">API Key</option>
+                                            </select>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                            WebSocket Events
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => setWebsocketApiConfig(prev => ({ ...prev, selectedEvents: websocketApiConfig.events }))}
+                                            >Select All</Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => setWebsocketApiConfig(prev => ({ ...prev, selectedEvents: [] }))}
+                                            >Clear</Button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {websocketApiConfig.events.map(event => {
+                                            const isSelected = websocketApiConfig.selectedEvents.includes(event);
+                                            const eventConfig = {
+                                                connect: { icon: '🔌', color: 'from-green-500 to-green-600', description: 'Connection' },
+                                                message: { icon: '💬', color: 'from-blue-500 to-blue-600', description: 'Message' },
+                                                disconnect: { icon: '🔌', color: 'from-red-500 to-red-600', description: 'Disconnect' },
+                                                error: { icon: '⚠️', color: 'from-yellow-500 to-yellow-600', description: 'Error' }
+                                            }[event];
+
+                                            if (!eventConfig) return null;
+
+                                            return (
+                                                <Card
+                                                    key={event}
+                                                    variant={isSelected ? 'elevated' : 'default'}
+                                                    padding="md"
+                                                    interactive
+                                                    onClick={() => {
+                                                        setWebsocketApiConfig(prev => ({
+                                                            ...prev,
+                                                            selectedEvents: prev.selectedEvents.includes(event)
+                                                                ? prev.selectedEvents.filter(e => e !== event)
+                                                                : [...prev.selectedEvents, event]
+                                                        }));
+                                                    }}
+                                                    className={`border-2 transition-all duration-200 ${isSelected ? eventConfig.color + ' ring-2 ring-green-400/50' : ''}`}
+                                                >
+                                                    <div className="flex flex-col items-center space-y-2 text-center">
+                                                        <Badge variant={isSelected ? 'primary' : 'default'} size="sm">
+                                                            <span className="text-lg">{eventConfig.icon}</span>
+                                                        </Badge>
+                                                        <div>
+                                                            <span className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>
+                                                                {event.charAt(0).toUpperCase() + event.slice(1)}
+                                                            </span>
+                                                            <p className={`text-xs ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                                {eventConfig.description}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-600">
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setSelectedApiPattern(null)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    gradient
+                                    onClick={handleWebsocketApiCreation}
+                                    disabled={!websocketApiConfig.endpoint || websocketApiConfig.selectedEvents.length === 0}
+                                >
+                                    Create WebSocket Sessions
+                                </Button>
+                            </div>
+                        </div>
+                    ) : selectedApiPattern === 'custom' ? (
+                        // Custom API Configuration
+                        <div className="space-y-6">
+                            <div className="flex items-center space-x-3 mb-6">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setSelectedApiPattern(null)}
+                                    icon={FiChevronDown}
+                                    iconPosition="left"
+                                >
+                                    Back
+                                </Button>
+                                <div className="flex items-center space-x-2">
+                                    <div className="p-2 bg-gradient-to-br from-gray-500 to-slate-600 rounded-lg">
+                                        <FiSettings className="w-4 h-4 text-white" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                                        Custom API Configuration
+                                    </h3>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Session Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={customApiConfig.name}
+                                        onChange={(e) => setCustomApiConfig(prev => ({ ...prev, name: e.target.value }))}
+                                        placeholder="My Custom API"
+                                        className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                            HTTP Method
+                                        </label>
+                                        <select
+                                            value={customApiConfig.method}
+                                            onChange={(e) => setCustomApiConfig(prev => ({ ...prev, method: e.target.value }))}
+                                            className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                        >
+                                            {HTTP_METHODS.map(method => (
+                                                <option key={method.value} value={method.value}>
+                                                    {method.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                            Body Type
+                                        </label>
+                                        <select
+                                            value={customApiConfig.bodyType}
+                                            onChange={(e) => setCustomApiConfig(prev => ({ ...prev, bodyType: e.target.value as any }))}
+                                            className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                        >
+                                            <option value="none">None</option>
+                                            <option value="json">JSON</option>
+                                            <option value="form">Form Data</option>
+                                            <option value="text">Text</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        API Path
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={customApiConfig.path}
+                                        onChange={(e) => setCustomApiConfig(prev => ({ ...prev, path: e.target.value }))}
+                                        placeholder="/api/custom"
+                                        className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Path after the base URL
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Authentication
+                                    </label>
+                                    <div className="space-y-3">
+                                        <label className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={customApiConfig.hasAuth}
+                                                onChange={(e) => setCustomApiConfig(prev => ({ ...prev, hasAuth: e.target.checked }))}
+                                                className="rounded border-gray-300"
+                                            />
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                Include authentication headers
+                                            </span>
+                                        </label>
+
+                                        {customApiConfig.hasAuth && (
+                                            <select
+                                                value={customApiConfig.authType}
+                                                onChange={(e) => setCustomApiConfig(prev => ({ ...prev, authType: e.target.value as any }))}
+                                                className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
+                                            >
+                                                <option value="bearer">Bearer Token</option>
+                                                <option value="basic">Basic Auth</option>
+                                                <option value="api-key">API Key</option>
+                                            </select>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-600">
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setSelectedApiPattern(null)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    gradient
+                                    onClick={handleCustomApiCreation}
+                                    disabled={!customApiConfig.name || !customApiConfig.path}
+                                >
+                                    Create Custom Session
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        // Placeholder for other patterns
+                        <div className="text-center py-8">
+                            <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200 dark:from-purple-900/20 dark:to-pink-900/20 dark:border-purple-700">
+                                <FiSettings className="w-12 h-12 text-purple-500 mx-auto mb-4" />
+                                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                                    Coming Soon
+                                </h3>
+                                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                    {selectedApiPattern === 'graphql' && 'GraphQL API creation is coming soon!'}
+                                    {selectedApiPattern === 'websocket' && 'WebSocket API creation is coming soon!'}
+                                    {selectedApiPattern === 'custom' && 'Custom API creation is coming soon!'}
+                                </p>
+                                <Button
+                                    variant="primary"
+                                    onClick={() => setSelectedApiPattern(null)}
+                                >
+                                    Back to Patterns
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="p-3 mt-4 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+                            <p className="text-sm dark:text-red-300 text-red-600">
                                 {error}
                             </p>
                         </div>

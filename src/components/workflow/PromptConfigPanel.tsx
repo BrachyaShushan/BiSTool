@@ -4,7 +4,8 @@ import { usePromptConfigContext } from '../../context/PromptConfigContext';
 import {
     FiSettings, FiEdit3, FiEye, FiEyeOff, FiPlus, FiTrash2,
     FiCode, FiFileText, FiDatabase, FiGlobe, FiShield, FiZap,
-    FiCheck, FiX, FiCopy, FiDownload, FiUpload
+    FiCheck, FiX, FiCopy, FiDownload, FiUpload,
+    FiEdit2
 } from 'react-icons/fi';
 import {
     Button, Card, Input, Textarea, Badge, IconButton,
@@ -182,6 +183,7 @@ ${newTemplate.content}`;
                 onClose={onClose}
                 onSave={handleSave}
                 title={modalTitle}
+                titleIcon={<FiSettings className="w-5 h-5 text-blue-500" />}
                 size="6xl"
                 showSaveButton={isEditing}
                 showCancelButton={true}
@@ -859,6 +861,7 @@ ${newTemplate.content}`;
                     showCancelButton={true}
                     saveButtonText="Save Changes"
                     cancelButtonText="Cancel"
+                    titleIcon={<FiEdit2 className="w-5 h-5 text-blue-500" />}
                 >
                     <div className="space-y-4">
                         <div>

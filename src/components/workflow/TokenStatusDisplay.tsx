@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { FiShield, FiClock } from "react-icons/fi";
+import { FiShield, FiClock, FiKey } from "react-icons/fi";
 import Modal from "../core/Modal";
 import { Button } from "../ui";
 import { TOKEN_CHECK_INTERVAL, TOKEN_EXPIRATION_STYLES } from "../../constants/requestConfig";
@@ -146,6 +146,7 @@ const TokenStatusDisplay: React.FC<TokenStatusDisplayProps> = ({
                 isOpen={showTokenModal}
                 onClose={() => setShowTokenModal(false)}
                 title="Decoded Token"
+                titleIcon={<FiKey className="w-5 h-5 text-blue-500" />}
                 showSaveButton={false}
                 size="lg"
             >

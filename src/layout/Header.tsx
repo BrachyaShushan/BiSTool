@@ -37,6 +37,7 @@ const Header = () => {
     const [isTokenExpired, setIsTokenExpired] = useState(false);
     const [tokenDuration, setTokenDuration] = useState<number | null>(null);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const { currentProject, clearCurrentProject } = useProjectContext();
 
     const tokenName = (globalVariables && tokenConfig && tokenConfig.tokenName) || "x-access-token";
@@ -95,6 +96,32 @@ const Header = () => {
     const toggleHeaderCollapse = useCallback(() => {
         setIsHeaderCollapsed(prev => !prev);
     }, []);
+
+    const toggleMobileSidebar = useCallback(() => {
+        setIsMobileSidebarOpen(prev => !prev);
+    }, []);
+
+    // Close mobile sidebar when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Element;
+            if (isMobileSidebarOpen && !target.closest('.mobile-sidebar') && !target.closest('.mobile-sidebar-toggle')) {
+                setIsMobileSidebarOpen(false);
+            }
+        };
+
+        if (isMobileSidebarOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isMobileSidebarOpen]);
 
     // Helper to decode JWT and check expiration
     useEffect(() => {
@@ -156,7 +183,7 @@ const Header = () => {
                         </button>
                     </div>
 
-                    {/* Center - Mode Switcher */}
+                    {/* Center - Mode Switcher (Desktop only) */}
                     <div className="hidden flex-1 justify-center items-center sm:flex">
                         <ModeSwitcher
                             mode={mode}
@@ -165,7 +192,7 @@ const Header = () => {
                         />
                     </div>
 
-                    {/* Right side - Save controls and theme toggle */}
+                    {/* Right side - Desktop controls and mobile menu button */}
                     <div className="flex flex-shrink-0 items-center space-x-1 sm:space-x-2 md:space-x-3">
 
                         {/* Sessions of Current Category - Hidden on mobile when collapsed */}
@@ -236,17 +263,10 @@ const Header = () => {
                             </div>
                         )}
 
-                        <div className="flex gap-1 justify-end items-center sm:gap-2">
+                        {/* Desktop Controls */}
+                        <div className="hidden sm:flex gap-1 justify-end items-center sm:gap-2">
                             {/* Collapsible Header Content */}
                             <div className={`flex items-center space-x-2 sm:space-x-3 md:space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
-                                {/* Mobile Mode Switcher */}
-                                <div className="sm:hidden">
-                                    <ModeSwitcher
-                                        mode={mode}
-                                        onModeChange={setMode}
-                                    />
-                                </div>
-
                                 {/* Action Buttons */}
                                 <div className="flex items-center space-x-1 sm:space-x-2">
 
@@ -267,9 +287,9 @@ const Header = () => {
                                         {isDarkMode ? <FiSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FiMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
                                     </button>
 
-                                    {/* Active Session Method Badge - Hidden on mobile */}
+                                    {/* Active Session Method Badge */}
                                     {activeSession?.requestConfig && (
-                                        <div className="hidden items-center space-x-2 sm:flex">
+                                        <div className="flex items-center space-x-2">
                                             <span className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-bold shadow-md ${methodColor[activeSession.requestConfig.method]?.color
                                                 }`}>
                                                 {activeSession.requestConfig.method}
@@ -309,7 +329,7 @@ const Header = () => {
                                 </div>
                             </div>
 
-                            {/* Hamburger Menu Button */}
+                            {/* Desktop Hamburger Menu Button */}
                             <button
                                 onClick={toggleHeaderCollapse}
                                 className={`flex justify-center items-center p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group sm:p-3 sm:rounded-xl hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 hover:bg-gray-200`}
@@ -321,9 +341,169 @@ const Header = () => {
                                 </div>
                             </button>
                         </div>
+
+                        {/* Mobile Menu Button */}
+                        <button
+                            onClick={toggleMobileSidebar}
+                            className="mobile-sidebar-toggle flex sm:hidden justify-center items-center p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 hover:bg-gray-200"
+                            title="Open menu"
+                            aria-label="Open menu"
+                        >
+                            <FiMenu size={16} className="transition-transform duration-200 group-hover:scale-110" />
+                        </button>
                     </div>
                 </div>
             </header>
+
+            {/* Mobile Sidebar Overlay */}
+            {isMobileSidebarOpen && (
+                <div className="fixed inset-0 z-50 sm:hidden">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300"
+                        onClick={() => setIsMobileSidebarOpen(false)}
+                    />
+
+                    {/* Sidebar */}
+                    <div className="mobile-sidebar absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-300 ease-in-out">
+                        <div className="flex flex-col h-full">
+                            {/* Sidebar Header */}
+                            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Menu</h2>
+                                <button
+                                    onClick={() => setIsMobileSidebarOpen(false)}
+                                    className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                >
+                                    <FiX size={20} />
+                                </button>
+                            </div>
+
+                            {/* Sidebar Content */}
+                            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                                {/* Mode Switcher */}
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Mode</h3>
+                                    <ModeSwitcher
+                                        mode={mode}
+                                        onModeChange={setMode}
+                                        className="w-full"
+                                    />
+                                </div>
+
+                                {/* Save Controls */}
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Save Status</h3>
+                                    <SaveControls
+                                        autoSave={autoSave}
+                                        hasUnsavedChanges={hasUnsavedChanges}
+                                        isSaving={isSaving}
+                                        lastSaved={lastSaved}
+                                    />
+                                </div>
+
+                                {/* Active Session Method Badge */}
+                                {activeSession?.requestConfig && (
+                                    <div className="space-y-3">
+                                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Current Method</h3>
+                                        <div className="flex items-center">
+                                            <span className={`px-3 py-2 rounded-lg text-sm font-bold shadow-md ${methodColor[activeSession.requestConfig.method]?.color}`}>
+                                                {activeSession.requestConfig.method}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Sessions of Current Category */}
+                                {activeSession?.category && (
+                                    <div className="space-y-3">
+                                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                                            {activeSession.category} Sessions
+                                        </h3>
+                                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                                            {savedSessions.filter((s: any) => s.category === activeSession.category).length > 0 ? (
+                                                savedSessions
+                                                    .filter((s: any) => s.category === activeSession.category)
+                                                    .map((session: any) => (
+                                                        <button
+                                                            key={session.id}
+                                                            onClick={() => {
+                                                                handleLoadSession(session);
+                                                                setIsMobileSidebarOpen(false);
+                                                            }}
+                                                            className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color
+                                                                } ${activeSession.id === session.id
+                                                                    ? "bg-opacity-100 shadow-md"
+                                                                    : "bg-opacity-30 dark:bg-opacity-30 hover:bg-opacity-50"
+                                                                }`}
+                                                        >
+                                                            {session.name}
+                                                        </button>
+                                                    ))
+                                            ) : (
+                                                <span className="text-sm text-gray-500 dark:text-gray-400">No other sessions</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Actions</h3>
+                                    <div className="space-y-2">
+                                        {/* Theme toggle */}
+                                        <button
+                                            onClick={toggleDarkMode}
+                                            className="w-full flex items-center justify-between p-3 text-left bg-gray-50 dark:bg-gray-800 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                                            </span>
+                                            {isDarkMode ? <FiSun className="w-5 h-5" /> : <FiMoon className="w-5 h-5" />}
+                                        </button>
+
+                                        {/* Project Manager Button */}
+                                        <button
+                                            onClick={() => {
+                                                openUnifiedManager();
+                                                setIsMobileSidebarOpen(false);
+                                            }}
+                                            className="w-full flex items-center justify-between p-3 text-left bg-gray-50 dark:bg-gray-800 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Manager</span>
+                                            <FiSettings size={16} />
+                                        </button>
+
+                                        {/* Token Status */}
+                                        <button
+                                            onClick={() => {
+                                                handleRegenerateToken();
+                                                setIsMobileSidebarOpen(false);
+                                            }}
+                                            className={`w-full flex items-center justify-between p-3 text-left rounded-lg transition-colors ${isTokenExpired
+                                                ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30"
+                                                : isTokenLoading
+                                                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                                                    : "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30"
+                                                }`}
+                                        >
+                                            <span className="text-sm font-medium">
+                                                {isTokenExpired
+                                                    ? "Token Expired"
+                                                    : isTokenLoading
+                                                        ? "Checking Token..."
+                                                        : `Token Valid${tokenDuration !== null ? ` (${Math.round(tokenDuration)}m)` : ""}`
+                                                }
+                                            </span>
+                                            <FiKey size={16} className={isTokenLoading ? 'animate-spin' : ''} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
         </>
     )
