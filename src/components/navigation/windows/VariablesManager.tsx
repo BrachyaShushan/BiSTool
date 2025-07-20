@@ -2,7 +2,7 @@ import { FiKey, FiGlobe, FiFolder, FiCheck, FiEdit2, FiCopy, FiTrash2, FiPlus } 
 import { useVariablesContext } from '../../../context/VariablesContext';
 import { useEffect, useRef, useState } from "react";
 import { ExtendedVariable, ModalType } from "../../../types/features/SavedManager";
-import Modal from "../../core/Modal";
+import Modal from "../../ui/Modal";
 
 
 const VariablesManager = () => {

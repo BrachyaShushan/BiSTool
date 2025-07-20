@@ -1,7 +1,7 @@
 import { ExtendedSession, ModalType } from "../../../types/features/SavedManager";
 import { useAppContext } from "../../../context/AppContext";
 import React, { useEffect, useState } from "react";
-import Modal from "../../core/Modal";
+import Modal from "../../ui/Modal";
 import { FiEdit2, FiCopy, FiTrash2, FiFolder, FiPlus, FiDownload, FiUpload, FiChevronDown, FiCheckSquare, FiSquare, FiKey, FiGlobe, FiDatabase, FiWifi, FiSettings } from "react-icons/fi";
 import { useVariablesContext } from '../../../context/VariablesContext';
 import { HTTP_METHODS, METHOD_ICONS } from '../../../constants/requestConfig';
@@ -492,8 +492,103 @@ const SessionsManager = () => {
             // Adjust path and name based on method
             switch (method) {
                 case 'GET':
-                    // List all resources
-                    break;
+                    // Create two GET endpoints: one for listing all, one for getting by ID
+                    // First: GET all resources
+                    const getAllSession: ExtendedSession = {
+                        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        name: `${restApiConfig.resourceName} GET All`,
+                        category: `REST API - ${restApiConfig.resourceName}`,
+                        timestamp: new Date().toISOString(),
+                        urlData: {
+                            baseURL: baseUrl,
+                            segments: resourcePath,
+                            parsedSegments: [],
+                            queryParams: [],
+                            segmentVariables: [],
+                            processedURL: `${baseUrl}${resourcePath}`,
+                            domain: '',
+                            protocol: 'https',
+                            builtUrl: `${baseUrl}${resourcePath}`,
+                            environment: 'development',
+                        },
+                        requestConfig: {
+                            method: 'GET',
+                            queryParams: [],
+                            headers: restApiConfig.hasAuth ? [
+                                {
+                                    key: restApiConfig.authType === 'bearer' ? 'Authorization' :
+                                        restApiConfig.authType === 'basic' ? 'Authorization' : 'X-API-Key',
+                                    value: restApiConfig.authType === 'bearer' ? 'Bearer {token}' :
+                                        restApiConfig.authType === 'basic' ? 'Basic {credentials}' : '{api_key}',
+                                    description: 'Authentication header',
+                                    required: true,
+                                    type: 'string',
+                                    in: 'header' as const
+                                }
+                            ] : [],
+                            bodyType: 'none',
+                            jsonBody: '',
+                            formData: [],
+                            textBody: '',
+                        },
+                        yamlOutput: '',
+                        segmentVariables: {},
+                        sharedVariables: {},
+                        activeSection: 'url',
+                    };
+                    handleSaveSession(`${restApiConfig.resourceName} GET All`, getAllSession);
+
+                    // Second: GET by ID
+                    const getByIdSession: ExtendedSession = {
+                        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        name: `${restApiConfig.resourceName} GET by ID`,
+                        category: `REST API - ${restApiConfig.resourceName}`,
+                        timestamp: new Date().toISOString(),
+                        urlData: {
+                            baseURL: baseUrl,
+                            segments: `${resourcePath}/{id}`,
+                            parsedSegments: [{
+                                paramName: 'id',
+                                description: 'Resource ID',
+                                required: true,
+                                value: '',
+                                isDynamic: true
+                            }],
+                            queryParams: [],
+                            segmentVariables: [],
+                            processedURL: `${baseUrl}${resourcePath}/{id}`,
+                            domain: '',
+                            protocol: 'https',
+                            builtUrl: `${baseUrl}${resourcePath}/{id}`,
+                            environment: 'development',
+                        },
+                        requestConfig: {
+                            method: 'GET',
+                            queryParams: [],
+                            headers: restApiConfig.hasAuth ? [
+                                {
+                                    key: restApiConfig.authType === 'bearer' ? 'Authorization' :
+                                        restApiConfig.authType === 'basic' ? 'Authorization' : 'X-API-Key',
+                                    value: restApiConfig.authType === 'bearer' ? 'Bearer {token}' :
+                                        restApiConfig.authType === 'basic' ? 'Basic {credentials}' : '{api_key}',
+                                    description: 'Authentication header',
+                                    required: true,
+                                    type: 'string',
+                                    in: 'header' as const
+                                }
+                            ] : [],
+                            bodyType: 'none',
+                            jsonBody: '',
+                            formData: [],
+                            textBody: '',
+                        },
+                        yamlOutput: '',
+                        segmentVariables: {},
+                        sharedVariables: {},
+                        activeSection: 'url',
+                    };
+                    handleSaveSession(`${restApiConfig.resourceName} GET by ID`, getByIdSession);
+                    return; // Skip the default processing for GET
                 case 'POST':
                     // Create new resource
                     break;

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { FiX, FiXCircle, FiSave, FiMaximize, FiMinimize } from 'react-icons/fi';
-import { Button, IconButton } from '../ui';
+import { Button, IconButton } from '.';
 
 export interface ModalProps {
     isOpen: boolean;

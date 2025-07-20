@@ -9,6 +9,16 @@ import { Header, QueryParam, FormDataField } from '../../types';
 import { DEFAULT_JSON_BODY, DEFAULT_FORM_DATA } from '../../constants/requestConfig';
 import { LuReplace } from 'react-icons/lu';
 import { GiTrafficLightsOrange, GiTrafficLightsReadyToGo, GiTrafficLightsRed } from 'react-icons/gi';
+import {
+    updateArrayItem,
+    addArrayItem,
+    removeArrayItem,
+    getInitialStateValue,
+    getMethodColor,
+    METHOD_CONFIG,
+    BODY_TYPE_CONFIG,
+    ENVIRONMENT_CONFIG
+} from '../../utils/basicModeUtils';
 
 interface BasicModeProps {
     requestConfig?: any;
@@ -45,14 +55,30 @@ const BasicMode: React.FC<BasicModeProps> = ({
     } = useURLBuilderContext();
 
     // Local state for request configuration (will be saved to context)
-    const [method, setMethod] = useState<string>(requestConfig?.method || 'GET');
-    const [queryParams, setQueryParams] = useState<QueryParam[]>(requestConfig?.queryParams || []);
-    const [headers, setHeaders] = useState<Header[]>(requestConfig?.headers || []);
-    const [bodyType, setBodyType] = useState<"none" | "json" | "form" | "text">(requestConfig?.bodyType || 'none');
-    const [jsonBody, setJsonBody] = useState<string>(requestConfig?.jsonBody || DEFAULT_JSON_BODY);
-    const [formData, setFormData] = useState<FormDataField[]>(requestConfig?.formData || DEFAULT_FORM_DATA);
-    const [textBody, setTextBody] = useState<string>(requestConfig?.textBody || '');
-    const [includeToken, setIncludeToken] = useState<boolean>(requestConfig?.includeToken ?? true);
+    const [method, setMethod] = useState<string>(() =>
+        getInitialStateValue(activeSession?.requestConfig?.method, requestConfig?.method, 'GET')
+    );
+    const [queryParams, setQueryParams] = useState<QueryParam[]>(() =>
+        getInitialStateValue(activeSession?.requestConfig?.queryParams, requestConfig?.queryParams, [])
+    );
+    const [headers, setHeaders] = useState<Header[]>(() =>
+        getInitialStateValue(activeSession?.requestConfig?.headers, requestConfig?.headers, [])
+    );
+    const [bodyType, setBodyType] = useState<"none" | "json" | "form" | "text">(() =>
+        getInitialStateValue(activeSession?.requestConfig?.bodyType, requestConfig?.bodyType, 'none')
+    );
+    const [jsonBody, setJsonBody] = useState<string>(() =>
+        getInitialStateValue(activeSession?.requestConfig?.jsonBody, requestConfig?.jsonBody, DEFAULT_JSON_BODY)
+    );
+    const [formData, setFormData] = useState<FormDataField[]>(() =>
+        getInitialStateValue(activeSession?.requestConfig?.formData, requestConfig?.formData, DEFAULT_FORM_DATA)
+    );
+    const [textBody, setTextBody] = useState<string>(() =>
+        getInitialStateValue(activeSession?.requestConfig?.textBody, requestConfig?.textBody, '')
+    );
+    const [includeToken, setIncludeToken] = useState<boolean>(() =>
+        getInitialStateValue(activeSession?.includeToken, requestConfig?.includeToken, true)
+    );
 
     // Local state for UI
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -108,6 +134,19 @@ const BasicMode: React.FC<BasicModeProps> = ({
         }
         return undefined;
     }, [isCreatingSession]);
+
+    // Sync request configuration with session when session changes
+    useEffect(() => {
+        if (activeSession?.requestConfig) {
+            setMethod(activeSession.requestConfig.method || 'GET');
+            setQueryParams(activeSession.requestConfig.queryParams || []);
+            setHeaders(activeSession.requestConfig.headers || []);
+            setBodyType(activeSession.requestConfig.bodyType || 'none');
+            setJsonBody(activeSession.requestConfig.jsonBody || DEFAULT_JSON_BODY);
+            setFormData(activeSession.requestConfig.formData || DEFAULT_FORM_DATA);
+            setTextBody(activeSession.requestConfig.textBody || '');
+        }
+    }, [activeSession?.id]);
 
     // Sync includeToken with session on session change
     useEffect(() => {
@@ -166,57 +205,42 @@ const BasicMode: React.FC<BasicModeProps> = ({
 
     // Request configuration functions
     const addQueryParam = () => {
-        setQueryParams([...queryParams, { key: '', value: '' }]);
+        setQueryParams(addArrayItem(queryParams, { key: '', value: '' }));
     };
 
     const removeQueryParam = (index: number) => {
-        setQueryParams(queryParams.filter((_, i) => i !== index));
+        setQueryParams(removeArrayItem(queryParams, index));
     };
 
     const updateQueryParam = (index: number, field: keyof QueryParam, value: string | boolean) => {
-        const newParams = [...queryParams];
-        newParams[index] = { ...newParams[index], [field]: value } as QueryParam;
-        setQueryParams(newParams);
+        setQueryParams(updateArrayItem(queryParams, index, field, value));
     };
 
     const addHeader = () => {
-        setHeaders([...headers, { key: '', value: '', in: 'header' }]);
+        setHeaders(addArrayItem(headers, { key: '', value: '', in: 'header' }));
     };
 
     const removeHeader = (index: number) => {
-        setHeaders(headers.filter((_, i) => i !== index));
+        setHeaders(removeArrayItem(headers, index));
     };
 
     const updateHeader = (index: number, field: keyof Header, value: string | boolean) => {
-        const newHeaders = [...headers];
-        newHeaders[index] = { ...newHeaders[index], [field]: value } as Header;
-        setHeaders(newHeaders);
+        setHeaders(updateArrayItem(headers, index, field, value));
     };
 
     const addFormField = () => {
-        setFormData([...formData, { key: '', value: '', type: 'text', required: false }]);
+        setFormData(addArrayItem(formData, { key: '', value: '', type: 'text', required: false }));
     };
 
     const removeFormField = (index: number) => {
-        setFormData(formData.filter((_, i) => i !== index));
+        setFormData(removeArrayItem(formData, index));
     };
 
     const updateFormField = (index: number, field: keyof FormDataField, value: string | boolean) => {
-        const newFormData = [...formData];
-        newFormData[index] = { ...newFormData[index], [field]: value } as FormDataField;
-        setFormData(newFormData);
+        setFormData(updateArrayItem(formData, index, field, value));
     };
 
-    const getMethodColor = (httpMethod: string) => {
-        const colors: Record<string, string> = {
-            GET: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-            POST: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-            PUT: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-            PATCH: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-            DELETE: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-        };
-        return colors[httpMethod] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-    };
+
 
     const handleJsonBodyChange = (value: string | undefined) => {
         setJsonBody(value || '');
@@ -551,35 +575,20 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                             </div>
                                         </label>
                                         <div className="grid grid-cols-3 gap-3">
-                                            {[
-                                                {
-                                                    id: 'dev',
-                                                    name: 'Development',
-                                                    color: 'green',
-                                                    icon: GiTrafficLightsRed,
-                                                    tooltip: 'Use for local testing and development work. Variables will be resolved using the pattern: {variable}_dev'
-                                                },
-                                                {
-                                                    id: 'staging',
-                                                    name: 'Staging',
-                                                    color: 'yellow',
-                                                    icon: GiTrafficLightsOrange,
-                                                    tooltip: 'Use for pre-production testing. Variables will be resolved using the pattern: {variable}_staging'
-                                                },
-                                                {
-                                                    id: 'prod',
-                                                    name: 'Production',
-                                                    color: 'red',
-                                                    icon: GiTrafficLightsReadyToGo,
-                                                    tooltip: 'Use for live production APIs. Variables will be resolved using the pattern: {variable}_prod'
-                                                }
-                                            ].map((env) => {
+                                            {ENVIRONMENT_CONFIG.map((env) => {
                                                 const isActive = environment === env.id;
                                                 const colorClasses = {
                                                     green: isActive ? 'border-green-500 bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-green-300',
                                                     yellow: isActive ? 'border-yellow-500 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-yellow-300',
                                                     red: isActive ? 'border-red-500 bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-red-300'
                                                 };
+
+                                                const iconMap = {
+                                                    GiTrafficLightsRed,
+                                                    GiTrafficLightsOrange,
+                                                    GiTrafficLightsReadyToGo
+                                                };
+                                                const IconComponent = iconMap[env.icon as keyof typeof iconMap];
 
                                                 return (
                                                     <Tooltip
@@ -593,7 +602,7 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                                 onClick={() => setEnvironment(env.id)}
                                                                 className={` w-full relative p-3 rounded-lg border-2 transition-all duration-200 group ${colorClasses[env.color as keyof typeof colorClasses]}`}
                                                                 variant="secondary"
-                                                                icon={env.icon}
+                                                                icon={IconComponent}
                                                                 isChecked={isActive}
                                                                 children={env.name}
                                                             />
@@ -787,27 +796,27 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                             HTTP Method
                                         </label>
                                         <div className="grid grid-cols-5 gap-3">
-                                            {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((httpMethod) => {
-                                                const methodColors = {
-                                                    GET: { color: 'emerald', icon: FiDownload },
-                                                    POST: { color: 'blue', icon: FiSend },
-                                                    PUT: { color: 'yellow', icon: LuReplace },
-                                                    PATCH: { color: 'purple', icon: FiEdit2 },
-                                                    DELETE: { color: 'red', icon: FiTrash2 }
-                                                };
-                                                const color = methodColors[httpMethod as keyof typeof methodColors].color;
+                                            {Object.entries(METHOD_CONFIG).map(([httpMethod, config]) => {
                                                 const isActive = method === httpMethod;
+                                                const iconMap = {
+                                                    FiDownload,
+                                                    FiSend,
+                                                    LuReplace,
+                                                    FiEdit2,
+                                                    FiTrash2
+                                                };
+                                                const IconComponent = iconMap[config.icon as keyof typeof iconMap];
 
                                                 return (
                                                     <Button
                                                         key={httpMethod}
                                                         onClick={() => setMethod(httpMethod)}
                                                         className={`px-4 py-3 rounded-xl border-2 transition-all duration-300 font-bold text-sm hover:scale-105 ${isActive
-                                                            ? `text-white bg-gradient-to-br shadow-xl border-${color}-500 from-${color}-500 to-${color}-600 shadow-${color}-500/25`
-                                                            : `border-slate-200 dark:border-slate-600 hover:border-${color}-300 hover:bg-${color}-50 dark:hover:bg-${color}-900/10`
+                                                            ? `text-white bg-gradient-to-br shadow-xl border-${config.color}-500 from-${config.color}-500 to-${config.color}-600 shadow-${config.color}-500/25`
+                                                            : `border-slate-200 dark:border-slate-600 hover:border-${config.color}-300 hover:bg-${config.color}-50 dark:hover:bg-${config.color}-900/10`
                                                             }`}
                                                         variant="secondary"
-                                                        icon={methodColors[httpMethod as keyof typeof methodColors].icon}
+                                                        icon={IconComponent}
                                                         children={httpMethod}
                                                     />
                                                 );
@@ -940,12 +949,14 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                 </label>
                                                 <div className="space-y-4">
                                                     <div className="flex space-x-2">
-                                                        {[
-                                                            { type: 'none', label: 'None', color: 'gray', icon: FiX },
-                                                            { type: 'json', label: 'JSON', color: 'blue', icon: FiCode },
-                                                            { type: 'form', label: 'Form', color: 'green', icon: FiMail },
-                                                            { type: 'text', label: 'Text', color: 'purple', icon: FiType }
-                                                        ].map(({ type, label, color, icon: Icon }) => {
+                                                        {BODY_TYPE_CONFIG.map(({ type, label, color, icon }) => {
+                                                            const iconMap = {
+                                                                FiX,
+                                                                FiCode,
+                                                                FiMail,
+                                                                FiType
+                                                            };
+                                                            const IconComponent = iconMap[icon as keyof typeof iconMap];
                                                             const isActive = bodyType === type;
                                                             const colorClasses = {
                                                                 gray: isActive ? 'border-gray-500 bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300',
@@ -960,7 +971,7 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                                                     onClick={() => setBodyType(type as any)}
                                                                     className={`flex items-center px-4 py-2 space-x-2 text-sm font-medium rounded-lg border-2 transition-all duration-200 ${colorClasses[color as keyof typeof colorClasses]}`}
                                                                 >
-                                                                    <Icon className="w-4 h-4" />
+                                                                    <IconComponent className="w-4 h-4" />
                                                                     <span>{label}</span>
                                                                 </button>
                                                             );

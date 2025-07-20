@@ -5,20 +5,23 @@ import { SectionId } from '../../types/core';
 export interface Section {
     id: SectionId;
     label: string;
+    className?: string; // Optional custom className for styling
 }
 
-interface ResponsiveWorkflowSelectorProps {
+export interface ResponsiveWorkflowSelectorProps {
     sections: Section[];
     activeSection: SectionId;
     onSectionChange: (sectionId: SectionId) => void;
     className?: string;
+    useCustomStyling?: boolean; // Flag to use custom styling instead of default
 }
 
 const ResponsiveWorkflowSelector: React.FC<ResponsiveWorkflowSelectorProps> = ({
     sections,
     activeSection,
     onSectionChange,
-    className = ''
+    className = '',
+    useCustomStyling = false
 }) => {
     const [showLeftArrow, setShowLeftArrow] = useState(false);
     const [showRightArrow, setShowRightArrow] = useState(false);
@@ -30,8 +33,11 @@ const ResponsiveWorkflowSelector: React.FC<ResponsiveWorkflowSelectorProps> = ({
 
         const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
 
-        setShowLeftArrow(scrollLeft > 0);
-        setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
+        // Only show arrows if there's actually content to scroll
+        const hasScrollableContent = scrollWidth > clientWidth;
+
+        setShowLeftArrow(hasScrollableContent && scrollLeft > 0);
+        setShowRightArrow(hasScrollableContent && scrollLeft < scrollWidth - clientWidth - 2);
     };
 
     const scrollLeft = () => {
@@ -47,10 +53,17 @@ const ResponsiveWorkflowSelector: React.FC<ResponsiveWorkflowSelectorProps> = ({
     };
 
     useEffect(() => {
-        checkScrollButtons();
+        // Small delay to ensure DOM has updated
+        const timer = setTimeout(() => {
+            checkScrollButtons();
+        }, 0);
+
         window.addEventListener('resize', checkScrollButtons);
-        return () => window.removeEventListener('resize', checkScrollButtons);
-    }, []);
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', checkScrollButtons);
+        };
+    }, [sections]); // Re-check when sections change
 
     useEffect(() => {
         const scrollContainer = scrollContainerRef.current;
@@ -119,9 +132,11 @@ const ResponsiveWorkflowSelector: React.FC<ResponsiveWorkflowSelectorProps> = ({
                             key={section.id}
                             data-section={section.id}
                             onClick={() => onSectionChange(section.id)}
-                            className={`px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-105 whitespace-nowrap ${activeSection === section.id
-                                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25"
-                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                            className={`px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-105 whitespace-nowrap ${useCustomStyling && section.className
+                                ? `${section.className} ${activeSection === section.id ? "bg-opacity-100 shadow-md" : "bg-opacity-30 dark:bg-opacity-30 hover:bg-opacity-50"}`
+                                : activeSection === section.id
+                                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25"
+                                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
                                 }`}
                         >
                             {section.label}

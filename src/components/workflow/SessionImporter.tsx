@@ -13,7 +13,7 @@ import {
     jsonataFunctionDocs,
     JsonataSuggestion
 } from '../../utils/jsonataSuggestions';
-import Modal from '../core/Modal';
+import Modal from '../ui/Modal';
 import { copyToClipboard } from '../../utils/clipboard';
 import { Button } from '../ui';
 

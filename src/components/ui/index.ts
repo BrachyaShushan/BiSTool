@@ -18,6 +18,8 @@ export { default as ModeSwitcher } from "./ModeSwitcher";
 export { default as IconWrapper } from "./IconWrapper";
 export { default as IconWrapperDemo } from "./IconWrapperDemo";
 export { default as OptionButton } from "./OptionButton";
+export { default as ResponsiveWorkflowSelector } from "./ResponsiveWorkflowSelector";
+export { default as VerticalCategorySelector } from "./VerticalCategorySelector";
 
 export type { ButtonProps } from "./Button";
 export type { CardProps } from "./Card";
@@ -36,3 +38,11 @@ export type { MonacoEditorProps } from "./MonacoEditor";
 export type { ToggleProps } from "./Toggle";
 export type { ModeSwitcherProps } from "./ModeSwitcher";
 export type { IconWrapperProps } from "./IconWrapper";
+export type {
+  ResponsiveWorkflowSelectorProps,
+  Section,
+} from "./ResponsiveWorkflowSelector";
+export type {
+  VerticalCategorySelectorProps,
+  Category,
+} from "./VerticalCategorySelector";

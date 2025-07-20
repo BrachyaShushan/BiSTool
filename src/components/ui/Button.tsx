@@ -128,7 +128,7 @@ const Button: React.FC<ButtonProps> = ({
         >
             {/* Checkmark indicator for checked state */}
             {isChecked && showCheckmark && (
-                <div className="flex absolute top-1 right-1 justify-center items-center w-3 h-3 bg-white rounded-full shadow-sm">
+                <div className="flex absolute top-1 right-1 justify-center items-center w-3 h-3 bg-white rounded-full shadow-sm text-black">
                     <IconWrapper icon={FiCheck} size="xs" preserveColors={true} variant="colored" />
                 </div>
             )}

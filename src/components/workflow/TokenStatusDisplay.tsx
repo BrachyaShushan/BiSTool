@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { FiShield, FiClock, FiKey } from "react-icons/fi";
-import Modal from "../core/Modal";
+import Modal from "../ui/Modal";
 import { Button } from "../ui";
 import { TOKEN_CHECK_INTERVAL, TOKEN_EXPIRATION_STYLES } from "../../constants/requestConfig";
 import { useVariablesContext } from "../../context/VariablesContext";

@@ -1,5 +1,5 @@
 import { FiCheck, FiEdit2, FiTrash2, FiSettings, FiPlus } from "react-icons/fi";
-import Modal from "../../core/Modal";
+import Modal from "../../ui/Modal";
 import { useState } from "react";
 import { Project } from "../../../types/project.types";
 import { useProjectContext, useProjectSwitch } from "../../../context/ProjectContext";

@@ -4,15 +4,18 @@ import { useVariablesContext } from "../context/VariablesContext";
 import { useTheme } from "../context/ThemeContext";
 import { useProjectContext } from "../context/ProjectContext";
 
-import { FiFolder, FiSettings, FiKey, FiMenu, FiX, FiSun, FiMoon, FiArrowRight } from "react-icons/fi";
+import { FiFolder, FiSettings, FiKey, FiMenu, FiX, FiSun, FiMoon } from "react-icons/fi";
 import SaveControls from "../components/ui/SaveControls";
 import { ModeSwitcher } from "../components/ui";
+import ResponsiveWorkflowSelector from "../components/ui/ResponsiveWorkflowSelector";
+import VerticalCategorySelector from "../components/ui/VerticalCategorySelector";
 import { useCallback, useEffect, useState } from "react";
 import { generateTokenCore } from "../services/tokenService";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "../styles/toastify-custom.css";
 import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import { SectionId } from "../types/core";
 
 const Header = () => {
     const {
@@ -42,6 +45,32 @@ const Header = () => {
 
     const tokenName = (globalVariables && tokenConfig && tokenConfig.tokenName) || "x-access-token";
     const token = globalVariables?.[tokenName];
+
+    // Create categories from saved sessions
+    const categories = savedSessions.reduce((acc: any[], session: any) => {
+        const existingCategory = acc.find(cat => cat.id === session.category);
+        if (existingCategory) {
+            existingCategory.count++;
+        } else {
+            acc.push({
+                id: session.category,
+                name: session.category,
+                count: 1
+            });
+        }
+        return acc;
+    }, []);
+
+    // Create sections from sessions in the current category for ResponsiveWorkflowSelector
+    const sessionSections = activeSession?.category
+        ? savedSessions
+            .filter((s: any) => s.category === activeSession.category)
+            .map((session: any) => ({
+                id: session.id as SectionId,
+                label: session.name,
+                className: methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color || ''
+            }))
+        : [];
 
     // Token regeneration logic using generateTokenCore
     const handleRegenerateToken = async () => {
@@ -91,6 +120,26 @@ const Header = () => {
 
     const handleReturnToWelcome = () => {
         clearCurrentProject();
+    };
+
+    // Handle session change from ResponsiveWorkflowSelector
+    const handleSessionChange = (sessionId: SectionId) => {
+        const session = savedSessions.find((s: any) => s.id === sessionId);
+        if (session) {
+            handleLoadSession(session);
+        }
+    };
+
+    // Handle category change from VerticalCategorySelector
+    const handleCategoryChange = (categoryId: string) => {
+        const sessionsInCategory = savedSessions.filter((s: any) => s.category === categoryId);
+        if (sessionsInCategory.length > 0) {
+            // Load the first session in the selected category
+            const firstSession = sessionsInCategory[0];
+            if (firstSession) {
+                handleLoadSession(firstSession);
+            }
+        }
     };
 
     const toggleHeaderCollapse = useCallback(() => {
@@ -183,85 +232,50 @@ const Header = () => {
                         </button>
                     </div>
 
-                    {/* Center - Mode Switcher (Desktop only) */}
-                    <div className="hidden flex-1 justify-center items-center sm:flex">
-                        <ModeSwitcher
-                            mode={mode}
-                            onModeChange={setMode}
-                            className="mx-4"
-                        />
-                    </div>
+                    {/* Category and Session Selectors - Hidden on mobile when collapsed */}
+                    {categories.length > 0 && (
+                        <div className={`hidden sm:flex sm:items-center gap-2 p-2 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-lg lg:max-w-xl opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
+                            {/* Vertical Category Selector */}
+                            <div className="flex flex-shrink-0">
+                                <VerticalCategorySelector
+                                    categories={categories}
+                                    activeCategory={activeSession?.category || ''}
+                                    onCategoryChange={handleCategoryChange}
+                                    className="w-32"
+                                />
+                            </div>
+
+                            {/* Divider */}
+                            <div className="w-px h-full bg-gray-300 dark:bg-gray-600"></div>
+
+                            {/* Horizontal Session Selector */}
+                            {activeSession?.category && sessionSections.length > 0 && (
+                                <div className="flex-1 min-w-0">
+                                    <ResponsiveWorkflowSelector
+                                        sections={sessionSections}
+                                        activeSection={activeSession.id as SectionId}
+                                        onSectionChange={handleSessionChange}
+                                        className="max-w-full"
+                                        useCustomStyling={true}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Right side - Desktop controls and mobile menu button */}
                     <div className="flex flex-shrink-0 items-center space-x-1 sm:space-x-2 md:space-x-3">
 
-                        {/* Sessions of Current Category - Hidden on mobile when collapsed */}
-                        {activeSession?.category && (
-                            <div className={`hidden sm:flex gap-2 p-2 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-xs lg:max-w-md opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
-                                <div className="flex flex-shrink-0 items-center space-x-2">
-                                    <span className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                                        {activeSession.category}
-                                    </span>
-                                    <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
-                                </div>
-                                {savedSessions.filter((s: any) => s.category === activeSession.category).length > 0 ? (
-                                    <div className="relative flex-1 min-w-0 group">
-                                        {/* Left Arrow */}
-                                        <button
-                                            onClick={() => {
-                                                const container = document.getElementById('sessions-scroll');
-                                                if (container) {
-                                                    container.scrollBy({ left: -200, behavior: 'smooth' });
-                                                }
-                                            }}
-                                            className="absolute left-0 top-1/2 z-10 p-1 bg-white rounded-full border border-gray-200 shadow-md opacity-0 transition-all duration-200 -translate-y-1/2 dark:bg-gray-700 dark:border-gray-600 group-hover:opacity-100 hover:scale-110"
-                                            title="Scroll left"
-                                        >
-                                            <FiArrowRight className="w-2.5 h-2.5 text-gray-600 rotate-180 dark:text-gray-300" />
-                                        </button>
 
-                                        {/* Right Arrow */}
-                                        <button
-                                            onClick={() => {
-                                                const container = document.getElementById('sessions-scroll');
-                                                if (container) {
-                                                    container.scrollBy({ left: 200, behavior: 'smooth' });
-                                                }
-                                            }}
-                                            className="absolute right-0 top-1/2 z-10 p-1 bg-white rounded-full border border-gray-200 shadow-md opacity-0 transition-all duration-200 -translate-y-1/2 dark:bg-gray-700 dark:border-gray-600 group-hover:opacity-100 hover:scale-110"
-                                            title="Scroll right"
-                                        >
-                                            <FiArrowRight className="w-2.5 h-2.5 text-gray-600 dark:text-gray-300" />
-                                        </button>
+                        {/* Center - Mode Switcher (Desktop only) */}
+                        <div className="hidden flex-1 justify-center items-center sm:flex">
+                            <ModeSwitcher
+                                mode={mode}
+                                onModeChange={setMode}
+                                className="mx-4"
+                            />
+                        </div>
 
-                                        {/* Scrollable Content */}
-                                        <div
-                                            id="sessions-scroll"
-                                            className="flex overflow-x-auto gap-1 items-center px-4 scrollbar-hide scroll-smooth"
-                                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                                        >
-                                            {savedSessions
-                                                .filter((s: any) => s.category === activeSession.category)
-                                                .map((session: any) => (
-                                                    <button
-                                                        key={session.id}
-                                                        onClick={() => handleLoadSession(session)}
-                                                        className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-105 flex-shrink-0 whitespace-nowrap ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color
-                                                            } ${activeSession.id === session.id
-                                                                ? "bg-opacity-100 shadow-md"
-                                                                : "bg-opacity-30 dark:bg-opacity-30 hover:bg-opacity-50"
-                                                            }`}
-                                                    >
-                                                        {session.name}
-                                                    </button>
-                                                ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <span className="text-xs text-gray-500 sm:text-sm dark:text-gray-400">No other sessions</span>
-                                )}
-                            </div>
-                        )}
 
                         {/* Desktop Controls */}
                         <div className="hidden sm:flex gap-1 justify-end items-center sm:gap-2">
@@ -413,35 +427,41 @@ const Header = () => {
                                     </div>
                                 )}
 
+                                {/* Categories */}
+                                {categories.length > 0 && (
+                                    <div className="space-y-3">
+                                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Categories</h3>
+                                        <div className="max-h-32">
+                                            <VerticalCategorySelector
+                                                categories={categories}
+                                                activeCategory={activeSession?.category || ''}
+                                                onCategoryChange={(categoryId) => {
+                                                    handleCategoryChange(categoryId);
+                                                    setIsMobileSidebarOpen(false);
+                                                }}
+                                                className="w-full"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Sessions of Current Category */}
-                                {activeSession?.category && (
+                                {activeSession?.category && sessionSections.length > 0 && (
                                     <div className="space-y-3">
                                         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">
                                             {activeSession.category} Sessions
                                         </h3>
-                                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                                            {savedSessions.filter((s: any) => s.category === activeSession.category).length > 0 ? (
-                                                savedSessions
-                                                    .filter((s: any) => s.category === activeSession.category)
-                                                    .map((session: any) => (
-                                                        <button
-                                                            key={session.id}
-                                                            onClick={() => {
-                                                                handleLoadSession(session);
-                                                                setIsMobileSidebarOpen(false);
-                                                            }}
-                                                            className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${methodColor[session.requestConfig?.method as keyof typeof methodColor]?.color
-                                                                } ${activeSession.id === session.id
-                                                                    ? "bg-opacity-100 shadow-md"
-                                                                    : "bg-opacity-30 dark:bg-opacity-30 hover:bg-opacity-50"
-                                                                }`}
-                                                        >
-                                                            {session.name}
-                                                        </button>
-                                                    ))
-                                            ) : (
-                                                <span className="text-sm text-gray-500 dark:text-gray-400">No other sessions</span>
-                                            )}
+                                        <div className="max-h-40">
+                                            <ResponsiveWorkflowSelector
+                                                sections={sessionSections}
+                                                activeSection={activeSession.id as SectionId}
+                                                onSectionChange={(sessionId) => {
+                                                    handleSessionChange(sessionId);
+                                                    setIsMobileSidebarOpen(false);
+                                                }}
+                                                className="w-full"
+                                                useCustomStyling={true}
+                                            />
                                         </div>
                                     </div>
                                 )}

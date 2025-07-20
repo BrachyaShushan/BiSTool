@@ -5,15 +5,18 @@ import {
     FiCheckCircle, FiPlay, FiBookOpen, FiShield, FiTrendingUp, FiSettings,
     FiMonitor, FiLayers, FiActivity, FiTarget, FiAward, FiStar,
     FiClock, FiBarChart, FiGitBranch, FiRefreshCw, FiGrid,
-    FiCommand, FiTerminal, FiPackage, FiServer, FiCpu, FiWifi, FiEye, FiEdit3
+    FiCommand, FiTerminal, FiPackage, FiServer, FiCpu, FiWifi, FiEye, FiEdit3,
+    FiSun, FiMoon
 } from "react-icons/fi";
-import { Button, Badge, Card } from "../ui";
+import { Button, Badge, Card, IconWrapper } from "../ui";
 import { useAppContext } from "../../context/AppContext";
+import { useTheme } from "../../context/ThemeContext";
 
 const WelcomeScreen: React.FC = () => {
     const { projects } = useProjectContext();
     const { switchToProject } = useProjectSwitch();
     const { setShowUnifiedManager } = useAppContext();
+    const { isDarkMode, toggleDarkMode } = useTheme();
     const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'getting-started' | 'system' | 'activity'>('overview');
 
     const handleProjectSwitch = async (projectId: string) => {
@@ -222,7 +225,7 @@ const WelcomeScreen: React.FC = () => {
         : features.filter(f => f.category === 'core' || f.category === 'ai');
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
             {/* Enhanced Background Pattern */}
             <div className="overflow-hidden fixed inset-0">
                 <div className="fixed top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-5 animate-pulse translate-x-48 -translate-y-48"></div>
@@ -232,6 +235,41 @@ const WelcomeScreen: React.FC = () => {
             </div>
 
             <div className="relative px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
+                {/* Theme Toggle - Top Right */}
+                <div className="absolute top-8 right-8 z-10">
+                    <button
+                        onClick={toggleDarkMode}
+                        className="group relative p-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-blue-300 dark:hover:border-blue-500"
+                        title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
+                        aria-label={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
+                    >
+                        <div className="relative">
+                            {/* Background gradient */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                            {/* Icon with smooth transition */}
+                            <div className="relative transform transition-all duration-500">
+                                {isDarkMode ? (
+                                    <IconWrapper
+                                        icon={FiSun}
+                                        size="lg"
+                                        className="text-yellow-500 group-hover:text-yellow-400 transition-colors duration-300"
+                                    />
+                                ) : (
+                                    <IconWrapper
+                                        icon={FiMoon}
+                                        size="lg"
+                                        className="text-indigo-600 group-hover:text-indigo-500 transition-colors duration-300"
+                                    />
+                                )}
+                            </div>
+
+                            {/* Glow effect */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+                        </div>
+                    </button>
+                </div>
+
                 {/* Enhanced Header Section */}
                 <div className="mb-12 text-center">
                     <div className="inline-flex justify-center items-center p-6 mb-8 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-3xl shadow-2xl">
@@ -511,7 +549,7 @@ const WelcomeScreen: React.FC = () => {
                                     {categories.map((category) => (
                                         <button
                                             key={category.id}
-                                            className="flex items-center px-4 py-2 space-x-2 text-sm font-medium rounded-xl border border-gray-200 transition-all duration-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+                                            className="flex items-center px-4 py-2 space-x-2 text-sm font-medium rounded-xl border border-gray-200 transition-all duration-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 dark:text-white"
                                         >
                                             <category.icon className="w-4 h-4" />
                                             <span>{category.name} ({category.count})</span>

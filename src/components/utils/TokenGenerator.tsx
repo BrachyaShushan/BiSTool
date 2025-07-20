@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useVariablesContext } from "../../context/VariablesContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useTokenContext } from "../../context/TokenContext";
-import Modal from "../core/Modal";
+import Modal from "../ui/Modal";
 import Tooltip from "../ui/Tooltip";
 import {
     FiClock, FiCheckCircle, FiAlertCircle, FiEye, FiCopy,

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useProjectContext } from "../../context/ProjectContext";
-import Modal from "../core/Modal";
+import Modal from "../ui/Modal";
 import { FiFolder, FiSettings, FiKey, } from "react-icons/fi";
 import Settings from "./windows/Settings";
 import SessionsManager from "./windows/SessionsManager";

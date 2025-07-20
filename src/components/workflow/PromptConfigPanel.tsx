@@ -11,7 +11,7 @@ import {
     Button, Card, Input, Textarea, Badge, IconButton,
     SectionHeader, Toggle, Select
 } from '../ui';
-import Modal from '../core/Modal';
+import Modal from '../ui/Modal';
 import {
     PROGRAMMING_LANGUAGES,
     TEST_FRAMEWORKS,
