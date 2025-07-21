@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useProjectContext } from './ProjectContext';
 import { useAppContext } from './AppContext';
 import { useVariablesContext } from './VariablesContext';
@@ -80,8 +80,8 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
     const [searchHistory, setSearchHistory] = useState<string[]>([]);
 
     // Get data from other contexts
-    const { projects, currentProject } = useProjectContext();
-    const { savedSessions, activeSession } = useAppContext();
+    const { projects } = useProjectContext();
+    const { savedSessions } = useAppContext();
     const { globalVariables, sharedVariables } = useVariablesContext();
 
     // Search function
@@ -242,14 +242,7 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
 
     // Navigate to result
     const navigateToResult = useCallback((result: SearchResult) => {
-        // This will be implemented to navigate to the specific item
-        console.log('Navigate to result:', result);
-
-        // For now, we'll just log the navigation
-        // In a real implementation, this would:
-        // 1. Switch to the appropriate project if needed
-        // 2. Open the specific item (session, variable, etc.)
-        // 3. Update the UI to show the selected item
+        alert(`Navigate to: ${result.title} (${result.type})`);
     }, []);
 
     // Add to search history
@@ -280,7 +273,7 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
         clearFilters,
         navigateToResult,
         getFilteredResults,
-        totalResults: getFilteredResults.length,
+        totalResults: getFilteredResults().length,
         searchHistory,
         addToHistory,
         clearHistory

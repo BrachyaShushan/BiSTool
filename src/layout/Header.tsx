@@ -243,7 +243,7 @@ const Header = () => {
 
                     {/* Category and Session Selectors - Hidden on mobile when collapsed */}
                     {categories.length > 0 && (
-                        <div className={`hidden sm:flex sm:items-center gap-2 p-2 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-lg lg:max-w-xl opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
+                        <div className={`hidden sm:flex sm:items-center gap-2 bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-lg lg:max-w-xl opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
                             {/* Vertical Category Selector */}
                             <div className="flex flex-shrink-0">
                                 <VerticalCategorySelector

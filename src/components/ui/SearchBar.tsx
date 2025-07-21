@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiX, FiFilter, FiClock, FiArrowRight } from 'react-icons/fi';
 import { useSearchContext, SearchResult } from '../../context/SearchContext';
 import { Input, Button, Badge, IconWrapper } from './index';
-import { useTheme } from '../../context/ThemeContext';
 
 interface SearchBarProps {
     placeholder?: string;
@@ -19,7 +18,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
     compact = false,
     onResultClick
 }) => {
-    const { isDarkMode } = useTheme();
     const {
         query,
         results,
@@ -31,7 +29,10 @@ const SearchBar: React.FC<SearchBarProps> = ({
         search,
         clearSearch,
         navigateToResult,
-        clearHistory
+        clearHistory,
+        filters,
+        setFilters,
+        getFilteredResults
     } = useSearchContext();
 
     const [isOpen, setIsOpen] = useState(false);
@@ -39,6 +40,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const searchRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const [showFiltersPanel, setShowFiltersPanel] = useState(false);
+
+    const filteredResults = getFilteredResults();
 
     // Handle search input changes
     const handleInputChange = (value: string) => {
@@ -62,9 +66,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
             return;
         }
 
+        // Use filtered results for display and navigation
+        const filteredResults = getFilteredResults();
+
         if (e.key === 'ArrowDown') {
             e.preventDefault();
-            const maxIndex = showHistory ? searchHistory.length - 1 : results.length - 1;
+            const maxIndex = showHistory ? searchHistory.length - 1 : filteredResults.length - 1;
             setSelectedIndex(prev => Math.min(prev + 1, maxIndex));
         }
 
@@ -85,7 +92,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                         setShowHistory(false);
                     }
                 } else {
-                    const result = results[selectedIndex];
+                    const result = filteredResults[selectedIndex];
                     if (result) {
                         handleResultClick(result);
                     }
@@ -160,6 +167,42 @@ const SearchBar: React.FC<SearchBarProps> = ({
     useEffect(() => {
         setSelectedIndex(-1);
     }, [results]);
+
+    // Close filters panel when clicking outside
+    useEffect(() => {
+        if (!showFiltersPanel) return;
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                searchRef.current &&
+                !searchRef.current.contains(event.target as Node)
+            ) {
+                setShowFiltersPanel(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showFiltersPanel]);
+
+    // Filter types
+    const filterTypes = [
+        { label: 'Project', value: 'project' },
+        { label: 'Session', value: 'session' },
+        { label: 'Test', value: 'test' },
+        { label: 'Variable', value: 'variable' },
+        { label: 'Configuration', value: 'configuration' },
+    ];
+
+    // Handle filter change
+    const handleTypeFilterChange = (type: string) => {
+        const currentTypes = filters.types;
+        let newTypes;
+        if (currentTypes.includes(type)) {
+            newTypes = currentTypes.filter(t => t !== type);
+        } else {
+            newTypes = [...currentTypes, type];
+        }
+        setFilters({ types: newTypes });
+    };
 
     const getTypeIcon = (type: string) => {
         switch (type) {
@@ -236,28 +279,50 @@ const SearchBar: React.FC<SearchBarProps> = ({
                     {/* Results */}
                     {hasSearched && !isSearching && (
                         <div className="p-4">
-                            {results.length > 0 ? (
-                                <>
-                                    {/* Results header */}
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            {totalResults} result{totalResults !== 1 ? 's' : ''}
-                                        </span>
-                                        {showFilters && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                icon={FiFilter}
-                                                className="text-xs"
-                                            >
-                                                Filters
-                                            </Button>
+
+                            {/* Results header */}
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {totalResults} result{totalResults !== 1 ? 's' : ''}
+                                </span>
+                                {showFilters && (
+                                    <div className="relative">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            icon={FiFilter}
+                                            className="text-xs"
+                                            onMouseDown={e => e.preventDefault()}
+                                            onClick={() => setShowFiltersPanel(v => !v)}
+                                        >
+                                            Filters
+                                        </Button>
+                                        {showFiltersPanel && (
+                                            <div onMouseDown={e => e.preventDefault()} className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 p-4">
+                                                <div className="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-200">Filter by type</div>
+                                                <div className="space-y-1">
+                                                    {filterTypes.map(ft => (
+                                                        <label key={ft.value} className="flex items-center space-x-2 cursor-pointer text-sm text-gray-700 dark:text-gray-200">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={filters.types.includes(ft.value)}
+                                                                onChange={() => handleTypeFilterChange(ft.value)}
+                                                                className="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                                            />
+                                                            <span>{ft.label}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
-
+                                )}
+                            </div>
+                            {filteredResults.length > 0 ? (
+                                <>
                                     {/* Results list */}
                                     <div className="space-y-2">
-                                        {results.map((result, index) => (
+                                        {filteredResults.map((result: SearchResult, index: number) => (
                                             <button
                                                 key={result.id}
                                                 onClick={() => handleResultClick(result)}
@@ -268,7 +333,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                                             >
                                                 <div className="flex items-start space-x-3">
                                                     <div className="flex-shrink-0 mt-1">
-                                                        <span className="text-lg">{getTypeIcon(result.type)}</span>
+                                                        <IconWrapper icon={getTypeIcon(result.type)} variant="colored" size="lg" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center space-x-2">

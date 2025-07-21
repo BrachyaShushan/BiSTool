@@ -14,8 +14,6 @@ import { AIConfigProvider } from "./context/AIConfigContext";
 import { StorageProvider } from "./context/StorageContext";
 import { Section } from "./types/core";
 import Header from "./layout/Header";
-import MonacoEditorDemo from "./components/ui/MonacoEditorDemo";
-import UIComponentsDemo from "./components/ui/UIComponentsDemo";
 import UnifiedManager from "./components/navigation/UnifiedManager";
 import { VariablesProvider } from "./context/VariablesContext";
 import { TokenProvider } from "./context/TokenContext";
@@ -25,6 +23,7 @@ import { SearchProvider } from "./context/SearchContext";
 import { initializeDevTools } from "./utils/devtools";
 import ResponsiveWorkflowSelector from "./components/ui/ResponsiveWorkflowSelector";
 import QuickStartWizard from "./components/core/QuickStartWizard";
+import JsonDiffTool from './components/utils/JsonDiffTool';
 
 const AppContent: React.FC = () => {
     const {
@@ -106,10 +105,8 @@ const AppContent: React.FC = () => {
                 return <AITestGenerator yamlData={yamlOutput} />;
             case "import":
                 return <SessionImporter onImportSessions={handleImportSessions} />;
-            case "monaco":
-                return <MonacoEditorDemo />;
-            case "ui":
-                return <UIComponentsDemo />;
+            case "json":
+                return <JsonDiffTool />;
             case "url":
             default:
                 return <URLBuilder onSubmit={handleURLBuilderSubmit} />;
@@ -123,8 +120,7 @@ const AppContent: React.FC = () => {
         { id: "yaml", label: "YAML Generator" },
         { id: "ai", label: "AI Test Generator" },
         { id: "import", label: "Session Importer" },
-        { id: "monaco", label: "Monaco Editor" },
-        { id: "ui", label: "UI Components" },
+        { id: "json", label: "JSON Diff Tool" },
     ];
 
     return (

@@ -7,8 +7,7 @@ export type SectionId =
   | "yaml"
   | "ai"
   | "import"
-  | "monaco"
-  | "ui";
+  | "json";
 
 export interface Section {
   id: SectionId;

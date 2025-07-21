@@ -16,7 +16,6 @@ export { default as LazyMonacoEditor } from "./LazyMonacoEditor";
 export { default as Toggle } from "./Toggle";
 export { default as ModeSwitcher } from "./ModeSwitcher";
 export { default as IconWrapper } from "./IconWrapper";
-export { default as IconWrapperDemo } from "./IconWrapperDemo";
 export { default as OptionButton } from "./OptionButton";
 export { default as ResponsiveWorkflowSelector } from "./ResponsiveWorkflowSelector";
 export { default as VerticalCategorySelector } from "./VerticalCategorySelector";
