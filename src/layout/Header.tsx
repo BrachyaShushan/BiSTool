@@ -4,9 +4,9 @@ import { useVariablesContext } from "../context/VariablesContext";
 import { useTheme } from "../context/ThemeContext";
 import { useProjectContext } from "../context/ProjectContext";
 
-import { FiFolder, FiSettings, FiKey, FiMenu, FiX, FiSun, FiMoon } from "react-icons/fi";
+import { FiFolder, FiSettings, FiKey, FiMenu, FiX, FiSun, FiMoon, FiSearch } from "react-icons/fi";
 import SaveControls from "../components/ui/SaveControls";
-import { ModeSwitcher } from "../components/ui";
+import { ModeSwitcher, SearchBar } from "../components/ui";
 import ResponsiveWorkflowSelector from "../components/ui/ResponsiveWorkflowSelector";
 import VerticalCategorySelector from "../components/ui/VerticalCategorySelector";
 import { useCallback, useEffect, useState } from "react";
@@ -232,6 +232,15 @@ const Header = () => {
                         </button>
                     </div>
 
+                    {/* Center - Search Bar */}
+                    <div className="hidden md:flex flex-1 justify-center items-center max-w-md mx-4">
+                        <SearchBar
+                            placeholder="Search projects, sessions, variables..."
+                            compact
+                            className="w-full"
+                        />
+                    </div>
+
                     {/* Category and Session Selectors - Hidden on mobile when collapsed */}
                     {categories.length > 0 && (
                         <div className={`hidden sm:flex sm:items-center gap-2 p-2 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-lg lg:max-w-xl opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
@@ -311,6 +320,21 @@ const Header = () => {
                                         </div>
                                     )}
 
+                                    {/* Search Button */}
+                                    <button
+                                        onClick={() => {
+                                            // Focus on search input
+                                            const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+                                            if (searchInput) {
+                                                searchInput.focus();
+                                            }
+                                        }}
+                                        className={`p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group sm:p-3 sm:rounded-xl hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-white hover:bg-gray-200 hover:text-gray-900`}
+                                        title="Search"
+                                    >
+                                        <FiSearch size={16} className="transition-transform duration-200 group-hover:scale-110 sm:w-4.5 sm:h-4.5" />
+                                    </button>
+
                                     {/* Project Manager Button */}
                                     <button
                                         onClick={() => openUnifiedManager()}
@@ -356,6 +380,26 @@ const Header = () => {
                             </button>
                         </div>
 
+                        {/* Mobile Search Button */}
+                        <button
+                            onClick={() => {
+                                // Focus on search input in mobile sidebar
+                                setIsMobileSidebarOpen(true);
+                                // Add a small delay to ensure sidebar is open
+                                setTimeout(() => {
+                                    const searchInput = document.querySelector('.mobile-sidebar input[type="text"]') as HTMLInputElement;
+                                    if (searchInput) {
+                                        searchInput.focus();
+                                    }
+                                }, 100);
+                            }}
+                            className="flex sm:hidden justify-center items-center p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 hover:bg-gray-200 mr-2"
+                            title="Search"
+                            aria-label="Search"
+                        >
+                            <FiSearch size={16} className="transition-transform duration-200 group-hover:scale-110" />
+                        </button>
+
                         {/* Mobile Menu Button */}
                         <button
                             onClick={toggleMobileSidebar}
@@ -394,6 +438,16 @@ const Header = () => {
 
                             {/* Sidebar Content */}
                             <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                                {/* Search */}
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Search</h3>
+                                    <SearchBar
+                                        placeholder="Search..."
+                                        compact
+                                        className="w-full"
+                                    />
+                                </div>
+
                                 {/* Mode Switcher */}
                                 <div className="space-y-3">
                                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Mode</h3>

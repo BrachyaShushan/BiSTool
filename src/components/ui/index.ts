@@ -20,6 +20,7 @@ export { default as IconWrapperDemo } from "./IconWrapperDemo";
 export { default as OptionButton } from "./OptionButton";
 export { default as ResponsiveWorkflowSelector } from "./ResponsiveWorkflowSelector";
 export { default as VerticalCategorySelector } from "./VerticalCategorySelector";
+export { default as SearchBar } from "./SearchBar";
 
 export type { ButtonProps } from "./Button";
 export type { CardProps } from "./Card";

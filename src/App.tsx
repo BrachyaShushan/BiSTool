@@ -21,8 +21,10 @@ import { VariablesProvider } from "./context/VariablesContext";
 import { TokenProvider } from "./context/TokenContext";
 import { URLBuilderProvider } from "./context/URLBuilderContext";
 import { PromptConfigProvider } from "./context/PromptConfigContext";
+import { SearchProvider } from "./context/SearchContext";
 import { initializeDevTools } from "./utils/devtools";
 import ResponsiveWorkflowSelector from "./components/ui/ResponsiveWorkflowSelector";
+import QuickStartWizard from "./components/core/QuickStartWizard";
 
 const AppContent: React.FC = () => {
     const {
@@ -169,6 +171,9 @@ const AppContent: React.FC = () => {
                     initialTab={unifiedManagerTab}
                 />
             )}
+
+            {/* Quick Start Wizard */}
+            <QuickStartWizard />
         </>
     );
 };
@@ -209,9 +214,11 @@ const AppContentWrapper: React.FC = () => {
                         forceReload={forceReload}
                     >
                         <PromptConfigProvider>
-                            <URLBuilderProvider>
-                                <AppContent />
-                            </URLBuilderProvider>
+                            <SearchProvider>
+                                <URLBuilderProvider>
+                                    <AppContent />
+                                </URLBuilderProvider>
+                            </SearchProvider>
                         </PromptConfigProvider>
                     </TokenProvider>
                 </VariablesProvider>

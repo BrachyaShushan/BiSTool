@@ -8,15 +8,17 @@ import {
     FiCommand, FiTerminal, FiPackage, FiServer, FiCpu, FiWifi, FiEye, FiEdit3,
     FiSun, FiMoon
 } from "react-icons/fi";
-import { Button, Badge, Card, IconWrapper } from "../ui";
+import { Button, Badge, Card, IconWrapper, SearchBar } from "../ui";
 import { useAppContext } from "../../context/AppContext";
 import { useTheme } from "../../context/ThemeContext";
+import { useSearchContext } from "../../context/SearchContext";
 
 const WelcomeScreen: React.FC = () => {
     const { projects } = useProjectContext();
     const { switchToProject } = useProjectSwitch();
     const { setShowUnifiedManager } = useAppContext();
     const { isDarkMode, toggleDarkMode } = useTheme();
+    const { totalResults } = useSearchContext();
     const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'getting-started' | 'system' | 'activity'>('overview');
 
     const handleProjectSwitch = async (projectId: string) => {
@@ -294,6 +296,29 @@ const WelcomeScreen: React.FC = () => {
                                 <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
                             </div>
                         ))}
+                    </div>
+
+                    {/* Search Demo */}
+                    <div className="mx-auto max-w-2xl mb-8">
+                        <div className="text-center mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                                Try the Global Search
+                            </h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Search across all your projects, sessions, and variables
+                            </p>
+                        </div>
+                        <SearchBar
+                            placeholder="Search projects, sessions, variables..."
+                            className="w-full"
+                        />
+                        {totalResults > 0 && (
+                            <div className="mt-2 text-center">
+                                <Badge variant="info" size="sm">
+                                    {totalResults} result{totalResults !== 1 ? 's' : ''} found
+                                </Badge>
+                            </div>
+                        )}
                     </div>
 
                     {/* Enhanced Feature Pills */}
