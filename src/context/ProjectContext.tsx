@@ -4,6 +4,7 @@ import React, {
     useState,
     useEffect,
     useCallback,
+    useMemo,
 } from "react";
 import { Project, ProjectContextType } from "../types/core/project.types";
 import { useNavigate } from "react-router-dom";
@@ -256,7 +257,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsLoading(false);
     }, []);
 
-    const value: ProjectContextType = {
+    const value = useMemo(() => ({
         currentProject,
         projects,
         isLoading,
@@ -269,7 +270,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         getProjectStorageKey,
         forceReload,
         setProjectLoadingComplete,
-    };
+    }), [
+        currentProject,
+        projects,
+        isLoading,
+        error,
+        createProject,
+        switchProject,
+        deleteProject,
+        updateProject,
+        clearCurrentProject,
+        getProjectStorageKey,
+        forceReload,
+        setProjectLoadingComplete
+    ]);
 
     return (
         <ProjectContext.Provider value={value}>

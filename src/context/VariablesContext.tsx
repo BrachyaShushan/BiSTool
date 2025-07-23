@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Variable } from "../types/core/app.types";
 import { useProjectContext } from "./ProjectContext";
 import { useVariableStorage } from "../hooks/useStorage";
@@ -233,7 +233,7 @@ export const VariablesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return null;
     }, [globalVariables, sharedVariables]);
 
-    const value: VariablesContextType = {
+    const value = useMemo(() => ({
         globalVariables,
         sharedVariables,
         updateGlobalVariable,
@@ -246,7 +246,20 @@ export const VariablesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         saveSessionVariables,
         replaceVariables,
         getVariableValue,
-    };
+    }), [
+        globalVariables,
+        sharedVariables,
+        updateGlobalVariable,
+        deleteGlobalVariable,
+        updateSharedVariable,
+        deleteSharedVariable,
+        loadVariables,
+        saveVariables,
+        loadSessionVariables,
+        saveSessionVariables,
+        replaceVariables,
+        getVariableValue
+    ]);
 
     return <VariablesContext.Provider value={value}>{children}</VariablesContext.Provider>;
 };

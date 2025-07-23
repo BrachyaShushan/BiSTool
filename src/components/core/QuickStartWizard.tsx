@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useProjectContext } from '../../context/ProjectContext';
-import { useVariablesContext } from '../../context/VariablesContext';
 import { useURLBuilderContext } from '../../context/URLBuilderContext';
 import {
     FiArrowRight, FiArrowLeft, FiCheck, FiX, FiPlay, FiGlobe, FiCode, FiZap, FiDatabase,
-    FiFolder, FiSettings, FiGrid, FiHelpCircle, FiPlus
+    FiFolder, FiSettings, FiGrid, FiHelpCircle
 } from 'react-icons/fi';
 import { Button, Card, Input, Textarea } from '../ui';
 
@@ -28,97 +27,9 @@ interface WizardStepProps {
     totalSteps: number;
 }
 
-const QuickStartWizard: React.FC = () => {
-    const [currentStep, setCurrentStep] = useState(0);
-    const [_completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
-    const [showWizard, setShowWizard] = useState(false);
-    const [wizardData, setWizardData] = useState({
-        projectName: '',
-        projectDescription: '',
-        baseUrl: '',
-        environment: 'development',
-        apiKey: '',
-        globalVariables: [] as Array<{ key: string; value: string; id: string }>,
-        selectedFeatures: [] as string[]
-    });
-
-    const { createProject } = useProjectContext();
-    const { updateGlobalVariable } = useVariablesContext();
-    const { setDomain, setEnvironment } = useURLBuilderContext();
-
-    // Check if user is new (no projects exist)
-    const { projects } = useProjectContext();
-    const isNewUser = projects.length === 0;
-
-    useEffect(() => {
-        // Show wizard for new users or if explicitly requested
-        if (isNewUser) {
-            setShowWizard(true);
-        }
-    }, [isNewUser]);
-
-    const handleNext = () => {
-        const currentStepData = steps[currentStep];
-        if (currentStepData?.isRequired) {
-            setCompletedSteps(prev => new Set([...prev, currentStepData.id]));
-        }
-
-        if (currentStep < steps.length - 1) {
-            setCurrentStep(currentStep + 1);
-        } else {
-            handleWizardComplete();
-        }
-    };
-
-    const handleBack = () => {
-        if (currentStep > 0) {
-            setCurrentStep(currentStep - 1);
-        }
-    };
-
-    const handleSkip = () => {
-        if (currentStep < steps.length - 1) {
-            setCurrentStep(currentStep + 1);
-        } else {
-            handleWizardComplete();
-        }
-    };
-
-    const handleWizardComplete = async () => {
-        try {
-            // Create project if name is provided
-            if (wizardData.projectName.trim()) {
-                await createProject(wizardData.projectName, wizardData.projectDescription);
-
-                // Set up initial configuration
-                if (wizardData.baseUrl) {
-                    setDomain(wizardData.baseUrl);
-                }
-
-                if (wizardData.environment) {
-                    setEnvironment(wizardData.environment);
-                }
-
-                // Set up global variables
-                wizardData.globalVariables.forEach(({ key, value }) => {
-                    if (key && value) {
-                        updateGlobalVariable(key, value);
-                    }
-                });
-            }
-
-            setShowWizard(false);
-        } catch (error) {
-            console.error('Error completing wizard:', error);
-        }
-    };
-
-    const handleClose = () => {
-        setShowWizard(false);
-    };
-
-    // Wizard Steps Components
-    const WelcomeStep: React.FC<WizardStepProps> = ({ onNext }) => (
+// Step Components OUTSIDE main component
+function WelcomeStep({ onNext }: Pick<WizardStepProps, 'onNext'>) {
+    return (
         <div className="text-center space-y-6">
             <div className="inline-flex justify-center items-center p-6 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-3xl shadow-2xl">
                 <FiZap className="w-16 h-16 text-white" />
@@ -172,8 +83,31 @@ const QuickStartWizard: React.FC = () => {
             </div>
         </div>
     );
+}
 
-    const ProjectSetupStep: React.FC<WizardStepProps> = ({ onNext, onBack, isFirstStep }) => (
+function ProjectSetupStep({ onNext, onBack, isFirstStep, onDataChange }: WizardStepProps & {
+    onDataChange: (data: { projectName: string; projectDescription: string }) => void;
+}) {
+    const [localData, setLocalData] = useState({
+        projectName: '',
+        projectDescription: ''
+    });
+
+    // Memoize handlers for inputs
+    const handleProjectNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalData(prev => ({ ...prev, projectName: e.target.value }));
+    }, []);
+
+    const handleProjectDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setLocalData(prev => ({ ...prev, projectDescription: e.target.value }));
+    }, []);
+
+    const handleNext = useCallback(() => {
+        onDataChange(localData);
+        onNext();
+    }, [localData, onDataChange, onNext]);
+
+    return (
         <div className="space-y-6">
             <div className="text-center">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -188,8 +122,8 @@ const QuickStartWizard: React.FC = () => {
                 <Input
                     label="Project Name"
                     placeholder="My API Project"
-                    value={wizardData.projectName}
-                    onChange={(e) => setWizardData(prev => ({ ...prev, projectName: e.target.value }))}
+                    value={localData.projectName}
+                    onChange={handleProjectNameChange}
                     fullWidth
                     required
                 />
@@ -197,8 +131,8 @@ const QuickStartWizard: React.FC = () => {
                 <Textarea
                     label="Project Description (Optional)"
                     placeholder="Describe what this project is for..."
-                    value={wizardData.projectDescription}
-                    onChange={(e) => setWizardData(prev => ({ ...prev, projectDescription: e.target.value }))}
+                    value={localData.projectDescription}
+                    onChange={handleProjectDescriptionChange}
                     fullWidth
                     rows={3}
                 />
@@ -215,18 +149,46 @@ const QuickStartWizard: React.FC = () => {
                 </Button>
 
                 <Button
-                    onClick={onNext}
+                    onClick={handleNext}
                     variant="primary"
                     icon={FiArrowRight}
-                    disabled={!wizardData.projectName.trim()}
+                    disabled={!localData.projectName.trim()}
                 >
                     Next
                 </Button>
             </div>
         </div>
     );
+}
 
-    const EnvironmentSetupStep: React.FC<WizardStepProps> = ({ onNext, onBack, onSkip, isFirstStep }) => (
+function EnvironmentSetupStep({ onNext, onBack, onSkip, isFirstStep, onDataChange }: WizardStepProps & {
+    onDataChange: (data: { baseUrl: string; environment: string }) => void;
+}) {
+    const [localData, setLocalData] = useState({
+        baseUrl: '',
+        environment: 'development'
+    });
+
+    // Memoize handlers for inputs
+    const handleBaseUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalData(prev => ({ ...prev, baseUrl: e.target.value }));
+    }, []);
+
+    const handleEnvironmentChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        setLocalData(prev => ({ ...prev, environment: e.target.value }));
+    }, []);
+
+    const handleNext = useCallback(() => {
+        onDataChange(localData);
+        onNext();
+    }, [localData, onDataChange, onNext]);
+
+    const handleSkip = useCallback(() => {
+        onDataChange(localData);
+        onSkip();
+    }, [localData, onDataChange, onSkip]);
+
+    return (
         <div className="space-y-6">
             <div className="text-center">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -241,8 +203,8 @@ const QuickStartWizard: React.FC = () => {
                 <Input
                     label="Base URL"
                     placeholder="https://api.example.com"
-                    value={wizardData.baseUrl}
-                    onChange={(e) => setWizardData(prev => ({ ...prev, baseUrl: e.target.value }))}
+                    value={localData.baseUrl}
+                    onChange={handleBaseUrlChange}
                     fullWidth
                     icon={FiGlobe}
                 />
@@ -252,8 +214,8 @@ const QuickStartWizard: React.FC = () => {
                         Default Environment
                     </label>
                     <select
-                        value={wizardData.environment}
-                        onChange={(e) => setWizardData(prev => ({ ...prev, environment: e.target.value }))}
+                        value={localData.environment}
+                        onChange={handleEnvironmentChange}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                         <option value="development">Development</option>
@@ -275,14 +237,14 @@ const QuickStartWizard: React.FC = () => {
 
                 <div className="flex space-x-2">
                     <Button
-                        onClick={onSkip}
+                        onClick={handleSkip}
                         variant="ghost"
                     >
                         Skip
                     </Button>
 
                     <Button
-                        onClick={onNext}
+                        onClick={handleNext}
                         variant="primary"
                         icon={FiArrowRight}
                     >
@@ -292,73 +254,89 @@ const QuickStartWizard: React.FC = () => {
             </div>
         </div>
     );
+}
 
-    const VariablesSetupStep: React.FC<WizardStepProps> = ({ onNext, onBack, onSkip, isFirstStep }) => (
+
+
+function FeaturesStep({ onNext, onBack, onSkip, isFirstStep, onDataChange }: WizardStepProps & {
+    onDataChange: (data: { selectedFeatures: string[] }) => void;
+}) {
+    const [localData, setLocalData] = useState({
+        selectedFeatures: [] as string[]
+    });
+
+    // Memoize handlers for inputs
+    const toggleFeature = useCallback((featureId: string) => {
+        setLocalData(prev => ({
+            ...prev,
+            selectedFeatures: prev.selectedFeatures.includes(featureId)
+                ? prev.selectedFeatures.filter((id: string) => id !== featureId)
+                : [...prev.selectedFeatures, featureId]
+        }));
+    }, []);
+
+    const handleNext = useCallback(() => {
+        onDataChange(localData);
+        onNext();
+    }, [localData, onDataChange, onNext]);
+
+    const handleSkip = useCallback(() => {
+        onDataChange(localData);
+        onSkip();
+    }, [localData, onDataChange, onSkip]);
+
+    const features = [
+        { id: 'url-builder', name: 'URL Builder', description: 'Dynamic URL construction with variables', icon: FiGlobe },
+        { id: 'request-config', name: 'Request Config', description: 'Advanced request configuration', icon: FiCode },
+        { id: 'ai-testing', name: 'AI Test Generator', description: 'AI-powered test scenario generation', icon: FiZap },
+        { id: 'yaml-export', name: 'YAML Export', description: 'Export configurations for CI/CD', icon: FiDatabase },
+        { id: 'session-management', name: 'Session Management', description: 'Organize and manage test sessions', icon: FiFolder },
+        { id: 'variables', name: 'Variable Management', description: 'Global and session variables', icon: FiSettings }
+    ];
+
+    return (
         <div className="space-y-6">
             <div className="text-center">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    Set Up Global Variables
+                    Choose Your Features
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400">
-                    Configure variables that will be available across all your API requests.
+                    Select the features you'd like to explore first.
                 </p>
             </div>
 
-            <div className="space-y-4">
-                {wizardData.globalVariables.map((variable) => (
-                    <div key={variable.id} className="flex space-x-2">
-                        <Input
-                            placeholder="Variable name"
-                            value={variable?.key || ''}
-                            onChange={(e) => {
-                                const newVariables = wizardData.globalVariables.map((v) =>
-                                    v.id === variable.id ? { ...v, key: e.target.value } : v
-                                );
-                                setWizardData(prev => ({ ...prev, globalVariables: newVariables }));
-                            }}
-                            className="flex-1"
-                        />
-                        <Input
-                            placeholder="Value"
-                            value={variable?.value || ''}
-                            onChange={(e) => {
-                                const newVariables = wizardData.globalVariables.map((v) =>
-                                    v.id === variable.id ? { ...v, value: e.target.value } : v
-                                );
-                                setWizardData(prev => ({ ...prev, globalVariables: newVariables }));
-                            }}
-                            className="flex-1"
-                        />
-                        <Button
-                            onClick={() => {
-                                const newVariables = wizardData.globalVariables.filter((v) => v.id !== variable.id);
-                                setWizardData(prev => ({ ...prev, globalVariables: newVariables }));
-                            }}
-                            variant="danger"
-                            size="sm"
-                            icon={FiX}
-                        >
-                            Remove
-                        </Button>
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {features.map((feature) => (
+                    <Card
+                        key={feature.id}
+                        variant={localData.selectedFeatures.includes(feature.id) ? "elevated" : "default"}
+                        className={`cursor-pointer transition-all duration-200 ${localData.selectedFeatures.includes(feature.id)
+                            ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }`}
+                        onClick={() => toggleFeature(feature.id)}
+                    >
+                        <div className="flex items-start space-x-3">
+                            <div className={`p-2 rounded-lg ${localData.selectedFeatures.includes(feature.id)
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                                }`}>
+                                <feature.icon className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-semibold text-gray-900 dark:text-white">
+                                    {feature.name}
+                                </h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {feature.description}
+                                </p>
+                            </div>
+                            {localData.selectedFeatures.includes(feature.id) && (
+                                <FiCheck className="w-5 h-5 text-blue-500" />
+                            )}
+                        </div>
+                    </Card>
                 ))}
-
-                <Button
-                    onClick={() => {
-                        setWizardData(prev => ({
-                            ...prev,
-                            globalVariables: [
-                                ...prev.globalVariables,
-                                { key: '', value: '', id: Date.now().toString() + Math.random().toString(36).substr(2, 5) }
-                            ]
-                        }));
-                    }}
-                    variant="outline"
-                    icon={FiPlus}
-                    fullWidth
-                >
-                    Add Variable
-                </Button>
             </div>
 
             <div className="flex justify-between">
@@ -373,14 +351,14 @@ const QuickStartWizard: React.FC = () => {
 
                 <div className="flex space-x-2">
                     <Button
-                        onClick={onSkip}
+                        onClick={handleSkip}
                         variant="ghost"
                     >
                         Skip
                     </Button>
 
                     <Button
-                        onClick={onNext}
+                        onClick={handleNext}
                         variant="primary"
                         icon={FiArrowRight}
                     >
@@ -390,103 +368,10 @@ const QuickStartWizard: React.FC = () => {
             </div>
         </div>
     );
+}
 
-    const FeaturesStep: React.FC<WizardStepProps> = ({ onNext, onBack, onSkip, isFirstStep }) => {
-        const features = [
-            { id: 'url-builder', name: 'URL Builder', description: 'Dynamic URL construction with variables', icon: FiGlobe },
-            { id: 'request-config', name: 'Request Config', description: 'Advanced request configuration', icon: FiCode },
-            { id: 'ai-testing', name: 'AI Test Generator', description: 'AI-powered test scenario generation', icon: FiZap },
-            { id: 'yaml-export', name: 'YAML Export', description: 'Export configurations for CI/CD', icon: FiDatabase },
-            { id: 'session-management', name: 'Session Management', description: 'Organize and manage test sessions', icon: FiFolder },
-            { id: 'variables', name: 'Variable Management', description: 'Global and session variables', icon: FiSettings }
-        ];
-
-        const toggleFeature = (featureId: string) => {
-            setWizardData(prev => ({
-                ...prev,
-                selectedFeatures: prev.selectedFeatures.includes(featureId)
-                    ? prev.selectedFeatures.filter(id => id !== featureId)
-                    : [...prev.selectedFeatures, featureId]
-            }));
-        };
-
-        return (
-            <div className="space-y-6">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                        Choose Your Features
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400">
-                        Select the features you'd like to explore first.
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {features.map((feature) => (
-                        <Card
-                            key={feature.id}
-                            variant={wizardData.selectedFeatures.includes(feature.id) ? "elevated" : "default"}
-                            className={`cursor-pointer transition-all duration-200 ${wizardData.selectedFeatures.includes(feature.id)
-                                ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                                }`}
-                            onClick={() => toggleFeature(feature.id)}
-                        >
-                            <div className="flex items-start space-x-3">
-                                <div className={`p-2 rounded-lg ${wizardData.selectedFeatures.includes(feature.id)
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                                    }`}>
-                                    <feature.icon className="w-5 h-5" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-900 dark:text-white">
-                                        {feature.name}
-                                    </h3>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        {feature.description}
-                                    </p>
-                                </div>
-                                {wizardData.selectedFeatures.includes(feature.id) && (
-                                    <FiCheck className="w-5 h-5 text-blue-500" />
-                                )}
-                            </div>
-                        </Card>
-                    ))}
-                </div>
-
-                <div className="flex justify-between">
-                    <Button
-                        onClick={onBack}
-                        variant="secondary"
-                        icon={FiArrowLeft}
-                        disabled={isFirstStep}
-                    >
-                        Back
-                    </Button>
-
-                    <div className="flex space-x-2">
-                        <Button
-                            onClick={onSkip}
-                            variant="ghost"
-                        >
-                            Skip
-                        </Button>
-
-                        <Button
-                            onClick={onNext}
-                            variant="primary"
-                            icon={FiArrowRight}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    const CompletionStep: React.FC<WizardStepProps> = ({ onBack }) => (
+function CompletionStep({ onBack, onComplete }: Pick<WizardStepProps, 'onBack'> & { onComplete: () => void }) {
+    return (
         <div className="text-center space-y-6">
             <div className="inline-flex justify-center items-center p-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl shadow-2xl">
                 <FiCheck className="w-16 h-16 text-white" />
@@ -537,7 +422,7 @@ const QuickStartWizard: React.FC = () => {
                 </Button>
 
                 <Button
-                    onClick={handleWizardComplete}
+                    onClick={onComplete}
                     variant="primary"
                     icon={FiCheck}
                     gradient
@@ -548,14 +433,105 @@ const QuickStartWizard: React.FC = () => {
             </div>
         </div>
     );
+}
 
+const QuickStartWizard: React.FC = () => {
+    console.log('QuickStartWizard rendered');
+    // All wizard data is kept in local state only. Only on completion is it saved to global/context state.
+    const [currentStep, setCurrentStep] = useState(0);
+    const [_completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+    const [showWizard, setShowWizard] = useState(false);
+    const [wizardData, setWizardData] = useState({
+        projectName: '',
+        projectDescription: '',
+        baseUrl: '',
+        environment: 'development',
+        apiKey: '',
+        selectedFeatures: [] as string[]
+    });
+
+    // Only get context functions, not values, to avoid rerenders
+    const { createProject, projects } = useProjectContext();
+    const { setDomain, setEnvironment } = useURLBuilderContext();
+
+    // Check if user is new (no projects exist)
+    const isNewUser = projects.length === 0;
+
+    useEffect(() => {
+        // Show wizard for new users or if explicitly requested
+        if (isNewUser) {
+            setShowWizard(true);
+        }
+    }, [isNewUser]);
+
+    const handleNext = () => {
+        const currentStepData = steps[currentStep];
+        if (currentStepData?.isRequired) {
+            setCompletedSteps(prev => new Set([...prev, currentStepData.id]));
+        }
+
+        if (currentStep < steps.length - 1) {
+            setCurrentStep(currentStep + 1);
+        } else {
+            handleWizardComplete();
+        }
+    };
+
+    const handleBack = () => {
+        if (currentStep > 0) {
+            setCurrentStep(currentStep - 1);
+        }
+    };
+
+    const handleSkip = () => {
+        if (currentStep < steps.length - 1) {
+            setCurrentStep(currentStep + 1);
+        } else {
+            handleWizardComplete();
+        }
+    };
+
+    const handleWizardComplete = async () => {
+        try {
+            console.log('Completing wizard with data:', wizardData);
+
+            // Always save configuration data, even if no project is created
+            if (wizardData.baseUrl) {
+                setDomain(wizardData.baseUrl);
+            }
+
+            if (wizardData.environment) {
+                setEnvironment(wizardData.environment);
+            }
+
+
+            // Create project if name is provided
+            if (wizardData.projectName.trim()) {
+                await createProject(wizardData.projectName, wizardData.projectDescription);
+            }
+
+            setShowWizard(false);
+
+
+        } catch (error) {
+            console.error('Error completing wizard:', error);
+        }
+    };
+
+    const handleClose = () => {
+        setShowWizard(false);
+    };
+
+
+
+    // Wizard Steps Components
     const steps: WizardStep[] = [
         {
             id: 'welcome',
             title: 'Welcome',
             description: 'Get started with BiSTool',
             icon: FiZap,
-            component: WelcomeStep,
+            component: (props) => <WelcomeStep {...props} />,
             isRequired: false
         },
         {
@@ -563,7 +539,7 @@ const QuickStartWizard: React.FC = () => {
             title: 'Project Setup',
             description: 'Create your first project',
             icon: FiFolder,
-            component: ProjectSetupStep,
+            component: (props) => <ProjectSetupStep {...props} onDataChange={(data) => setWizardData(prev => ({ ...prev, ...data }))} />,
             isRequired: true
         },
         {
@@ -571,23 +547,16 @@ const QuickStartWizard: React.FC = () => {
             title: 'Environment',
             description: 'Configure your environment',
             icon: FiGlobe,
-            component: EnvironmentSetupStep,
+            component: (props) => <EnvironmentSetupStep {...props} onDataChange={(data) => setWizardData(prev => ({ ...prev, ...data }))} />,
             isRequired: false
         },
-        {
-            id: 'variables',
-            title: 'Variables',
-            description: 'Set up global variables',
-            icon: FiSettings,
-            component: VariablesSetupStep,
-            isRequired: false
-        },
+
         {
             id: 'features',
             title: 'Features',
             description: 'Choose your features',
             icon: FiGrid,
-            component: FeaturesStep,
+            component: (props) => <FeaturesStep {...props} onDataChange={(data) => setWizardData(prev => ({ ...prev, ...data }))} />,
             isRequired: false
         },
         {
@@ -595,10 +564,12 @@ const QuickStartWizard: React.FC = () => {
             title: 'Completion',
             description: 'You\'re all set!',
             icon: FiCheck,
-            component: CompletionStep,
+            component: (props) => <CompletionStep {...props} onComplete={handleWizardComplete} />,
             isRequired: false
         }
     ];
+
+
 
     if (!showWizard) {
         return null;

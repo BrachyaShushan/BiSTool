@@ -106,20 +106,22 @@ export const useSessionStorage = (
 
   const saveActiveSession = useCallback(
     (session: any) => {
+      if (!projectId) return; // Guard: do not save if no project selected
       debouncedSave(() => {
         storageManager.saveActiveSession(session, projectName);
       }, 200);
     },
-    [storageManager, debouncedSave, projectName]
+    [storageManager, debouncedSave, projectName, projectId]
   );
 
   const saveSavedSessions = useCallback(
     (sessions: any[]) => {
+      if (!projectId) return; // Guard: do not save if no project selected
       debouncedSave(() => {
         storageManager.saveSavedSessions(sessions, projectName);
       }, 200);
     },
-    [storageManager, debouncedSave, projectName]
+    [storageManager, debouncedSave, projectName, projectId]
   );
 
   return {

@@ -12,7 +12,6 @@ export { default as StatCard } from "./StatCard";
 export { default as TestStatusBadge } from "./TestStatusBadge";
 export { default as SectionHeader } from "./SectionHeader";
 export { default as MonacoEditor } from "./MonacoEditor";
-export { default as LazyMonacoEditor } from "./LazyMonacoEditor";
 export { default as Toggle } from "./Toggle";
 export { default as ModeSwitcher } from "./ModeSwitcher";
 export { default as IconWrapper } from "./IconWrapper";

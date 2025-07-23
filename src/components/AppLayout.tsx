@@ -10,6 +10,7 @@ import { Section, SectionId } from "../types";
 // Fallback to importing from app.types if previous imports fail
 
 const AppLayout: React.FC = () => {
+    console.log('AppLayout rendered');
     const { mode, showUnifiedManager, unifiedManagerTab, setShowUnifiedManager, requestConfig, setRequestConfig } = useAppContext();
     const location = useLocation();
     const params = useParams();

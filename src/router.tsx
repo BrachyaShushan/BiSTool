@@ -12,6 +12,7 @@ import ResultDetailPage from './components/ResultDetailPage';
 import AppLayout from "./components/AppLayout";
 import NotFoundPage from './components/NotFoundPage';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import ProjectRouteWrapper from './components/core/ProjectRouteWrapper';
 
 const router = createBrowserRouter([
     {
@@ -24,21 +25,26 @@ const router = createBrowserRouter([
         errorElement: <ErrorBoundary />,
         children: [
             { index: true, element: <WelcomeScreen /> },
-            {
-                path: "project/:projectId/session/:sessionId",
-                children: [
-                    { index: true, element: <Navigate to="url" replace /> },
-                    { path: "url", element: <URLBuilder /> },
-                    { path: "request", element: <RequestConfig /> },
-                    { path: "tests", element: <TestManager /> },
-                    { path: "yaml", element: <YAMLGenerator /> },
-                    { path: "ai", element: <AITestGenerator /> },
-                    { path: "import", element: <SessionImporter /> },
-                    { path: "json", element: <JsonDiffTool /> },
-                ],
-            },
             { path: "details/:type/:id", element: <ResultDetailPage /> },
             { path: "*", element: <NotFoundPage /> },
+        ],
+    },
+    {
+        path: "/project/:projectId/session/:sessionId",
+        element: (
+            <Providers>
+                <ProjectRouteWrapper />
+            </Providers>
+        ),
+        children: [
+            { index: true, element: <Navigate to="url" replace /> },
+            { path: "url", element: <URLBuilder /> },
+            { path: "request", element: <RequestConfig /> },
+            { path: "tests", element: <TestManager /> },
+            { path: "yaml", element: <YAMLGenerator /> },
+            { path: "ai", element: <AITestGenerator /> },
+            { path: "import", element: <SessionImporter /> },
+            { path: "json", element: <JsonDiffTool /> },
         ],
     },
 ]);

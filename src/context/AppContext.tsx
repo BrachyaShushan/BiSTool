@@ -720,7 +720,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     setMode(newMode);
     // The mode will be auto-saved by the useEffect above
   }, []);
-  const value: AppContextType = {
+  const value: AppContextType = useMemo(() => ({
     // App state
     urlData: appState.urlData,
     requestConfig: appState.requestConfig,
@@ -760,8 +760,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     handleRequestConfigSubmit,
     handleYAMLGenerated,
 
-
-
     // Save management
     autoSave: saveManager.autoSave,
     isSaving: saveManager.isSaving,
@@ -784,7 +782,50 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
     // Session variables
     updateSessionVariables,
-  };
+  }), [
+    appState.urlData,
+    appState.requestConfig,
+    appState.yamlOutput,
+    appState.activeSection,
+    appState.segmentVariables,
+    sessionManager.activeSession,
+    sessionManager.savedSessions,
+    methodColor,
+    isLoading,
+    error,
+    mode,
+    handleSetMode,
+    appState.setUrlData,
+    appState.setRequestConfig,
+    appState.setYamlOutput,
+    appState.setSegmentVariables,
+    handleNewSession,
+    handleClearSession,
+    handleLoadSession,
+    handleSaveSession,
+    handleDeleteSession,
+    handleImportSessions,
+    handleURLBuilderSubmit,
+    handleRequestConfigSubmit,
+    handleYAMLGenerated,
+    saveManager.autoSave,
+    saveManager.isSaving,
+    saveManager.lastSaved,
+    saveManager.hasUnsavedChanges,
+    saveManager.saveFrequency,
+    handleManualSave,
+    handleUndo,
+    handleRedo,
+    handleAutoSaveToggle,
+    saveManager.updateSaveFrequency,
+    saveManager.isUndoAvailable,
+    saveManager.isRedoAvailable,
+    showUnifiedManager,
+    setShowUnifiedManager,
+    unifiedManagerTab,
+    openUnifiedManager,
+    updateSessionVariables
+  ]);
 
   return <AppContext value={value}>{children}</AppContext>;
 };
