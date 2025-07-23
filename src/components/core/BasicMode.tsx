@@ -3,22 +3,19 @@ import { useAppContext } from '../../context/AppContext';
 import { useTokenContext } from '../../context/TokenContext';
 import { useVariablesContext } from '../../context/VariablesContext';
 import { useURLBuilderContext } from '../../context/URLBuilderContext';
-import { Card, SectionHeader, MonacoEditor, Input, Button, Toggle, Textarea, Badge, IconButton, Divider, Tooltip } from '../ui';
-import { FiGlobe, FiSettings, FiSend, FiEye, FiPlus, FiTrash2, FiLink, FiZap, FiDatabase, FiEdit2, FiCheck, FiX, FiShield, FiInfo, FiServer, FiCode, FiFileText, FiKey, FiHash, FiList, FiType, FiMail, FiUser, FiAlertCircle, FiClock, FiExternalLink, FiLayers, FiTag, FiActivity as FiActivityIcon, FiDownload } from 'react-icons/fi';
+import { Card, SectionHeader, MonacoEditor, Input, Button, Toggle, Badge, IconButton, Divider, Tooltip } from '../ui';
+import { FiGlobe, FiSettings, FiSend, FiEye, FiPlus, FiTrash2, FiZap, FiDatabase, FiEdit2, FiCheck, FiX, FiShield, FiInfo, FiServer, FiCode, FiKey, FiUser, FiAlertCircle, FiClock, FiExternalLink, FiLayers, FiTag, FiActivity as FiActivityIcon } from 'react-icons/fi';
 import { Header, QueryParam, FormDataField } from '../../types';
-import { DEFAULT_JSON_BODY, DEFAULT_FORM_DATA } from '../../constants/requestConfig';
-import { LuReplace } from 'react-icons/lu';
-import { GiTrafficLightsOrange, GiTrafficLightsReadyToGo, GiTrafficLightsRed } from 'react-icons/gi';
+import { DEFAULT_JSON_BODY, DEFAULT_FORM_DATA, HTTP_METHODS } from '../../constants/requestConfig';
+import { PROTOCOL_OPTIONS, ENVIRONMENT_OPTIONS } from '../../constants/urlBuilder';
 import {
     updateArrayItem,
     addArrayItem,
     removeArrayItem,
-    getInitialStateValue,
-    getMethodColor,
-    METHOD_CONFIG,
-    BODY_TYPE_CONFIG,
-    ENVIRONMENT_CONFIG
+    getInitialStateValue
 } from '../../utils/basicModeUtils';
+// Import expert mode components
+import { HTTPMethodSelector, QueryParametersSection, RequestHeadersSection, RequestBodySection } from '../workflow';
 
 interface BasicModeProps {
     requestConfig?: any;
@@ -227,20 +224,6 @@ const BasicMode: React.FC<BasicModeProps> = ({
     const updateHeader = (index: number, field: keyof Header, value: string | boolean) => {
         setHeaders(updateArrayItem(headers, index, field, value));
     };
-
-    const addFormField = () => {
-        setFormData(addArrayItem(formData, { key: '', value: '', type: 'text', required: false }));
-    };
-
-    const removeFormField = (index: number) => {
-        setFormData(removeArrayItem(formData, index));
-    };
-
-    const updateFormField = (index: number, field: keyof FormDataField, value: string | boolean) => {
-        setFormData(updateArrayItem(formData, index, field, value));
-    };
-
-
 
     const handleJsonBodyChange = (value: string | undefined) => {
         setJsonBody(value || '');
@@ -511,42 +494,32 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                             Protocol
                                         </label>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <button
-                                                onClick={() => setProtocol('https')}
-                                                className={`relative p-6 rounded-2xl border-2 transition-all duration-300 group hover:scale-105 ${protocol === 'https'
-                                                    ? 'border-emerald-500 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-xl shadow-emerald-500/25'
-                                                    : 'border-slate-200 dark:border-slate-600 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/10'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center space-x-3">
-                                                    <FiShield className={`w-6 h-6 ${protocol === 'https' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-                                                    <span className="text-lg font-bold">HTTPS</span>
-                                                </div>
-                                                {protocol === 'https' && (
-                                                    <div className="flex absolute -top-2 -right-2 justify-center items-center w-8 h-8 bg-emerald-500 rounded-full shadow-lg">
-                                                        <FiCheck className="w-5 h-5 text-white" />
-                                                    </div>
-                                                )}
-                                                <div className="absolute inset-0 bg-gradient-to-br from-transparent rounded-2xl opacity-0 transition-opacity duration-300 to-black/5 group-hover:opacity-100"></div>
-                                            </button>
-                                            <button
-                                                onClick={() => setProtocol('http')}
-                                                className={`relative p-6 rounded-2xl border-2 transition-all duration-300 group hover:scale-105 ${protocol === 'http'
-                                                    ? 'border-blue-500 bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xl shadow-blue-500/25'
-                                                    : 'border-slate-200 dark:border-slate-600 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/10'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center space-x-3">
-                                                    <FiLink className={`w-6 h-6 ${protocol === 'http' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
-                                                    <span className="text-lg font-bold">HTTP</span>
-                                                </div>
-                                                {protocol === 'http' && (
-                                                    <div className="flex absolute -top-2 -right-2 justify-center items-center w-8 h-8 bg-blue-500 rounded-full shadow-lg">
-                                                        <FiCheck className="w-5 h-5 text-white" />
-                                                    </div>
-                                                )}
-                                                <div className="absolute inset-0 bg-gradient-to-br from-transparent rounded-2xl opacity-0 transition-opacity duration-300 to-black/5 group-hover:opacity-100"></div>
-                                            </button>
+                                            {PROTOCOL_OPTIONS.map(({ id, label, selectedColor }) => {
+                                                const isActive = protocol === id;
+                                                const ProtocolIcon = id === 'https' ? FiShield : FiGlobe;
+
+                                                return (
+                                                    <button
+                                                        key={id}
+                                                        onClick={() => setProtocol(id)}
+                                                        className={`relative p-6 rounded-2xl border-2 transition-all duration-300 group hover:scale-105 ${isActive
+                                                            ? `border-emerald-500 bg-gradient-to-br ${selectedColor} text-white shadow-xl shadow-emerald-500/25`
+                                                            : `border-slate-200 dark:border-slate-600 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/10`
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center space-x-3">
+                                                            <ProtocolIcon className={`w-6 h-6 ${isActive ? 'text-white' : id === 'https' ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'}`} />
+                                                            <span className="text-lg font-bold">{label}</span>
+                                                        </div>
+                                                        {isActive && (
+                                                            <div className="flex absolute -top-2 -right-2 justify-center items-center w-8 h-8 bg-emerald-500 rounded-full shadow-lg">
+                                                                <FiCheck className="w-5 h-5 text-white" />
+                                                            </div>
+                                                        )}
+                                                        <div className="absolute inset-0 bg-gradient-to-br from-transparent rounded-2xl opacity-0 transition-opacity duration-300 to-black/5 group-hover:opacity-100"></div>
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
@@ -575,36 +548,24 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                             </div>
                                         </label>
                                         <div className="grid grid-cols-3 gap-3">
-                                            {ENVIRONMENT_CONFIG.map((env) => {
+                                            {ENVIRONMENT_OPTIONS.map((env) => {
                                                 const isActive = environment === env.id;
-                                                const colorClasses = {
-                                                    green: isActive ? 'border-green-500 bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-green-300',
-                                                    yellow: isActive ? 'border-yellow-500 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-yellow-300',
-                                                    red: isActive ? 'border-red-500 bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-red-300'
-                                                };
-
-                                                const iconMap = {
-                                                    GiTrafficLightsRed,
-                                                    GiTrafficLightsOrange,
-                                                    GiTrafficLightsReadyToGo
-                                                };
-                                                const IconComponent = iconMap[env.icon as keyof typeof iconMap];
 
                                                 return (
                                                     <Tooltip
                                                         key={env.id}
-                                                        content={env.tooltip}
+                                                        content={env.description}
                                                         position="top"
                                                         multiline
                                                     >
                                                         <div>
                                                             <Button
                                                                 onClick={() => setEnvironment(env.id)}
-                                                                className={` w-full relative p-3 rounded-lg border-2 transition-all duration-200 group ${colorClasses[env.color as keyof typeof colorClasses]}`}
-                                                                variant="secondary"
-                                                                icon={IconComponent}
+                                                                className={`w-full relative p-3 rounded-lg border-2 transition-all duration-200 bg-gradient-to-r group ${isActive ? env.selectedColor : env.color}`}
+                                                                variant="inherit"
+                                                                icon={env.icon}
                                                                 isChecked={isActive}
-                                                                children={env.name}
+                                                                children={env.label}
                                                             />
                                                         </div>
                                                     </Tooltip>
@@ -791,270 +752,41 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                 />
                                 <div className="space-y-8">
                                     {/* HTTP Method */}
-                                    <div>
-                                        <label className="block mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                            HTTP Method
-                                        </label>
-                                        <div className="grid grid-cols-5 gap-3">
-                                            {Object.entries(METHOD_CONFIG).map(([httpMethod, config]) => {
-                                                const isActive = method === httpMethod;
-                                                const iconMap = {
-                                                    FiDownload,
-                                                    FiSend,
-                                                    LuReplace,
-                                                    FiEdit2,
-                                                    FiTrash2
-                                                };
-                                                const IconComponent = iconMap[config.icon as keyof typeof iconMap];
-
-                                                return (
-                                                    <Button
-                                                        key={httpMethod}
-                                                        onClick={() => setMethod(httpMethod)}
-                                                        className={`px-4 py-3 rounded-xl border-2 transition-all duration-300 font-bold text-sm hover:scale-105 ${isActive
-                                                            ? `text-white bg-gradient-to-br shadow-xl border-${config.color}-500 from-${config.color}-500 to-${config.color}-600 shadow-${config.color}-500/25`
-                                                            : `border-slate-200 dark:border-slate-600 hover:border-${config.color}-300 hover:bg-${config.color}-50 dark:hover:bg-${config.color}-900/10`
-                                                            }`}
-                                                        variant="secondary"
-                                                        icon={IconComponent}
-                                                        children={httpMethod}
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
+                                    <HTTPMethodSelector
+                                        selectedMethod={method}
+                                        onMethodChange={setMethod}
+                                    />
 
                                     {/* Query Parameters */}
-                                    <div>
-                                        <label className="block mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            <div className="flex items-center space-x-2">
-                                                <FiHash className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                                                <span>Query Parameters</span>
-                                            </div>
-                                        </label>
-                                        <div className="space-y-3">
-                                            {queryParams.map((param, index) => (
-                                                <div key={index} className="flex items-center space-x-3">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center mb-1 space-x-2">
-                                                            <FiHash className="w-3 h-3 text-gray-500" />
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Parameter</span>
-                                                        </div>
-                                                        <Input
-                                                            value={param.key}
-                                                            onChange={(e) => updateQueryParam(index, 'key', e.target.value)}
-                                                            placeholder="Parameter name"
-                                                            className="w-full"
-                                                        />
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center mb-1 space-x-2">
-                                                            <FiTag className="w-3 h-3 text-gray-500" />
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Value</span>
-                                                        </div>
-                                                        <Input
-                                                            value={param.value}
-                                                            onChange={(e) => updateQueryParam(index, 'value', e.target.value)}
-                                                            placeholder="Parameter value"
-                                                            className="w-full"
-                                                        />
-                                                    </div>
-                                                    <IconButton
-                                                        icon={FiTrash2}
-                                                        variant="ghost"
-                                                        onClick={() => removeQueryParam(index)}
-                                                        size="sm"
-                                                        className="text-red-500 hover:text-red-700"
-                                                    />
-                                                </div>
-                                            ))}
-                                            <Button
-                                                variant="secondary"
-                                                icon={FiPlus}
-                                                onClick={addQueryParam}
-                                                size="sm"
-                                                fullWidth
-                                                className="flex items-center space-x-2"
-                                                children={"Query Parameter"}
-                                            />
-                                        </div>
-                                    </div>
+                                    <QueryParametersSection
+                                        queryParams={queryParams}
+                                        onAdd={addQueryParam}
+                                        onRemove={removeQueryParam}
+                                        onUpdate={updateQueryParam}
+                                    />
 
                                     {/* Headers */}
-                                    <div>
-                                        <label className="block mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            <div className="flex items-center space-x-2">
-                                                <FiList className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                                                <span>Headers</span>
-                                            </div>
-                                        </label>
-                                        <div className="space-y-3">
-                                            {headers.map((header, index) => (
-                                                <div key={index} className="flex items-center space-x-3">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center mb-1 space-x-2">
-                                                            <FiList className="w-3 h-3 text-gray-500" />
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Header</span>
-                                                        </div>
-                                                        <Input
-                                                            value={header.key}
-                                                            onChange={(e) => updateHeader(index, 'key', e.target.value)}
-                                                            placeholder="Header name"
-                                                            className="w-full"
-                                                        />
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center mb-1 space-x-2">
-                                                            <FiTag className="w-3 h-3 text-gray-500" />
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Value</span>
-                                                        </div>
-                                                        <Input
-                                                            value={header.value}
-                                                            onChange={(e) => updateHeader(index, 'value', e.target.value)}
-                                                            placeholder="Header value"
-                                                            className="w-full"
-                                                        />
-                                                    </div>
-                                                    <IconButton
-                                                        icon={FiTrash2}
-                                                        variant="ghost"
-                                                        onClick={() => removeHeader(index)}
-                                                        size="sm"
-                                                        className="text-red-500 hover:text-red-700"
-                                                    />
-                                                </div>
-                                            ))}
-                                            <Button
-                                                variant="secondary"
-                                                icon={FiPlus}
-                                                onClick={addHeader}
-                                                size="sm"
-                                                fullWidth
-                                                className="flex items-center space-x-2"
-                                                children={"Header"}
-                                            />
-                                        </div>
-                                    </div>
+                                    <RequestHeadersSection
+                                        headers={headers}
+                                        onAdd={addHeader}
+                                        onRemove={removeHeader}
+                                        onUpdate={updateHeader}
+                                    />
 
                                     {/* Body */}
                                     {['POST', 'PUT', 'PATCH'].includes(method) && (
                                         <>
                                             <Divider />
-                                            <div>
-                                                <label className="block mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                                    <div className="flex items-center space-x-2">
-                                                        <FiFileText className="w-4 h-4 text-pink-600 dark:text-pink-400" />
-                                                        <span>Request Body</span>
-                                                    </div>
-                                                </label>
-                                                <div className="space-y-4">
-                                                    <div className="flex space-x-2">
-                                                        {BODY_TYPE_CONFIG.map(({ type, label, color, icon }) => {
-                                                            const iconMap = {
-                                                                FiX,
-                                                                FiCode,
-                                                                FiMail,
-                                                                FiType
-                                                            };
-                                                            const IconComponent = iconMap[icon as keyof typeof iconMap];
-                                                            const isActive = bodyType === type;
-                                                            const colorClasses = {
-                                                                gray: isActive ? 'border-gray-500 bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300',
-                                                                blue: isActive ? 'border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-blue-300',
-                                                                green: isActive ? 'border-green-500 bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-green-300',
-                                                                purple: isActive ? 'border-purple-500 bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg' : 'border-gray-200 dark:border-gray-600 hover:border-purple-300'
-                                                            };
-
-                                                            return (
-                                                                <button
-                                                                    key={type}
-                                                                    onClick={() => setBodyType(type as any)}
-                                                                    className={`flex items-center px-4 py-2 space-x-2 text-sm font-medium rounded-lg border-2 transition-all duration-200 ${colorClasses[color as keyof typeof colorClasses]}`}
-                                                                >
-                                                                    <IconComponent className="w-4 h-4" />
-                                                                    <span>{label}</span>
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-
-                                                    {bodyType === 'json' && (
-                                                        <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 dark:from-blue-900/20 dark:to-indigo-900/20 dark:border-blue-700">
-                                                            <MonacoEditor
-                                                                value={jsonBody}
-                                                                onChange={handleJsonBodyChange}
-                                                                language="json"
-                                                                height="200px"
-                                                                variant="compact"
-                                                                colorTheme="bistool"
-                                                            />
-                                                        </div>
-                                                    )}
-
-                                                    {bodyType === 'form' && (
-                                                        <div className="p-3 space-y-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 dark:from-green-900/20 dark:to-emerald-900/20 dark:border-green-700">
-                                                            {formData.map((field, index) => (
-                                                                <div key={index} className="flex items-center space-x-3">
-                                                                    <div className="flex-1">
-                                                                        <div className="flex items-center mb-1 space-x-2">
-                                                                            <FiKey className="w-3 h-3 text-gray-500" />
-                                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Field</span>
-                                                                        </div>
-                                                                        <Input
-                                                                            value={field.key}
-                                                                            onChange={(e) => updateFormField(index, 'key', e.target.value)}
-                                                                            placeholder="Field name"
-                                                                            className="w-full"
-                                                                        />
-                                                                    </div>
-                                                                    <div className="flex-1">
-                                                                        <div className="flex items-center mb-1 space-x-2">
-                                                                            <FiTag className="w-3 h-3 text-gray-500" />
-                                                                            <span className="text-xs text-gray-600 dark:text-gray-400">Value</span>
-                                                                        </div>
-                                                                        <Input
-                                                                            value={field.value}
-                                                                            onChange={(e) => updateFormField(index, 'value', e.target.value)}
-                                                                            placeholder="Field value"
-                                                                            className="w-full"
-                                                                        />
-                                                                    </div>
-                                                                    <IconButton
-                                                                        icon={FiTrash2}
-                                                                        variant="ghost"
-                                                                        onClick={() => removeFormField(index)}
-                                                                        size="sm"
-                                                                        className="text-red-500 hover:text-red-700"
-                                                                    />
-                                                                </div>
-                                                            ))}
-                                                            <Button
-                                                                variant="secondary"
-                                                                icon={FiPlus}
-                                                                onClick={addFormField}
-                                                                size="sm"
-                                                                fullWidth
-                                                                className="flex items-center space-x-2"
-                                                            >
-
-                                                                <span>Field</span>
-                                                            </Button>
-                                                        </div>
-                                                    )}
-
-                                                    {bodyType === 'text' && (
-                                                        <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200 dark:from-purple-900/20 dark:to-pink-900/20 dark:border-purple-700">
-                                                            <Textarea
-                                                                value={textBody}
-                                                                onChange={(e) => setTextBody(e.target.value)}
-                                                                placeholder="Enter text body..."
-                                                                rows={4}
-                                                                fullWidth
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
+                                            <RequestBodySection
+                                                bodyType={bodyType}
+                                                jsonBody={jsonBody}
+                                                formData={formData}
+                                                textBody={textBody}
+                                                onBodyTypeChange={setBodyType}
+                                                onJsonBodyChange={handleJsonBodyChange}
+                                                onFormDataChange={setFormData}
+                                                onTextBodyChange={setTextBody}
+                                            />
                                         </>
                                     )}
                                 </div>
@@ -1308,7 +1040,7 @@ const BasicMode: React.FC<BasicModeProps> = ({
                                 />
                                 <div className="space-y-6">
                                     <div className="flex items-center p-6 space-x-4 bg-gradient-to-br to-blue-50 rounded-2xl border-2 shadow-lg from-slate-50 border-slate-200 dark:from-slate-800 dark:to-blue-900/20 dark:border-slate-600">
-                                        <Badge variant="primary" className={`px-4 py-2 text-lg font-bold ${getMethodColor(method)}`}>
+                                        <Badge variant="primary" className={`px-4 py-2 text-lg font-bold ${HTTP_METHODS.find(m => m.value === method)?.color || '!bg-gray-500 text-white'}`}>
                                             {method}
                                         </Badge>
                                         <div className="flex-1 font-mono text-base break-all text-slate-700 dark:text-slate-200">

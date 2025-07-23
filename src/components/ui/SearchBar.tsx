@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiX, FiFilter, FiClock, FiArrowRight } from 'react-icons/fi';
 import { useSearchContext, SearchResult } from '../../context/SearchContext';
+import { useAppContext } from '../../context/AppContext';
 import { Input, Button, Badge, IconWrapper } from './index';
 
 interface SearchBarProps {
@@ -34,6 +35,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
         setFilters,
         getFilteredResults
     } = useSearchContext();
+
+    const { openUnifiedManager } = useAppContext();
 
     const [isOpen, setIsOpen] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
@@ -113,7 +116,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
         if (onResultClick) {
             onResultClick(result);
         } else {
-            navigateToResult(result);
+            // Special handling for variables - open unified manager
+            if (result.type === 'variable') {
+                openUnifiedManager('variables');
+            } else {
+                navigateToResult(result);
+            }
         }
         setIsOpen(false);
         setSelectedIndex(-1);

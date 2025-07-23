@@ -6,6 +6,7 @@ import React, {
     useCallback,
 } from "react";
 import { Project, ProjectContextType } from "../types/core/project.types";
+import { useNavigate } from "react-router-dom";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -71,6 +72,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [error, setError] = useState<string | null>(null);
     const [forceReload, setForceReload] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
+    const navigate = useNavigate();
 
     // Load current project after projects are loaded
     useEffect(() => {
@@ -182,12 +184,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             // Force AppContext to reload data for the new project
             setForceReload(prev => prev + 1);
+
+            // Navigate to the first session of the project (or new session)
+            // @ts-ignore: savedSessions may not exist on Project type, fallback to []
+            const savedSessions = (project && (project as any).savedSessions) || [];
+            const firstSession = savedSessions[0];
+            if (firstSession) {
+                navigate(`/project/${projectId}/session/${firstSession.id}/url`);
+            } else {
+                navigate(`/project/${projectId}/session/new/url`);
+            }
         } else {
             console.error(`Project not found: ${projectId}`);
             setError(`Project not found: ${projectId}`);
             setIsLoading(false);
         }
-    }, [projects]);
+    }, [projects, navigate]);
 
     const deleteProject = useCallback((projectId: string) => {
         const wasCurrentProject = currentProject?.id === projectId;

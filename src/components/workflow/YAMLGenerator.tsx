@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAppContext } from '../../context/AppContext';
 import { useTokenContext } from '../../context/TokenContext';
 import { useVariablesContext } from '../../context/VariablesContext';
+import { useParams, useNavigate } from "react-router-dom";
 import {
   FiDownload,
   FiCopy,
@@ -39,16 +40,19 @@ import {
   Toggle,
   TestStatusBadge
 } from "../ui";
-import { YAMLGeneratorProps } from "../../types/components/components.types";
 import {
   ResponseData,
 } from "../../types/components/yamlGenerator.types";
 import { RequestConfigData, ResponseCondition } from "../../types/core/app.types";
 import { ExtendedSession, TestCase } from "../../types/features/SavedManager";
 
-const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
+const YAMLGenerator: React.FC = () => {
+  const params = useParams();
+  const navigate = useNavigate();
+  const projectId = params["projectId"];
+  const sessionId = params["sessionId"];
   const { globalVariables, sharedVariables, replaceVariables } = useVariablesContext();
-  const { urlData, requestConfig, setYamlOutput, segmentVariables, activeSession, handleSaveSession, setActiveSection, openUnifiedManager } = useAppContext();
+  const { urlData, requestConfig, setYamlOutput, segmentVariables, activeSession, handleSaveSession, openUnifiedManager, handleYAMLGenerated } = useAppContext();
   const { generateAuthHeaders } = useTokenContext();
 
   const [localYamlOutput, setLocalYamlOutput] = useState<string>("");
@@ -86,6 +90,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
   const [lastYamlOutput, setLastYamlOutput] = useState<string>("");
   const [showTests, setShowTests] = useState<boolean>(true);
   const [expandedTests, setExpandedTests] = useState<Set<string>>(new Set());
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -97,6 +102,14 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
         clearTimeout(expandTimeoutRef.current);
       }
     };
+  }, []);
+
+  // Set initial load flag to false after component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoad(false);
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Initialize selectedQueries when requestConfig changes
@@ -316,7 +329,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
       setLocalYamlOutput(yamlStr);
       setYamlOutput(yamlStr);
       // Call onGenerate to trigger navigation to next section
-      onGenerate(yamlStr);
+      handleYAMLGenerated(yamlStr);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       if (statusCode === "200") {
@@ -340,7 +353,7 @@ const YAMLGenerator: React.FC<YAMLGeneratorProps> = ({ onGenerate }) => {
       setLocalYamlOutput(yamlStr);
       setYamlOutput(yamlStr);
       // Call onGenerate to trigger navigation to next section
-      onGenerate(yamlStr);
+      handleYAMLGenerated(yamlStr);
     } catch (err) {
       setError("Invalid JSON format ERROR: " + err);
     }
@@ -802,7 +815,7 @@ ${generateRequestBody()}
 
   // Save custom response to session when it changes
   useEffect(() => {
-    if (activeSession && customResponse !== undefined) {
+    if (!isInitialLoad && activeSession && customResponse !== undefined) {
       const updatedSession: ExtendedSession = {
         ...activeSession,
         customResponse,
@@ -812,7 +825,7 @@ ${generateRequestBody()}
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customResponse, activeSession?.id]);
+  }, [customResponse, activeSession?.id, isInitialLoad]);
 
   const handleResetCustomResponse = () => {
     const defaultResponse = getDefaultCustomResponse();
@@ -876,7 +889,7 @@ ${generateRequestBody()}
 
   // Save response conditions to session when they change
   useEffect(() => {
-    if (activeSession) {
+    if (!isInitialLoad && activeSession) {
       const updatedSession: ExtendedSession = {
         ...activeSession,
         responseConditions,
@@ -885,7 +898,7 @@ ${generateRequestBody()}
         handleSaveSession(activeSession.name, updatedSession);
       }
     }
-  }, [responseConditions, activeSession?.id]);
+  }, [responseConditions, activeSession?.id, isInitialLoad]);
 
   // Sync includeToken with session on session change
   useEffect(() => {
@@ -894,7 +907,7 @@ ${generateRequestBody()}
 
   // Save includeToken to session when it changes
   useEffect(() => {
-    if (activeSession && includeToken !== undefined) {
+    if (!isInitialLoad && activeSession && includeToken !== undefined) {
       const updatedSession: ExtendedSession = {
         ...activeSession,
         includeToken,
@@ -904,7 +917,7 @@ ${generateRequestBody()}
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeToken, activeSession?.id]);
+  }, [includeToken, activeSession?.id, isInitialLoad]);
 
   // Define status code options with descriptions
   const statusOptions = [
@@ -1380,7 +1393,7 @@ ${generateRequestBody()}
               gradient
               size="lg"
               icon={FiArrowRight}
-              onClick={() => setActiveSection("ai")}
+              onClick={() => navigate(`/project/${projectId}/session/${sessionId}/ai`)}
               fullWidth
             >
               Continue to AI Test Generator
@@ -1415,7 +1428,7 @@ ${generateRequestBody()}
                 gradient
                 size="sm"
                 icon={FiArrowRight}
-                onClick={() => setActiveSection("tests")}
+                onClick={() => navigate(`/project/${projectId}/session/${sessionId}/tests`)}
               >
                 Edit Tests
               </Button>
@@ -1636,7 +1649,7 @@ ${generateRequestBody()}
               gradient
               size="sm"
               icon={FiPlus}
-              onClick={() => setActiveSection("tests")}
+              onClick={() => navigate(`/project/${projectId}/session/${sessionId}/tests`)}
             >
               Create Tests
             </Button>
@@ -1656,7 +1669,7 @@ ${generateRequestBody()}
               variant="primary"
               gradient
               icon={FiPlus}
-              onClick={() => setActiveSection("tests")}
+              onClick={() => navigate(`/project/${projectId}/session/${sessionId}/tests`)}
             >
               Create Your First Test
             </Button>

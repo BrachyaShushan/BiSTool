@@ -1166,10 +1166,10 @@ const SessionsManager = () => {
                                         data-category-count={Object.keys(groupByCategory(savedSessions)).length}
                                     >
                                         <option value="none" className={`dark:text-white dark:bg-gray-700 text-gray-900 bg-white`}>
-                                            <IconWrapper icon="📋" preserveColors={true} variant="colored" /> No grouping
+                                            📋 No grouping
                                         </option>
                                         <option value="category" className={`dark:text-white dark:bg-gray-700 text-gray-900 bg-white`}>
-                                            <IconWrapper icon="📁" preserveColors={true} variant="colored" /> By category
+                                            📁 By category
                                         </option>
                                     </select>
                                     <div className={`absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none dark:text-gray-400 text-gray-500`}>

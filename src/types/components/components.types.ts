@@ -22,14 +22,6 @@ export interface YAMLGeneratorProps {
   onGenerate: (yaml: string) => void;
 }
 
-export interface AITestGeneratorProps {
-  yamlData: string;
-  aiConfig?: AIConfig;
-  testConfig?: Partial<AITestGeneratorConfig>;
-  onConfigChange?: (config: AITestGeneratorConfig) => void;
-  onTestGenerated?: (test: string, metadata: any) => void;
-}
-
 export interface SavedManagerProps {
   // Add saved manager specific props here
   [key: string]: any;

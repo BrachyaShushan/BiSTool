@@ -234,7 +234,7 @@ export interface AppContextType {
   setUrlData: (data: URLData) => void;
   setRequestConfig: (config: RequestConfigData | null) => void;
   setYamlOutput: (yaml: string) => void;
-  setActiveSection: (section: SectionId) => void;
+
   setSegmentVariables: (vars: Record<string, string>) => void;
   handleNewSession: () => void;
   handleClearSession: () => void;

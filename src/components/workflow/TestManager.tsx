@@ -1,4 +1,5 @@
 import React from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import { useTokenContext } from "../../context/TokenContext";
 import { useVariablesContext } from "../../context/VariablesContext";
@@ -30,17 +31,20 @@ import {
 } from "../ui";
 
 const TestManager: React.FC = () => {
+    const params = useParams();
+    const navigate = useNavigate();
+    const projectId = params["projectId"];
+    const sessionId = params["sessionId"];
+
     const {
         urlData,
         requestConfig,
         activeSession,
         handleSaveSession,
-        setActiveSection,
         openUnifiedManager,
     } = useAppContext();
     const { generateAuthHeaders } = useTokenContext();
     const { replaceVariables } = useVariablesContext();
-
 
     const tests: TestCase[] = activeSession?.tests ?? [];
 
@@ -96,7 +100,9 @@ const TestManager: React.FC = () => {
     };
 
     const handleContinue = () => {
-        setActiveSection("yaml");
+        if (projectId && sessionId) {
+            navigate(`/project/${projectId}/session/${sessionId}/yaml`);
+        }
     };
 
     const handleRunAllFailed = () => {

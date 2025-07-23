@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useRef,
+  useMemo,
 } from "react";
 import {
   AppContextType,
@@ -19,6 +20,7 @@ import { useSaveManager } from "../hooks/useSaveManager";
 import { useAppStateStorage, useSessionStorage, useModeStorage } from "../hooks/useStorage";
 import { useStorageContext } from "./StorageContext";
 import { useProjectContext } from "./ProjectContext";
+import { useNavigate, useParams } from "react-router-dom";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -47,13 +49,57 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   const appState = useAppState();
   const sessionManager = useSessionManager();
 
-  // Initialize save manager
-  const saveManager = useSaveManager(storageManager, projectName, {
+  // Ref to store the latest saveAllData function
+  const saveAllDataRef = useRef<((state: any) => void) | null>(null);
+
+  // Unified save function that handles both basic and project modes
+  const saveAllData = useCallback((state: {
+    appState: any;
+    sessions: any;
+    variables: any;
+  }) => {
+    if (currentProjectId) {
+      // Project mode - use storage manager
+      storageManager.updateAppState(state.appState, projectName);
+      storageManager.updateSessions(state.sessions, projectName);
+      storageManager.updateVariables(state.variables, projectName);
+    } else {
+      // Basic mode - save directly to localStorage
+      try {
+        // Save active session
+        if (state.sessions.activeSession) {
+          localStorage.setItem('activeSession', JSON.stringify(state.sessions.activeSession));
+        }
+        // Save saved sessions
+        if (state.sessions.savedSessions.length > 0) {
+          localStorage.setItem('savedSessions', JSON.stringify(state.sessions.savedSessions));
+        }
+        // Save app state
+        localStorage.setItem('appState', JSON.stringify(state.appState));
+        // Note: Mode is saved separately to prevent infinite loops
+        console.log('AppContext: Basic mode unified save completed');
+      } catch (error) {
+        console.error('AppContext: Error saving to localStorage:', error);
+      }
+    }
+  }, [currentProjectId, storageManager, projectName]);
+
+  // Update the ref whenever saveAllData changes
+  useEffect(() => {
+    saveAllDataRef.current = saveAllData;
+  }, [saveAllData]);
+
+  // Memoize save manager options to prevent infinite loops
+  const saveManagerOptions = useMemo(() => ({
     autoSaveEnabled: true,
     autoSaveDelay: 300,
     maxUndoHistory: 20,
-    projectId: currentProjectId
-  });
+    projectId: currentProjectId,
+    unifiedSaveFunction: saveAllData
+  }), [currentProjectId, saveAllData]);
+
+  // Initialize save manager
+  const saveManager = useSaveManager(storageManager, projectName, saveManagerOptions);
 
   // Initialize storage hooks with projectId and projectName
   const appStateStorage = useAppStateStorage(storageManager, appState.appState, currentProjectId, projectName);
@@ -74,7 +120,75 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   // Load data when project changes
   useEffect(() => {
     if (!currentProjectId) {
-      setIsLoading(false);
+      // Basic mode - load data from localStorage
+      console.log('AppContext: Loading basic mode data from localStorage');
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Load active session from localStorage
+        const activeSessionData = localStorage.getItem('activeSession');
+        const loadedActiveSession = activeSessionData ? JSON.parse(activeSessionData) : null;
+
+        // Load saved sessions from localStorage
+        const savedSessionsData = localStorage.getItem('savedSessions');
+        const loadedSavedSessions = savedSessionsData ? JSON.parse(savedSessionsData) : [];
+
+        // Load app state from localStorage
+        const appStateData = localStorage.getItem('appState');
+        const loadedAppState = appStateData ? JSON.parse(appStateData) : null;
+
+        // Load mode setting from localStorage
+        const modeData = localStorage.getItem('bistool_mode');
+        const loadedMode = modeData ? JSON.parse(modeData) : 'expert';
+
+        console.log('AppContext: Basic mode loaded data:', {
+          activeSession: loadedActiveSession?.id,
+          savedSessionsCount: loadedSavedSessions.length,
+          hasAppState: !!loadedAppState,
+          mode: loadedMode
+        });
+
+        // Load app state if available
+        if (loadedAppState) {
+          appState.loadAppState(loadedAppState);
+        }
+
+        // Load sessions
+        if (loadedActiveSession) {
+          intendedActiveSessionId.current = loadedActiveSession.id;
+        }
+        sessionManager.setSavedSessionsAndRestoreActive(
+          loadedSavedSessions,
+          intendedActiveSessionId.current
+        );
+
+        // Load mode setting
+        setMode(loadedMode);
+
+        // Initialize save manager with loaded state
+        const currentState = {
+          appState: loadedAppState || appState.appState,
+          sessions: {
+            activeSession: loadedActiveSession,
+            savedSessions: loadedSavedSessions
+          },
+          variables: {
+            shared: [],
+            global: {}
+          }
+        };
+        saveManager.initialize(currentState);
+
+        setHasLoaded(true);
+        setIsLoading(false);
+        console.log('AppContext: Basic mode loading completed');
+      } catch (err) {
+        console.error("Failed to load basic mode data:", err);
+        setError(`Failed to load basic mode data: ${err}`);
+        setIsLoading(false);
+      }
+
       // Notify ProjectContext that loading is complete when no project is selected
       if (projectContext?.setProjectLoadingComplete) {
         projectContext.setProjectLoadingComplete();
@@ -142,6 +256,58 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
   // Auto-save when app state changes (using new save manager)
   useEffect(() => {
+    console.log('AppContext: Auto-save effect check', {
+      hasLoaded,
+      currentProjectId,
+      willRun: hasLoaded || !currentProjectId,
+      timestamp: Date.now()
+    });
+
+    if (!hasLoaded && currentProjectId) return;
+
+    const currentState = {
+      appState: appState.appState,
+      sessions: {
+        activeSession: sessionManager.activeSession,
+        savedSessions: sessionManager.savedSessions
+      },
+      variables: {
+        shared: [],
+        global: {}
+      }
+    };
+
+    console.log('AppContext: Auto-save effect triggered', {
+      hasLoaded,
+      currentProjectId,
+      activeSession: sessionManager.activeSession?.id,
+      urlData: sessionManager.activeSession?.urlData,
+      requestConfig: sessionManager.activeSession?.requestConfig,
+      timestamp: Date.now()
+    });
+
+    saveManager.autoSaveChanges(currentState);
+
+    // Use unified save function instead of separate storage calls
+    if (saveAllDataRef.current) {
+      saveAllDataRef.current(currentState);
+    }
+  }, [
+    appState.appState,
+    sessionManager.activeSession,
+    sessionManager.savedSessions,
+    // Add more specific dependencies to detect session content changes
+    sessionManager.activeSession?.urlData,
+    sessionManager.activeSession?.requestConfig,
+    sessionManager.activeSession?.yamlOutput,
+    sessionManager.activeSession?.sharedVariables,
+    sessionManager.activeSession?.segmentVariables,
+    hasLoaded,
+    currentProjectId
+  ]);
+
+  // Re-initialize save manager when app is loaded to ensure proper state tracking
+  useEffect(() => {
     if (!hasLoaded) return;
 
     const currentState = {
@@ -156,14 +322,64 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
       }
     };
 
-    saveManager.autoSaveChanges(currentState);
-  }, [appState.appState, sessionManager.activeSession, sessionManager.savedSessions, hasLoaded, saveManager]);
+    // Re-initialize the save manager with current state to ensure proper tracking
+    saveManager.initialize(currentState);
+    console.log('AppContext: Re-initialized save manager with current state');
+  }, [hasLoaded]);
 
-  // Auto-save when mode changes
+  // Auto-save when mode changes (works for both basic and project modes)
   useEffect(() => {
-    if (!hasLoaded || !currentProjectId) return;
-    modeStorage.saveMode(mode);
-  }, [mode, hasLoaded, currentProjectId, projectName, modeStorage]);
+    if (!hasLoaded) return;
+
+    if (currentProjectId) {
+      // Project mode - use mode storage
+      modeStorage.saveMode(mode);
+    } else {
+      // Basic mode - save mode to localStorage
+      try {
+        localStorage.setItem('bistool_mode', JSON.stringify(mode));
+        console.log('AppContext: Basic mode - saved mode setting:', mode);
+      } catch (error) {
+        console.error('AppContext: Error saving mode to localStorage:', error);
+      }
+    }
+  }, [mode, hasLoaded, currentProjectId, modeStorage]);
+
+  // Auto-save request configuration changes to active session
+  useEffect(() => {
+    if (!hasLoaded || !sessionManager.activeSession || !appState.requestConfig) return;
+
+    console.log('AppContext: Request config changed, saving to active session:', {
+      sessionId: sessionManager.activeSession.id,
+      method: appState.requestConfig.method,
+      bodyType: appState.requestConfig.bodyType,
+      headersCount: appState.requestConfig.headers?.length || 0,
+      queryParamsCount: appState.requestConfig.queryParams?.length || 0,
+      hasJsonBody: !!appState.requestConfig.jsonBody,
+      hasFormData: !!appState.requestConfig.formData,
+      hasTextBody: !!appState.requestConfig.textBody,
+      timestamp: Date.now()
+    });
+
+    const updatedSession = {
+      ...sessionManager.activeSession,
+      requestConfig: appState.requestConfig
+    };
+
+    // Save the updated session without reloading it to prevent circular dependencies
+    sessionManager.saveSession(updatedSession);
+    console.log('AppContext: Session saved via sessionManager');
+
+    // Also persist to localStorage in basic mode
+    if (!currentProjectId) {
+      try {
+        localStorage.setItem('activeSession', JSON.stringify(updatedSession));
+        console.log('AppContext: Request config saved to localStorage');
+      } catch (error) {
+        console.error('AppContext: Error saving request config to localStorage:', error);
+      }
+    }
+  }, [appState.requestConfig, hasLoaded, sessionManager.activeSession?.id, currentProjectId]);
 
   // Handle session changes and load configurations
   useEffect(() => {
@@ -171,6 +387,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     if (sessionManager.activeSession && hasLoaded) {
       const session = sessionManager.activeSession;
       console.log('AppContext: Processing session change for session:', session.id, 'sharedVariables:', session.sharedVariables);
+      console.log('AppContext: Session request config:', {
+        method: session.requestConfig?.method,
+        bodyType: session.requestConfig?.bodyType,
+        headersCount: session.requestConfig?.headers?.length || 0,
+        queryParamsCount: session.requestConfig?.queryParams?.length || 0,
+        hasJsonBody: !!session.requestConfig?.jsonBody,
+        hasFormData: !!session.requestConfig?.formData,
+        hasTextBody: !!session.requestConfig?.textBody
+      });
 
       // Load session data into app state (excluding activeSection - it should persist globally)
       const sessionData: any = {};
@@ -180,11 +405,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
       // Remove activeSection from session loading - it should be global, not per-session
       if (session.segmentVariables) sessionData.segmentVariables = session.segmentVariables;
 
+      console.log('AppContext: Loading session data into app state:', sessionData);
       appState.loadAppState(sessionData);
 
       // Session variables are now handled by VariablesContext through the active session
     }
-  }, [sessionManager.activeSession?.id, hasLoaded]);
+  }, [sessionManager.activeSession?.id, hasLoaded, sessionManager.savedSessions.length]);
 
   // Function to update session variables in the active session
   const updateSessionVariables = useCallback((sessionVariables: Record<string, string>) => {
@@ -213,6 +439,85 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   // Session variable management now handled by VariablesContext
 
   // Session management functions
+  const navigate = useNavigate();
+  const params = useParams();
+  const projectIdFromUrl = params["projectId"] || currentProjectId;
+  const sessionIdFromUrl = params["sessionId"];
+  const sectionFromUrl = params["section"] || "url";
+
+  // Track last processed session ID to prevent unnecessary re-runs
+  const lastProcessedSessionId = useRef<string | null>(null);
+
+  // Always use URL params to set current project/session
+  useEffect(() => {
+    // Only switch project after initial data loading is complete
+    if (!hasLoaded) return;
+
+    if (projectIdFromUrl && projectContext?.projects) {
+      const project = projectContext.projects.find(p => p.id === projectIdFromUrl);
+      if (project && projectContext.currentProject?.id !== projectIdFromUrl) {
+        console.log('AppContext: Switching project from URL:', projectIdFromUrl, 'current:', projectContext.currentProject?.id);
+        projectContext.switchProject(projectIdFromUrl);
+      }
+    }
+    // No else: let ProjectProvider handle no project case
+  }, [projectIdFromUrl, projectContext, hasLoaded]);
+
+  useEffect(() => {
+    // Only load session from URL after initial data loading is complete
+    if (!hasLoaded) {
+      console.log('AppContext: Session loading effect skipped - data not loaded yet');
+      return;
+    }
+
+    // Skip if we've already processed this session ID
+    if (lastProcessedSessionId.current === sessionIdFromUrl) {
+      return;
+    }
+
+    console.log('AppContext: Session loading effect triggered', {
+      sessionIdFromUrl,
+      savedSessionsCount: sessionManager.savedSessions.length,
+      currentActiveSession: sessionManager.activeSession?.id,
+      hasLoaded
+    });
+
+    if (sessionIdFromUrl && sessionManager.savedSessions.length > 0) {
+      const session = sessionManager.savedSessions.find(s => s.id === sessionIdFromUrl);
+      if (session && sessionManager.activeSession?.id !== sessionIdFromUrl) {
+        console.log('AppContext: Loading session from URL:', sessionIdFromUrl, 'current:', sessionManager.activeSession?.id);
+        sessionManager.loadSession(session);
+
+        // Also update app state to match the loaded session
+        const sessionData: any = {};
+        if (session.urlData) sessionData.urlData = session.urlData;
+        if (session.requestConfig !== undefined) sessionData.requestConfig = session.requestConfig;
+        if (session.yamlOutput !== undefined) sessionData.yamlOutput = session.yamlOutput;
+        if (session.segmentVariables) sessionData.segmentVariables = session.segmentVariables;
+        appState.loadAppState(sessionData);
+
+        // Mark this session as processed
+        lastProcessedSessionId.current = sessionIdFromUrl;
+      } else if (!session) {
+        console.log('AppContext: Session not found in savedSessions:', sessionIdFromUrl);
+        lastProcessedSessionId.current = sessionIdFromUrl;
+      } else {
+        // Session is already active, no need to load
+        console.log('AppContext: Session already active, no need to load:', sessionIdFromUrl);
+        lastProcessedSessionId.current = sessionIdFromUrl;
+      }
+    } else if (sessionIdFromUrl && sessionManager.savedSessions.length === 0) {
+      console.log('AppContext: No saved sessions available, cannot load:', sessionIdFromUrl);
+      lastProcessedSessionId.current = sessionIdFromUrl;
+    }
+    // No else: let sessionManager handle no session case
+  }, [sessionIdFromUrl, sessionManager.savedSessions.length, hasLoaded]);
+
+  // Reset last processed session ID when saved sessions change
+  useEffect(() => {
+    lastProcessedSessionId.current = null;
+  }, [sessionManager.savedSessions.length]);
+
   const handleNewSession = useCallback(() => {
     // Create a new session with default values
     const newSession = sessionManager.createSession("New Session", {
@@ -251,7 +556,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
     // Reset app state to match the new session
     appState.resetAppState();
-  }, [sessionManager, appState]);
+
+    // Navigate to the new session URL
+    if (projectIdFromUrl && newSession.id) {
+      navigate(`/project/${projectIdFromUrl}/session/${newSession.id}/url`);
+    }
+  }, [sessionManager, appState, sessionStorage, projectIdFromUrl, navigate]);
 
   const handleClearSession = useCallback(() => {
     sessionManager.clearActiveSession();
@@ -274,9 +584,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     // DO NOT set globalVariables here!
     appState.loadAppState(sessionData);
     // Shared variables are now handled by VariablesContext
-  }, [sessionManager, sessionStorage, appState]);
+
+    // Navigate to the session URL, keep current section if possible
+    if (projectIdFromUrl && session.id) {
+      navigate(`/project/${projectIdFromUrl}/session/${session.id}/${sectionFromUrl}`);
+    }
+  }, [sessionManager, sessionStorage, appState, projectIdFromUrl, sectionFromUrl, navigate]);
 
   const handleSaveSession = useCallback((name: string, sessionData?: ExtendedSession) => {
+    let sessionToUse = sessionData;
     if (sessionData) {
       sessionManager.saveSession(sessionData);
       sessionManager.loadSession(sessionData);
@@ -302,8 +618,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
       // Also persist the new session to localStorage
       sessionStorage.saveActiveSession(newSession);
       sessionStorage.saveSavedSessions(sessionManager.savedSessions);
+      sessionToUse = newSession;
     }
-  }, [appState.appState, sessionManager, sessionStorage]);
+    // Navigate to the session URL
+    if (projectIdFromUrl && sessionToUse?.id) {
+      navigate(`/project/${projectIdFromUrl}/session/${sessionToUse.id}/${sectionFromUrl}`);
+    }
+  }, [appState.appState, sessionManager, sessionStorage, projectIdFromUrl, sectionFromUrl, navigate]);
 
   const handleDeleteSession = useCallback((id: string) => {
     sessionManager.deleteSession(id);
@@ -316,13 +637,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
   // Workflow handlers
   const handleURLBuilderSubmit = useCallback((data: URLData) => {
     appState.setUrlData(data);
-    appState.setActiveSection("request");
-  }, []);
+    // Navigate to request config page
+    if (projectIdFromUrl && sessionIdFromUrl) {
+      navigate(`/project/${projectIdFromUrl}/session/${sessionIdFromUrl}/request`);
+    }
+  }, [projectIdFromUrl, sessionIdFromUrl, navigate]);
 
   const handleRequestConfigSubmit = useCallback((config: RequestConfigData) => {
     appState.setRequestConfig(config);
-    appState.setActiveSection("tests");
-  }, []);
+    // Navigate to tests page
+    if (projectIdFromUrl && sessionIdFromUrl) {
+      navigate(`/project/${projectIdFromUrl}/session/${sessionIdFromUrl}/tests`);
+    }
+  }, [projectIdFromUrl, sessionIdFromUrl, navigate]);
 
   const handleYAMLGenerated = useCallback((yaml: string) => {
     appState.setYamlOutput(yaml);
@@ -360,7 +687,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
       // Update variables - now handled by VariablesContext
     }
-  }, [saveManager, appState, sessionManager]);
+  }, [saveManager, appState]);
 
   const handleRedo = useCallback(() => {
     const restoredState = saveManager.redo();
@@ -376,7 +703,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
 
       // Update variables - now handled by VariablesContext
     }
-  }, [saveManager, appState, sessionManager]);
+  }, [saveManager, appState]);
 
   const handleAutoSaveToggle = useCallback((enabled: boolean) => {
     saveManager.toggleAutoSave(enabled);
@@ -418,7 +745,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     setUrlData: appState.setUrlData,
     setRequestConfig: appState.setRequestConfig,
     setYamlOutput: appState.setYamlOutput,
-    setActiveSection: appState.setActiveSection,
     setSegmentVariables: appState.setSegmentVariables,
 
     // Session management

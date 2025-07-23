@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { useProjectContext, useProjectSwitch } from "../../context/ProjectContext";
+import { useProjectContext } from "../../context/ProjectContext";
+import { useNavigate } from "react-router-dom";
 import {
     FiFolder, FiPlus, FiGlobe, FiCode, FiZap, FiDatabase, FiUsers, FiArrowRight,
     FiCheckCircle, FiPlay, FiBookOpen, FiShield, FiTrendingUp, FiSettings,
@@ -15,18 +16,24 @@ import { useSearchContext } from "../../context/SearchContext";
 
 const WelcomeScreen: React.FC = () => {
     const { projects } = useProjectContext();
-    const { switchToProject } = useProjectSwitch();
+    const navigate = useNavigate();
     const { setShowUnifiedManager } = useAppContext();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const { totalResults } = useSearchContext();
     const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'getting-started' | 'system' | 'activity'>('overview');
 
-    const handleProjectSwitch = async (projectId: string) => {
-        const success = await switchToProject(projectId);
-        if (success) {
-            console.log(`WelcomeScreen: Project switch completed successfully`);
-        } else {
-            console.error(`WelcomeScreen: Project switch failed`);
+    const handleProjectSwitch = (projectId: string) => {
+        // Navigate to the first session of the project (or new session)
+        const project = projects.find(p => p.id === projectId);
+        if (project) {
+            // @ts-ignore: savedSessions may not exist on Project type, fallback to []
+            const savedSessions = (project && (project as any).savedSessions) || [];
+            const firstSession = savedSessions[0];
+            if (firstSession) {
+                navigate(`/project/${projectId}/session/${firstSession.id}/url`);
+            } else {
+                navigate(`/project/${projectId}/session/new/url`);
+            }
         }
     };
 

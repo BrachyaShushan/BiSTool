@@ -6,7 +6,6 @@ import { useProjectContext } from "../../context/ProjectContext";
 import { usePromptConfigContext } from "../../context/PromptConfigContext";
 import Editor from "@monaco-editor/react";
 import {
-  AITestGeneratorProps,
   EditorRef,
   EditorMountParams,
   AIResponse,
@@ -79,9 +78,9 @@ import {
 
 
 
-const AITestGenerator: React.FC<AITestGeneratorProps> = ({ yamlData }) => {
+const AITestGenerator: React.FC = () => {
   const { isDarkMode } = useTheme();
-  const { activeSession, handleSaveSession, openUnifiedManager } = useAppContext();
+  const { activeSession, handleSaveSession, openUnifiedManager, yamlOutput: yamlData } = useAppContext();
   const { aiConfig, setAIConfig } = useAIConfigContext();
   const { currentProject } = useProjectContext();
   const { templates: customTemplates, selectedTemplate, setSelectedTemplate } = usePromptConfigContext();

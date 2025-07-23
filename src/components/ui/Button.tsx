@@ -5,9 +5,9 @@ import { useTheme } from '../../context/ThemeContext';
 import IconWrapper from './IconWrapper';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-    variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'ghost' | 'outline';
+    variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'ghost' | 'outline' | 'inherit';
     size?: 'sm' | 'md' | 'lg' | 'xl';
-    icon?: IconType;
+    icon?: IconType | string;
     iconPosition?: 'left' | 'right';
     loading?: boolean;
     fullWidth?: boolean;
@@ -102,6 +102,10 @@ const Button: React.FC<ButtonProps> = ({
                 solid: isDarkMode
                     ? `${isChecked ? 'text-white bg-gray-500 border-gray-400 ring-2 ring-gray-300/60' : 'text-gray-200 bg-transparent border border-gray-500 hover:bg-gray-600 hover:border-gray-400 hover:text-white'} focus:ring-gray-400`
                     : `${isChecked ? 'text-gray-800 bg-gray-200 border-gray-300 ring-2 ring-gray-200/50' : 'text-gray-700 bg-transparent border border-gray-400 hover:bg-gray-50 hover:border-gray-500 hover:text-gray-800'} focus:ring-gray-400`
+            },
+            inherit: {
+                gradient: '',
+                solid: ''
             }
         };
 

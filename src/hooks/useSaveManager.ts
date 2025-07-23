@@ -1,12 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useUndoManager } from "./useUndoManager";
 import { ProjectData } from "../utils/storage";
+import { useStorage } from "./useStorage";
 
 interface SaveManagerOptions {
   autoSaveEnabled?: boolean;
   autoSaveDelay?: number;
   maxUndoHistory?: number;
   projectId?: string | null;
+  unifiedSaveFunction?: (state: any) => void;
 }
 
 export const useSaveManager = (
@@ -19,42 +21,22 @@ export const useSaveManager = (
     autoSaveDelay = 300,
     maxUndoHistory = 20,
     projectId = null,
+    unifiedSaveFunction = null,
   } = options;
 
-  // Load auto-save setting from project settings
-  const [autoSave, setAutoSave] = useState(() => {
-    if (!projectId) {
-      return autoSaveEnabled;
-    }
-    try {
-      const projectData = storageManager.getCurrentProjectData(projectName);
-      const projectAutoSave = projectData.settings.autoSave;
-      return projectAutoSave;
-    } catch (error) {
-      console.error("useSaveManager: Failed to load auto-save setting:", error);
-      return autoSaveEnabled;
-    }
-  });
-
+  // State
+  const [autoSave, setAutoSave] = useState(autoSaveEnabled);
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<string | undefined>();
+  const [lastSaved, setLastSaved] = useState<string | undefined>(undefined);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  // Load save frequency from project settings
-  const [saveFrequency, setSaveFrequency] = useState(() => {
-    if (!projectId) return autoSaveDelay;
-    try {
-      const projectData = storageManager.getCurrentProjectData(projectName);
-      return projectData.settings.saveFrequency || autoSaveDelay;
-    } catch (error) {
-      console.error("Failed to load save frequency:", error);
-      return autoSaveDelay;
-    }
-  });
+  const [saveFrequency, setSaveFrequency] = useState(autoSaveDelay);
 
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSavedStateRef = useRef<string>("");
+  // Refs
+  const lastSavedStateRef = useRef<string | null>(null);
 
+  // Hooks
   const undoManager = useUndoManager(maxUndoHistory);
+  const { debouncedSave } = useStorage(storageManager, projectId);
 
   // Reload auto-save setting and save frequency when project changes
   useEffect(() => {
@@ -79,29 +61,6 @@ export const useSaveManager = (
     }
   }, [projectId, projectName, autoSaveEnabled, autoSaveDelay]);
 
-  // Debounced save function
-  const debouncedSave = useCallback(
-    (saveFn: () => void, delay?: number) => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-
-      saveTimeoutRef.current = setTimeout(() => {
-        try {
-          setIsSaving(true);
-          saveFn();
-          setLastSaved(new Date().toISOString());
-          setHasUnsavedChanges(false);
-        } catch (error) {
-          console.error("Save error:", error);
-        } finally {
-          setIsSaving(false);
-        }
-      }, delay || saveFrequency);
-    },
-    [saveFrequency]
-  );
-
   // Manual save function
   const manualSave = useCallback(
     async (state: {
@@ -109,22 +68,51 @@ export const useSaveManager = (
       sessions: ProjectData["sessions"];
       variables: ProjectData["variables"];
     }) => {
-      if (!projectId) return;
-
       try {
         setIsSaving(true);
 
-        // Save to storage
-        storageManager.updateAppState(state.appState, projectName);
-        storageManager.updateSessions(state.sessions, projectName);
-        storageManager.updateVariables(state.variables, projectName);
+        // Use unified save function if provided, otherwise fall back to old logic
+        if (unifiedSaveFunction) {
+          unifiedSaveFunction(state);
+        } else if (projectId) {
+          // Project mode - use storage manager
+          storageManager.updateAppState(state.appState, projectName);
+          storageManager.updateSessions(state.sessions, projectName);
+          storageManager.updateVariables(state.variables, projectName);
+        } else {
+          // Basic mode - save directly to localStorage
+          console.log(
+            "SaveManager: Manual save in basic mode - saving to localStorage"
+          );
+          try {
+            // Save active session
+            if (state.sessions.activeSession) {
+              localStorage.setItem(
+                "activeSession",
+                JSON.stringify(state.sessions.activeSession)
+              );
+            }
+            // Save saved sessions
+            if (state.sessions.savedSessions.length > 0) {
+              localStorage.setItem(
+                "savedSessions",
+                JSON.stringify(state.sessions.savedSessions)
+              );
+            }
+            // Save app state
+            localStorage.setItem("appState", JSON.stringify(state.appState));
+            console.log("SaveManager: Basic mode manual save completed");
+          } catch (error) {
+            console.error("SaveManager: Error saving to localStorage:", error);
+            throw error;
+          }
+        }
 
-        // Update undo history
+        // Update undo history for manual saves
         undoManager.saveState(state);
 
         setLastSaved(new Date().toISOString());
         setHasUnsavedChanges(false);
-
       } catch (error) {
         console.error("Manual save failed:", error);
         throw error;
@@ -132,7 +120,7 @@ export const useSaveManager = (
         setIsSaving(false);
       }
     },
-    [storageManager, projectName, undoManager, projectId]
+    [storageManager, projectName, undoManager, projectId, unifiedSaveFunction]
   );
 
   // Auto-save function
@@ -142,22 +130,122 @@ export const useSaveManager = (
       sessions: ProjectData["sessions"];
       variables: ProjectData["variables"];
     }) => {
-      if (!projectId) return;
+      console.log("SaveManager: autoSaveChanges called", {
+        projectId,
+        autoSave,
+        hasUnsavedChanges: lastSavedStateRef.current
+          ? "has previous state"
+          : "no previous state",
+      });
 
-      const stateString = JSON.stringify(state);
-      if (stateString !== lastSavedStateRef.current) {
-        lastSavedStateRef.current = stateString;
+      // Create a more robust comparison by normalizing the state
+      const normalizeState = (s: any) => {
+        return JSON.stringify({
+          appState: s.appState,
+          sessions: {
+            activeSession: s.sessions.activeSession
+              ? {
+                  ...s.sessions.activeSession,
+                  // Ensure consistent ordering of properties
+                  id: s.sessions.activeSession.id,
+                  name: s.sessions.activeSession.name,
+                  urlData: s.sessions.activeSession.urlData,
+                  requestConfig: s.sessions.activeSession.requestConfig,
+                  yamlOutput: s.sessions.activeSession.yamlOutput,
+                  sharedVariables: s.sessions.activeSession.sharedVariables,
+                  segmentVariables: s.sessions.activeSession.segmentVariables,
+                }
+              : null,
+            savedSessions: s.sessions.savedSessions.map((session: any) => ({
+              ...session,
+              id: session.id,
+              name: session.name,
+              urlData: session.urlData,
+              requestConfig: session.requestConfig,
+              yamlOutput: session.yamlOutput,
+              sharedVariables: session.sharedVariables,
+              segmentVariables: session.segmentVariables,
+            })),
+          },
+          variables: s.variables,
+        });
+      };
+
+      const currentStateString = normalizeState(state);
+      const lastStateString = lastSavedStateRef.current;
+
+      console.log("SaveManager: State comparison", {
+        currentStateLength: currentStateString.length,
+        lastStateLength: lastStateString?.length || 0,
+        statesEqual: currentStateString === lastStateString,
+      });
+
+      if (currentStateString !== lastStateString) {
+        console.log("SaveManager: State changed, triggering auto-save");
+        lastSavedStateRef.current = currentStateString;
         setHasUnsavedChanges(true);
 
         // Only perform auto-save if auto-save is enabled
         if (autoSave) {
+          console.log("SaveManager: Auto-save enabled, scheduling save");
           debouncedSave(() => {
-            storageManager.updateAppState(state.appState, projectName);
-            storageManager.updateSessions(state.sessions, projectName);
-            storageManager.updateVariables(state.variables, projectName);
-            undoManager.saveState(state);
+            console.log("SaveManager: Executing save");
+
+            // Use unified save function if provided, otherwise fall back to old logic
+            if (unifiedSaveFunction) {
+              unifiedSaveFunction(state);
+            } else if (projectId) {
+              // Project mode - use storage manager
+              storageManager.updateAppState(state.appState, projectName);
+              storageManager.updateSessions(state.sessions, projectName);
+              storageManager.updateVariables(state.variables, projectName);
+            } else {
+              // Basic mode - save directly to localStorage
+              console.log("SaveManager: Basic mode - saving to localStorage");
+              try {
+                // Save active session
+                if (state.sessions.activeSession) {
+                  localStorage.setItem(
+                    "activeSession",
+                    JSON.stringify(state.sessions.activeSession)
+                  );
+                }
+                // Save saved sessions
+                if (state.sessions.savedSessions.length > 0) {
+                  localStorage.setItem(
+                    "savedSessions",
+                    JSON.stringify(state.sessions.savedSessions)
+                  );
+                }
+                // Save app state
+                localStorage.setItem(
+                  "appState",
+                  JSON.stringify(state.appState)
+                );
+                console.log("SaveManager: Basic mode save completed");
+              } catch (error) {
+                console.error(
+                  "SaveManager: Error saving to localStorage:",
+                  error
+                );
+              }
+            }
+
+            // Update last saved time and reset unsaved changes flag
+            setLastSaved(new Date().toISOString());
+            setHasUnsavedChanges(false);
+            console.log(
+              "SaveManager: Auto-save completed, resetting unsaved changes flag"
+            );
+
+            // Don't update undo manager for auto-saves to prevent infinite loops
+            // undoManager.saveState(state);
           }, saveFrequency);
+        } else {
+          console.log("SaveManager: Auto-save disabled");
         }
+      } else {
+        console.log("SaveManager: No state change detected");
       }
     },
     [
@@ -165,9 +253,9 @@ export const useSaveManager = (
       debouncedSave,
       storageManager,
       projectName,
-      undoManager,
       saveFrequency,
       projectId,
+      unifiedSaveFunction,
     ]
   );
 
@@ -213,7 +301,7 @@ export const useSaveManager = (
       // Save the setting to project settings
       if (projectId) {
         try {
-          const projectData = storageManager.getCurrentProjectData(projectName);  
+          const projectData = storageManager.getCurrentProjectData(projectName);
           projectData.settings.autoSave = enabled;
           storageManager.saveCurrentProjectData(projectData);
         } catch (error) {
@@ -253,7 +341,6 @@ export const useSaveManager = (
           const projectData = storageManager.getCurrentProjectData(projectName);
           projectData.settings.saveFrequency = frequency;
           storageManager.saveCurrentProjectData(projectData);
-
         } catch (error) {
           console.error(
             "useSaveManager: Failed to save save frequency:",
@@ -311,9 +398,7 @@ export const useSaveManager = (
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
+      // Cleanup is handled by the useStorage hook
     };
   }, []);
 

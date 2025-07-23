@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../../context/AppContext";
-import { RequestConfigProps } from "../../types/components/components.types";
 import { RequestConfigData, Header, QueryParam, FormDataField } from "../../types";
 import { FiSettings, FiArrowRight } from "react-icons/fi";
 import { Button } from "../ui";
@@ -29,13 +28,15 @@ interface RequestConfigState {
   activeTab: "params" | "headers" | "body";
 }
 
-const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
+const RequestConfig: React.FC = () => {
+
   const {
     requestConfig: savedConfig,
     setRequestConfig,
     activeSession,
     handleSaveSession,
     openUnifiedManager,
+    handleRequestConfigSubmit
   } = useAppContext();
 
 
@@ -237,7 +238,7 @@ const RequestConfig: React.FC<RequestConfigProps> = ({ onSubmit }) => {
       ...(bodyType === "text" && { textBody }),
     };
 
-    onSubmit(config);
+    handleRequestConfigSubmit(config);
   };
 
   // Check if there's an active session

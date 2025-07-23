@@ -1,7 +1,6 @@
 import React, { useCallback } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { useVariablesContext } from "../../context/VariablesContext";
-import { URLBuilderProps } from "../../types/components/components.types";
 import { FiPlus, FiTrash2, FiCopy, FiCheck, FiEyeOff, FiArrowRight, FiInfo, FiGlobe } from "react-icons/fi";
 import {
   Button,
@@ -22,10 +21,12 @@ import {
 } from "../../constants/urlBuilder";
 import { useURLBuilder } from "../../hooks/useURLBuilder";
 
-const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
+const URLBuilder: React.FC = () => {
+
   const {
     activeSession,
     openUnifiedManager,
+    handleURLBuilderSubmit
   } = useAppContext();
   const { globalVariables } = useVariablesContext();
 
@@ -54,8 +55,8 @@ const URLBuilder: React.FC<URLBuilderProps> = ({ onSubmit }) => {
 
   // Event handlers
   const handleSubmit = useCallback((): void => {
-    onSubmit(currentUrlData);
-  }, [onSubmit, currentUrlData]);
+    handleURLBuilderSubmit(currentUrlData);
+  }, [handleURLBuilderSubmit, currentUrlData]);
 
 
 

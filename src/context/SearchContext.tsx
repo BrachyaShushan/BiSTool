@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProjectContext } from './ProjectContext';
 import { useAppContext } from './AppContext';
 import { useVariablesContext } from './VariablesContext';
@@ -15,6 +16,8 @@ export interface SearchResult {
     lastModified?: string | undefined;
     relevance: number;
     path: string[];
+    projectId?: string;
+    sessionId?: string;
 }
 
 export interface SearchFilters {
@@ -80,9 +83,10 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
     const [searchHistory, setSearchHistory] = useState<string[]>([]);
 
     // Get data from other contexts
-    const { projects } = useProjectContext();
-    const { savedSessions } = useAppContext();
+    const { projects, currentProject } = useProjectContext();
+    const { savedSessions, openUnifiedManager } = useAppContext();
     const { globalVariables, sharedVariables } = useVariablesContext();
+    const navigate = useNavigate();
 
     // Search function
     const search = useCallback(async (searchQuery?: string) => {
@@ -124,7 +128,7 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
                 const methodMatch = session.requestConfig?.method?.toLowerCase().includes(lowerQuery);
 
                 if (titleMatch || urlMatch || methodMatch) {
-                    searchResults.push({
+                    const result: SearchResult = {
                         id: session.id,
                         type: 'session',
                         title: session.name,
@@ -133,8 +137,15 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
                         method: session.requestConfig?.method,
                         url: session.urlData?.builtUrl,
                         relevance: titleMatch ? 1.0 : urlMatch ? 0.6 : 0.4,
-                        path: ['Sessions', session.category || 'Uncategorized', session.name]
-                    });
+                        path: ['Sessions', session.category || 'Uncategorized', session.name],
+                        sessionId: session.id
+                    };
+
+                    if (currentProject?.id) {
+                        result.projectId = currentProject.id;
+                    }
+
+                    searchResults.push(result);
                 }
             });
 
@@ -168,6 +179,65 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
                         relevance: keyMatch ? 1.0 : 0.6,
                         path: ['Variables', 'Session', variable.key]
                     });
+                }
+            });
+
+            // Search tests within sessions
+            savedSessions.forEach(session => {
+                if (session.tests) {
+                    session.tests.forEach(test => {
+                        const nameMatch = test.name?.toLowerCase().includes(lowerQuery);
+                        const expectedMatch = test.expectedResponse?.toLowerCase().includes(lowerQuery);
+                        const statusMatch = test.expectedStatus?.toLowerCase().includes(lowerQuery);
+
+                        if (nameMatch || expectedMatch || statusMatch) {
+                            const result: SearchResult = {
+                                id: test.id,
+                                type: 'test',
+                                title: test.name || `Test ${test.id}`,
+                                description: `Expected: ${test.expectedStatus}${test.expectedResponse ? ` | Response: ${test.expectedResponse.substring(0, 50)}...` : ''}`,
+                                relevance: nameMatch ? 1.0 : expectedMatch ? 0.7 : 0.5,
+                                path: ['Sessions', session.category || 'Uncategorized', session.name, 'Tests'],
+                                sessionId: session.id
+                            };
+
+                            if (currentProject?.id) {
+                                result.projectId = currentProject.id;
+                            }
+
+                            searchResults.push(result);
+                        }
+                    });
+                }
+            });
+
+            // Search configurations (request configs)
+            savedSessions.forEach(session => {
+                if (session.requestConfig) {
+                    const methodMatch = session.requestConfig.method?.toLowerCase().includes(lowerQuery);
+                    const bodyMatch = session.requestConfig.jsonBody?.toLowerCase().includes(lowerQuery);
+                    const headerMatch = session.requestConfig.headers?.some(h =>
+                        h.key.toLowerCase().includes(lowerQuery) || h.value.toLowerCase().includes(lowerQuery)
+                    );
+
+                    if (methodMatch || bodyMatch || headerMatch) {
+                        const result: SearchResult = {
+                            id: `config_${session.id}`,
+                            type: 'configuration',
+                            title: `${session.name} Configuration`,
+                            description: `Method: ${session.requestConfig.method}${session.requestConfig.bodyType !== 'none' ? ` | Body: ${session.requestConfig.bodyType}` : ''}`,
+                            method: session.requestConfig.method,
+                            relevance: methodMatch ? 1.0 : bodyMatch ? 0.7 : 0.5,
+                            path: ['Sessions', session.category || 'Uncategorized', session.name, 'Configuration'],
+                            sessionId: session.id
+                        };
+
+                        if (currentProject?.id) {
+                            result.projectId = currentProject.id;
+                        }
+
+                        searchResults.push(result);
+                    }
                 }
             });
 
@@ -242,8 +312,53 @@ export const SearchProvider: React.FC<SearchProviderProps> = ({ children }) => {
 
     // Navigate to result
     const navigateToResult = useCallback((result: SearchResult) => {
-        alert(`Navigate to: ${result.title} (${result.type})`);
-    }, []);
+        switch (result.type) {
+            case 'project':
+                // Navigate to the first session of the project or create a new one
+                const project = projects.find(p => p.id === result.id);
+                if (project) {
+                    // @ts-ignore: savedSessions may not exist on Project type, fallback to []
+                    const projectSessions = (project as any).savedSessions || [];
+                    const firstSession = projectSessions[0];
+                    if (firstSession) {
+                        navigate(`/project/${result.id}/session/${firstSession.id}/url`);
+                    } else {
+                        navigate(`/project/${result.id}/session/new/url`);
+                    }
+                }
+                break;
+            case 'session':
+                // Navigate to the session's URL builder
+                if (result.projectId) {
+                    navigate(`/project/${result.projectId}/session/${result.id}/url`);
+                } else if (currentProject?.id) {
+                    navigate(`/project/${currentProject.id}/session/${result.id}/url`);
+                }
+                break;
+            case 'test':
+                // Navigate to the test in the session
+                if (result.projectId && result.sessionId) {
+                    navigate(`/project/${result.projectId}/session/${result.sessionId}/tests`);
+                } else if (currentProject?.id && result.sessionId) {
+                    navigate(`/project/${currentProject.id}/session/${result.sessionId}/tests`);
+                }
+                break;
+            case 'variable':
+                // Open the variables manager
+                openUnifiedManager('variables');
+                break;
+            case 'configuration':
+                // Navigate to the configuration page
+                if (result.projectId && result.sessionId) {
+                    navigate(`/project/${result.projectId}/session/${result.sessionId}/request`);
+                } else if (currentProject?.id && result.sessionId) {
+                    navigate(`/project/${currentProject.id}/session/${result.sessionId}/request`);
+                }
+                break;
+            default:
+                console.warn('Unknown result type:', result.type);
+        }
+    }, [navigate, projects]);
 
     // Add to search history
     const addToHistory = useCallback((searchTerm: string) => {

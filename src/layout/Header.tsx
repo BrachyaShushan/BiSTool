@@ -16,6 +16,7 @@ import "react-toastify/dist/ReactToastify.css";
 import "../styles/toastify-custom.css";
 import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import { SectionId } from "../types/core";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
     const {
@@ -41,8 +42,8 @@ const Header = () => {
     const [tokenDuration, setTokenDuration] = useState<number | null>(null);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-    const { currentProject, clearCurrentProject } = useProjectContext();
-
+    const { currentProject } = useProjectContext();
+    const navigate = useNavigate();
     const tokenName = (globalVariables && tokenConfig && tokenConfig.tokenName) || "x-access-token";
     const token = globalVariables?.[tokenName];
 
@@ -119,7 +120,7 @@ const Header = () => {
     };
 
     const handleReturnToWelcome = () => {
-        clearCurrentProject();
+        navigate('/');
     };
 
     // Handle session change from ResponsiveWorkflowSelector
