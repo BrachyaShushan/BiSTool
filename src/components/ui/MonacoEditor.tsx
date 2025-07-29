@@ -435,6 +435,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         editor.updateOptions({
             ...combinedOptions,
             automaticLayout: true,
+            fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", "Monaco", "Menlo", "Consolas", monospace',
+            fontLigatures: true,
             quickSuggestions: {
                 other: true,
                 comments: false,
@@ -533,6 +535,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                 wordWrap: localOptions.wordWrap,
                 lineNumbers: localOptions.showLineNumbers ? 'on' : 'off',
                 minimap: { enabled: localOptions.showMinimap },
+                fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", "Monaco", "Menlo", "Consolas", monospace',
+                fontLigatures: true,
             });
 
             // Update theme when color theme or transparency changes

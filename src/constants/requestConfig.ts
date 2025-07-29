@@ -128,6 +128,8 @@ export const EDITOR_OPTIONS: monaco.editor.IStandaloneEditorConstructionOptions 
     minimap: { enabled: false },
     scrollBeyondLastLine: false,
     fontSize: 14,
+    fontFamily:
+      '"JetBrains Mono", "Fira Code", "Cascadia Code", "Monaco", "Menlo", "Consolas", monospace',
     lineNumbers: "on" as const,
     roundedSelection: false,
     scrollbar: {
@@ -141,6 +143,7 @@ export const EDITOR_OPTIONS: monaco.editor.IStandaloneEditorConstructionOptions 
     formatOnPaste: true,
     formatOnType: true,
     tabSize: 2,
+    fontLigatures: true,
   };
 
 export const COLOR_CLASSES = {
