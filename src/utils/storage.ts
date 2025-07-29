@@ -1,11 +1,5 @@
 import { ExtendedSession } from "../types/features/SavedManager";
-import {
-  URLData,
-  RequestConfigData,
-  Variable,
-  SectionId,
-  TokenConfig,
-} from "../types";
+import { URLData, RequestConfigData, Variable, TokenConfig } from "../types";
 import { DEFAULT_GLOBAL_VARIABLES } from "../constants/variables";
 
 // New hierarchical storage structure
@@ -28,7 +22,6 @@ export interface ProjectData {
     urlData: URLData;
     requestConfig: RequestConfigData | null;
     yamlOutput: string;
-    activeSection: SectionId;
     segmentVariables: Record<string, string>;
   };
   sessions: {
@@ -239,10 +232,6 @@ export const createDefaultProjectData = (
         preserveSettings && existingProject
           ? existingProject.appState.yamlOutput
           : "",
-      activeSection:
-        preserveSettings && existingProject
-          ? existingProject.appState.activeSection
-          : "url",
       segmentVariables:
         preserveSettings && existingProject
           ? existingProject.appState.segmentVariables

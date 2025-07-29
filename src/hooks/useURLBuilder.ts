@@ -338,7 +338,7 @@ export const useURLBuilder = (
         ...activeSession,
         urlData: currentUrlData,
       };
-      handleSaveSession(activeSession.name, updatedSession);
+      handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
     } else {
       // Persist state if no active session
       persistState({

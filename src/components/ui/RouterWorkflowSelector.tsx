@@ -13,16 +13,39 @@ const sectionPathMap: Record<string, string> = {
     json: 'json',
 };
 
-function getSectionIdFromPath(pathname: string): string {
-    // Extract section from path like /project/:projectId/session/:sessionId/:section
-    const pathParts = pathname.split('/');
-    const sectionIndex = pathParts.findIndex(part => part === 'session') + 2;
-    const section = pathParts[sectionIndex];
+// Reverse mapping to get section ID from path
+const pathToSectionMap: Record<string, SectionId> = {
+    'url': 'url',
+    'request': 'request',
+    'tests': 'tests',
+    'yaml': 'yaml',
+    'ai': 'ai',
+    'import': 'import',
+    'json': 'json',
+};
 
-    if (section && sectionPathMap[section]) {
-        return section;
+function getSectionIdFromPath(pathname: string): SectionId {
+    // Handle the project/session route structure: /project/:projectId/session/:sessionId/:section
+    const projectSessionMatch = pathname.match(/\/project\/[^\/]+\/session\/[^\/]+\/([^\/]+)/);
+    if (projectSessionMatch && projectSessionMatch[1]) {
+        const sectionPath = projectSessionMatch[1];
+        if (pathToSectionMap[sectionPath]) {
+            return pathToSectionMap[sectionPath];
+        }
     }
-    return 'url'; // default
+
+    // Handle root level routes (if any)
+    const rootMatch = pathname.match(/^\/([^\/]+)$/);
+    if (rootMatch && rootMatch[1]) {
+        const sectionPath = rootMatch[1];
+        if (pathToSectionMap[sectionPath]) {
+            return pathToSectionMap[sectionPath];
+        }
+    }
+
+    // If no valid section found, return 'url' as default
+    // This should only happen on the index route which redirects to 'url'
+    return 'url';
 }
 
 interface RouterWorkflowSelectorProps {
@@ -44,7 +67,8 @@ const RouterWorkflowSelector: React.FC<RouterWorkflowSelectorProps> = ({ section
             navigate(path);
         } else {
             // Fallback for cases where project/session are not in URL
-            const path = sectionPathMap[sectionId] || '/url';
+            // This should rarely happen, but handle gracefully
+            const path = `/${sectionPathMap[sectionId] || 'url'}`;
             navigate(path);
         }
     };
@@ -52,7 +76,7 @@ const RouterWorkflowSelector: React.FC<RouterWorkflowSelectorProps> = ({ section
     return (
         <ResponsiveWorkflowSelector
             sections={sections}
-            activeSection={activeSection as SectionId}
+            activeSection={activeSection}
             onSectionChange={handleSectionChange}
             className={className ?? ''}
         />

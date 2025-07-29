@@ -821,7 +821,7 @@ ${generateRequestBody()}
         customResponse,
       };
       if (activeSession.customResponse !== customResponse) {
-        handleSaveSession(activeSession.name, updatedSession);
+        handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -835,7 +835,7 @@ ${generateRequestBody()}
         ...activeSession,
         customResponse: defaultResponse,
       };
-      handleSaveSession(activeSession.name, updatedSession);
+      handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
     }
   };
 
@@ -895,7 +895,7 @@ ${generateRequestBody()}
         responseConditions,
       };
       if (JSON.stringify(activeSession.responseConditions) !== JSON.stringify(responseConditions)) {
-        handleSaveSession(activeSession.name, updatedSession);
+        handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
       }
     }
   }, [responseConditions, activeSession?.id, isInitialLoad]);
@@ -913,7 +913,7 @@ ${generateRequestBody()}
         includeToken,
       };
       if (activeSession.includeToken !== includeToken) {
-        handleSaveSession(activeSession.name, updatedSession);
+        handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

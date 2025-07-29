@@ -165,7 +165,7 @@ const BasicMode: React.FC<BasicModeProps> = ({
                 includeToken,
             };
             if (activeSession.includeToken !== includeToken) {
-                handleSaveSession(activeSession.name, updatedSession);
+                handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
             }
         }
     }, [includeToken, activeSession?.id, handleSaveSession]);

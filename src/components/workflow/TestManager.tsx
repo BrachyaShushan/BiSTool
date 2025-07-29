@@ -78,7 +78,7 @@ const TestManager: React.FC = () => {
             tests: [...(activeSession.tests || []), newTest],
         };
 
-        handleSaveSession(activeSession.name, updatedSession);
+        handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
     };
 
     // Update Test handler
@@ -92,7 +92,7 @@ const TestManager: React.FC = () => {
             ...activeSession,
             tests: updatedTests,
         };
-        handleSaveSession(activeSession.name, updatedSession);
+        handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
     };
 
     const handleRunAll = () => {
@@ -126,7 +126,7 @@ const TestManager: React.FC = () => {
             ...activeSession,
             tests: updatedTests,
         };
-        handleSaveSession(activeSession.name, updatedSession);
+        handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
     };
 
     const handleDuplicateTest = (id: string) => {
@@ -142,7 +142,7 @@ const TestManager: React.FC = () => {
                 ...activeSession,
                 tests: [...(activeSession.tests || []), newTest],
             };
-            handleSaveSession(activeSession.name, updatedSession);
+            handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
         }
     };
 
@@ -154,7 +154,7 @@ const TestManager: React.FC = () => {
             ...activeSession,
             tests: updatedTests,
         };
-        handleSaveSession(activeSession.name, updatedSession);
+        handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
     };
 
     // Utility: Deep subset check for objects/arrays

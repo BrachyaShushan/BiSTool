@@ -152,7 +152,6 @@ const SessionsManager = () => {
                             yamlOutput: "",
                             segmentVariables: {},
                             sharedVariables: {},
-                            activeSection: "url",
                         };
                         handleSaveSession(sessionName, newSession);
                         break;
@@ -534,7 +533,7 @@ const SessionsManager = () => {
                         yamlOutput: '',
                         segmentVariables: {},
                         sharedVariables: {},
-                        activeSection: 'url',
+
                     };
                     handleSaveSession(`${restApiConfig.resourceName} GET All`, getAllSession);
 
@@ -585,7 +584,7 @@ const SessionsManager = () => {
                         yamlOutput: '',
                         segmentVariables: {},
                         sharedVariables: {},
-                        activeSection: 'url',
+
                     };
                     handleSaveSession(`${restApiConfig.resourceName} GET by ID`, getByIdSession);
                     return; // Skip the default processing for GET
@@ -651,7 +650,7 @@ const SessionsManager = () => {
                 yamlOutput: '',
                 segmentVariables: {},
                 sharedVariables: {},
-                activeSection: 'url',
+
             };
 
             handleSaveSession(sessionName, newSession);
@@ -729,7 +728,7 @@ const SessionsManager = () => {
                 yamlOutput: '',
                 segmentVariables: {},
                 sharedVariables: {},
-                activeSection: 'url',
+
             };
             handleSaveSession('GraphQL Query', querySession);
         }
@@ -784,7 +783,7 @@ const SessionsManager = () => {
                 yamlOutput: '',
                 segmentVariables: {},
                 sharedVariables: {},
-                activeSection: 'url',
+
             };
             handleSaveSession('GraphQL Mutation', mutationSession);
         }
@@ -839,7 +838,7 @@ const SessionsManager = () => {
                 yamlOutput: '',
                 segmentVariables: {},
                 sharedVariables: {},
-                activeSection: 'url',
+
             };
             handleSaveSession('GraphQL Subscription', subscriptionSession);
         }
@@ -926,7 +925,7 @@ const SessionsManager = () => {
                 yamlOutput: '',
                 segmentVariables: {},
                 sharedVariables: {},
-                activeSection: 'url',
+
             };
             handleSaveSession(sessionName, newSession);
         });
@@ -1001,7 +1000,7 @@ const SessionsManager = () => {
             yamlOutput: '',
             segmentVariables: {},
             sharedVariables: {},
-            activeSection: 'url',
+
         };
 
         handleSaveSession(customApiConfig.name, newSession);

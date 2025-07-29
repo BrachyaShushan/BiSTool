@@ -397,12 +397,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         hasTextBody: !!session.requestConfig?.textBody
       });
 
-      // Load session data into app state (excluding activeSection - it should persist globally)
+      // Load session data into app state
       const sessionData: any = {};
       if (session.urlData) sessionData.urlData = session.urlData;
       if (session.requestConfig !== undefined) sessionData.requestConfig = session.requestConfig;
       if (session.yamlOutput !== undefined) sessionData.yamlOutput = session.yamlOutput;
-      // Remove activeSection from session loading - it should be global, not per-session
       if (session.segmentVariables) sessionData.segmentVariables = session.segmentVariables;
 
       console.log('AppContext: Loading session data into app state:', sessionData);
@@ -574,12 +573,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     // Also persist the loaded session as active session to localStorage
     sessionStorage.saveActiveSession(session);
 
-    // Only update app state fields that are part of the session (excluding activeSection)
+    // Load session data into app state
     const sessionData: any = {};
     if (session.urlData) sessionData.urlData = session.urlData;
     if (session.requestConfig !== undefined) sessionData.requestConfig = session.requestConfig;
     if (session.yamlOutput !== undefined) sessionData.yamlOutput = session.yamlOutput;
-    // Don't load activeSection from session - it should remain at the global app level
     if (session.segmentVariables) sessionData.segmentVariables = session.segmentVariables;
     // DO NOT set globalVariables here!
     appState.loadAppState(sessionData);
@@ -591,7 +589,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     }
   }, [sessionManager, sessionStorage, appState, projectIdFromUrl, sectionFromUrl, navigate]);
 
-  const handleSaveSession = useCallback((name: string, sessionData?: ExtendedSession) => {
+  const handleSaveSession = useCallback((name: string, sessionData?: ExtendedSession, preventNavigation?: boolean) => {
     let sessionToUse = sessionData;
     if (sessionData) {
       sessionManager.saveSession(sessionData);
@@ -608,7 +606,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
         urlData: appState.urlData,
         requestConfig: appState.requestConfig,
         yamlOutput: appState.yamlOutput,
-        // Don't save activeSection with sessions - it should be global
+
         segmentVariables: appState.segmentVariables,
         sharedVariables: [], // Session variables are handled by VariablesContext
       });
@@ -620,8 +618,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
       sessionStorage.saveSavedSessions(sessionManager.savedSessions);
       sessionToUse = newSession;
     }
-    // Navigate to the session URL
-    if (projectIdFromUrl && sessionToUse?.id) {
+    // Navigate to the session URL only if navigation is not prevented
+    if (!preventNavigation && projectIdFromUrl && sessionToUse?.id) {
       navigate(`/project/${projectIdFromUrl}/session/${sessionToUse.id}/${sectionFromUrl}`);
     }
   }, [appState.appState, sessionManager, sessionStorage, projectIdFromUrl, sectionFromUrl, navigate]);
@@ -725,7 +723,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     urlData: appState.urlData,
     requestConfig: appState.requestConfig,
     yamlOutput: appState.yamlOutput,
-    activeSection: appState.activeSection,
     segmentVariables: appState.segmentVariables,
 
     // Session state
@@ -786,7 +783,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children, currentProje
     appState.urlData,
     appState.requestConfig,
     appState.yamlOutput,
-    appState.activeSection,
     appState.segmentVariables,
     sessionManager.activeSession,
     sessionManager.savedSessions,

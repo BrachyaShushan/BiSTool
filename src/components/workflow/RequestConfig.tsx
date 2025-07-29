@@ -144,7 +144,7 @@ const RequestConfig: React.FC = () => {
             ...activeSession,
             requestConfig: config,
           };
-          handleSaveSession(activeSession.name, updatedSession);
+          handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
         }
       }, 500); // 500ms debounce
 

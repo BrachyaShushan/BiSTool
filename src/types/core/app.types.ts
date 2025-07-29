@@ -221,7 +221,6 @@ export interface AppContextType {
   urlData: URLData;
   requestConfig: RequestConfigData | null;
   yamlOutput: string;
-  activeSection: SectionId;
   segmentVariables: Record<string, string>;
   activeSession: ExtendedSession | null;
   savedSessions: ExtendedSession[];
@@ -239,7 +238,7 @@ export interface AppContextType {
   handleNewSession: () => void;
   handleClearSession: () => void;
   handleLoadSession: (session: ExtendedSession) => void;
-  handleSaveSession: (name: string, sessionData?: ExtendedSession) => void;
+  handleSaveSession: (name: string, sessionData?: ExtendedSession, preventNavigation?: boolean) => void;
   handleDeleteSession: (id: string) => void;
   handleImportSessions: (sessions: any[]) => void;
   handleURLBuilderSubmit: (data: URLData) => void;

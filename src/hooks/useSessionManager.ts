@@ -83,8 +83,6 @@ export const useSessionManager = () => {
         sharedVariables: Object.fromEntries(
           appState.sharedVariables.map((v) => [v.key, v.value])
         ),
-        // Set activeSection to default "url" for new sessions (it won't be used anyway)
-        activeSection: "url",
       };
 
       return newSession;
@@ -147,8 +145,6 @@ export const useSessionManager = () => {
             yamlOutput: session.yamlOutput || "",
             segmentVariables: session.segmentVariables || {},
             sharedVariables: session.sharedVariables || {},
-            // activeSection is now global, not per session - set default for compatibility
-            activeSection: "url",
           };
         }
       );

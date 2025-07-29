@@ -362,7 +362,7 @@ const AITestGenerator: React.FC = () => {
         ...activeSession,
         requirements,
       };
-      handleSaveSession(activeSession.name, updatedSession);
+      handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requirements]);
@@ -573,7 +573,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
           generatedTest: generatedCode,
           aiResponse: response,
         };
-        handleSaveSession(activeSession.name, updatedSession);
+        handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
       }
 
     } catch (err) {
@@ -972,7 +972,7 @@ IMPORTANT: Include proper error handling, logging, and validation as specified i
         generatedTest,
         lastGenerated: new Date().toISOString(),
       };
-      await handleSaveSession(activeSession.name, updatedSession);
+      await handleSaveSession(activeSession.name, updatedSession, true); // Prevent navigation for auto-save
 
       // Clear any existing timeout
       if (saveTimeoutRef.current) {
