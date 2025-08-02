@@ -20,13 +20,13 @@ export type QueryParam = QueryParameter;
 export type Header = HeaderParameter;
 
 // Re-export the main types
-export type { 
-  URLData, 
-  RequestConfigData, 
-  Variable, 
+export type {
+  URLData,
+  RequestConfigData,
+  Variable,
   ExtendedSession,
   FormDataField,
-  ResponseCondition
+  ResponseCondition,
 };
 
 export interface TokenConfig {

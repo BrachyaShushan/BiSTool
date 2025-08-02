@@ -33,4 +33,8 @@ export interface ResponseData {
 }
 
 // Re-export types from shared for convenience
-export type { RequestConfigData as RequestConfig, QueryParameter as QueryParam, HeaderParameter as Header };
+export type {
+  RequestConfigData as RequestConfig,
+  QueryParameter as QueryParam,
+  HeaderParameter as Header,
+};
