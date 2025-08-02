@@ -12,14 +12,14 @@ import {
   URLData,
   RequestConfigData,
   TabType,
-} from "../types";
-import { ExtendedSession } from "../types/features/SavedManager";
-import { useAppState } from "../hooks/useAppState";
-import { useSessionManager } from "../hooks/useSessionManager";
-import { useSaveManager } from "../hooks/useSaveManager";
-import { useAppStateStorage, useSessionStorage, useModeStorage } from "../hooks/useStorage";
-import { useStorageContext } from "./StorageContext";
-import { useProjectContext } from "./ProjectContext";
+  ExtendedSession
+} from "@/types";
+import { useAppState } from "@/hooks/useAppState";
+import { useSessionManager } from "@/hooks/useSessionManager";
+import { useSaveManager } from "@/hooks/useSaveManager";
+import { useAppStateStorage, useSessionStorage, useModeStorage } from "@/hooks/useStorage";
+import { useStorageContext } from "@/context/StorageContext";
+import { useProjectContext } from "@/context/ProjectContext";
 import { useNavigate, useParams } from "react-router-dom";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);

@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { Variable } from "../types/core/app.types";
-import { useProjectContext } from "./ProjectContext";
-import { useVariableStorage } from "../hooks/useStorage";
-import { useStorageContext } from './StorageContext';
-import { useAppContext } from "./AppContext";
-import { DEFAULT_GLOBAL_VARIABLES, DEFAULT_SHARED_VARIABLES } from "../constants/variables";
+import { Variable } from "@/types";
+import { useProjectContext } from "@/context/ProjectContext";
+import { useVariableStorage } from "@/hooks/useStorage";
+import { useStorageContext } from "@/context/StorageContext";
+import { useAppContext } from "@/context/AppContext";
+import { DEFAULT_GLOBAL_VARIABLES, DEFAULT_SHARED_VARIABLES } from "@/constants/variables";
 
 export interface VariablesContextType {
     globalVariables: Record<string, string>;

@@ -1,4 +1,10 @@
-import { ResponseCondition } from "../core/app.types";
+import {
+  ResponseCondition,
+  URLData,
+  RequestConfigData,
+  TestCase as SharedTestCase,
+} from "@/types/shared";
+import { ModalType } from "@/types/core/common.types";
 
 export interface ExtendedVariable {
   key: string;
@@ -7,69 +13,16 @@ export interface ExtendedVariable {
   originalKey?: string;
 }
 
-export type ModalType = "new" | "edit" | "delete" | "rename" | "duplicate";
+// Re-export ModalType for backward compatibility
+export type { ModalType };
 
 export interface ExtendedSession {
   id: string;
   name: string;
   timestamp: string;
   category?: string;
-  urlData?: {
-    baseURL: string;
-    segments: string;
-    parsedSegments: Array<{
-      paramName: string;
-      description?: string;
-      required?: boolean;
-      value: string;
-      isDynamic: boolean;
-    }>;
-    queryParams: Array<{
-      key: string;
-      value: string;
-      description?: string;
-      required?: boolean;
-      type?: string;
-    }>;
-    segmentVariables: Array<{
-      key: string;
-      value: string;
-    }>;
-    processedURL: string;
-    domain: string;
-    protocol: string;
-    builtUrl: string;
-    environment: string;
-    sessionDescription?: string;
-  };
-  requestConfig?: {
-    method: string;
-    queryParams: Array<{
-      key: string;
-      value: string;
-      description?: string;
-      required?: boolean;
-      type?: string;
-    }>;
-    headers: Array<{
-      key: string;
-      value: string;
-      description?: string;
-      required?: boolean;
-      type?: string;
-      in: "path" | "header" | "query";
-    }>;
-    bodyType: "none" | "json" | "form" | "text";
-    jsonBody?: string;
-    formData?: Array<{
-      key: string;
-      value: string;
-      type: "text" | "file";
-      required: boolean;
-      description?: string;
-    }>;
-    textBody?: string;
-  };
+  urlData?: URLData;
+  requestConfig?: RequestConfigData;
   yamlOutput?: string;
   segmentVariables?: Record<string, string>;
   sharedVariables?: Record<string, string>;
@@ -77,24 +30,12 @@ export interface ExtendedSession {
   responseConditions?: ResponseCondition[];
   includeToken?: boolean;
   requirements?: string;
-  tests?: TestCase[];
+  tests?: SharedTestCase[];
   customResponse?: string;
 }
 
-export interface TestCase {
-  id: string;
-  name?: string;
-  bodyOverride?: string;
-  pathOverrides?: Record<string, string>;
-  queryOverrides?: Record<string, string>;
-  expectedStatus: string;
-  expectedResponse?: string;
-  expectedPartialResponse?: boolean;
-  lastResult?: "pass" | "fail" | undefined;
-  useToken?: boolean;
-  serverResponse?: string;
-  serverStatusCode?: number;
-  includeInAIPrompt?: boolean;
+export interface TestCase extends SharedTestCase {
+  // Additional properties specific to this feature if needed
 }
 
 export interface SavedManagerProps {

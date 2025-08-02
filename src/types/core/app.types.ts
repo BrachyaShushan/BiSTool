@@ -1,82 +1,33 @@
-import { ExtendedSession } from "../features/SavedManager";
-
-export type SectionId =
-  | "url"
-  | "request"
-  | "tests"
-  | "yaml"
-  | "ai"
-  | "import"
-  | "json";
+import {
+  URLData,
+  RequestConfigData,
+  Variable,
+  QueryParameter,
+  HeaderParameter,
+  FormDataField,
+  ResponseCondition,
+} from "@/types/shared";
+import { ExtendedSession } from "@/types/features/SavedManager";
+import { SectionId } from "@/types/core/common.types";
 
 export interface Section {
   id: SectionId;
   label: string;
 }
 
-export interface QueryParam {
-  key: string;
-  value: string;
-  description?: string;
-  required?: boolean;
-  type?: string;
-}
+// Re-export shared types for backward compatibility
+export type QueryParam = QueryParameter;
+export type Header = HeaderParameter;
 
-export interface Header {
-  key: string;
-  value: string;
-  description?: string;
-  required?: boolean;
-  type?: string;
-  in: "path" | "header" | "query";
-}
-
-export interface FormDataField {
-  key: string;
-  value: string;
-  type: "text" | "file";
-  required: boolean;
-  description?: string;
-}
-
-export interface URLData {
-  domain: string;
-  protocol: string;
-  builtUrl: string;
-  environment: string;
-  baseURL: string;
-  processedURL: string;
-  segments: string;
-  parsedSegments: Array<{
-    paramName: string;
-    description?: string;
-    required?: boolean;
-    value: string;
-    isDynamic: boolean;
-  }>;
-  queryParams: QueryParam[];
-  segmentVariables: Array<{
-    key: string;
-    value: string;
-  }>;
-  sessionDescription?: string;
-}
-
-export interface RequestConfigData {
-  method: string;
-  headers: Header[];
-  queryParams: QueryParam[];
-  bodyType: "none" | "json" | "form" | "text";
-  jsonBody?: string;
-  formData?: FormDataField[];
-  textBody?: string;
-  body?: Record<string, any>;
-}
-
-export interface Variable {
-  key: string;
-  value: string;
-}
+// Re-export the main types
+export type { 
+  URLData, 
+  RequestConfigData, 
+  Variable, 
+  ExtendedSession,
+  FormDataField,
+  ResponseCondition
+};
 
 export interface TokenConfig {
   domain: string;
@@ -200,12 +151,6 @@ export interface TokenConfig {
   };
 }
 
-export interface ResponseCondition {
-  status: string; // e.g. "204", "400", "201"
-  condition: string; // user-provided text
-  include: boolean; // whether to include this response
-}
-
 export interface Session {
   id: string;
   name: string;
@@ -238,7 +183,11 @@ export interface AppContextType {
   handleNewSession: () => void;
   handleClearSession: () => void;
   handleLoadSession: (session: ExtendedSession) => void;
-  handleSaveSession: (name: string, sessionData?: ExtendedSession, preventNavigation?: boolean) => void;
+  handleSaveSession: (
+    name: string,
+    sessionData?: ExtendedSession,
+    preventNavigation?: boolean
+  ) => void;
   handleDeleteSession: (id: string) => void;
   handleImportSessions: (sessions: any[]) => void;
   handleURLBuilderSubmit: (data: URLData) => void;
@@ -263,7 +212,7 @@ export interface AppContextType {
   showUnifiedManager: boolean;
   updateSessionVariables: (sessionVariables: Record<string, string>) => void;
 }
-export type TabType = "sessions" | "variables" | "projects" | "settings";
+import { TabType } from "@/types/core/common.types";
 
 export interface ThemeContextType {
   isDarkMode: boolean;

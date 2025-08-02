@@ -1,6 +1,6 @@
-import { ExtendedSession } from "../types/features/SavedManager";
-import { URLData, RequestConfigData, Variable, TokenConfig } from "../types";
-import { DEFAULT_GLOBAL_VARIABLES } from "../constants/variables";
+import { ExtendedSession } from "@/types";
+import { URLData, RequestConfigData, Variable, TokenConfig } from "@/types";
+import { DEFAULT_GLOBAL_VARIABLES } from "@/constants/variables";
 
 // New hierarchical storage structure
 export interface ProjectData {

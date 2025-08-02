@@ -39,12 +39,11 @@ import {
   MonacoEditor,
   Toggle,
   TestStatusBadge
-} from "../ui";
+} from "@/components/ui";
 import {
   ResponseData,
-} from "../../types/components/yamlGenerator.types";
-import { RequestConfigData, ResponseCondition } from "../../types/core/app.types";
-import { ExtendedSession, TestCase } from "../../types/features/SavedManager";
+} from "@/types/components/yamlGenerator.types";
+import { RequestConfigData, ResponseCondition, ExtendedSession, TestCase } from "@/types";
 
 const YAMLGenerator: React.FC = () => {
   const params = useParams();

@@ -1,10 +1,8 @@
 import {
-  URLData as AppURLData,
   RequestConfigData,
-  QueryParam as AppQueryParam,
-  Header as AppHeader,
-  FormDataField as AppFormDataField,
-} from "../core/app.types";
+  QueryParameter,
+  HeaderParameter,
+} from "@/types/shared";
 
 export interface YAMLGeneratorProps {
   onGenerate: (yaml: string) => void;
@@ -34,9 +32,5 @@ export interface ResponseData {
   [key: string]: any;
 }
 
-// Re-export types from app.types.ts
-export type URLData = AppURLData;
-export type RequestConfig = RequestConfigData;
-export type QueryParam = AppQueryParam;
-export type Header = AppHeader;
-export type FormDataField = AppFormDataField;
+// Re-export types from shared for convenience
+export type { RequestConfigData as RequestConfig, QueryParameter as QueryParam, HeaderParameter as Header };

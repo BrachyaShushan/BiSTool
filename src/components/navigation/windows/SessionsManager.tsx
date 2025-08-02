@@ -1,14 +1,14 @@
-import { ExtendedSession, ModalType } from "../../../types/features/SavedManager";
-import { useAppContext } from "../../../context/AppContext";
+import { ExtendedSession, ModalType } from "@/types";
+import { useAppContext } from "@/context/AppContext";
 import React, { useEffect, useState } from "react";
-import Modal from "../../ui/Modal";
+import Modal from "@/components/ui/Modal";
 import { FiEdit2, FiCopy, FiTrash2, FiFolder, FiPlus, FiDownload, FiUpload, FiChevronDown, FiCheckSquare, FiSquare, FiKey, FiGlobe, FiDatabase, FiWifi, FiSettings } from "react-icons/fi";
-import { useVariablesContext } from '../../../context/VariablesContext';
-import { HTTP_METHODS, METHOD_ICONS } from '../../../constants/requestConfig';
-import Card from '../../ui/Card';
-import Button from '../../ui/Button';
-import Badge from '../../ui/Badge';
-import { IconWrapper } from "../../ui";
+import { useVariablesContext } from '@/context/VariablesContext';
+import { HTTP_METHODS, METHOD_ICONS } from '@/constants/requestConfig';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import { IconWrapper } from "@/components/ui";
 
 const SessionsManager = () => {
     const [divideBy, setDivideBy] = useState<'none' | 'category'>("category");
@@ -442,7 +442,7 @@ const SessionsManager = () => {
                 timestamp: new Date().toISOString(),
                 requestConfig: {
                     ...origReq,
-                    method,
+                    method: method as any,
                     queryParams: origReq.queryParams || [],
                     headers: origReq.headers || [],
                     bodyType: origReq.bodyType || 'none',
@@ -511,7 +511,7 @@ const SessionsManager = () => {
                             environment: 'development',
                         },
                         requestConfig: {
-                            method: 'GET',
+                            method: 'GET' as const,
                             queryParams: [],
                             headers: restApiConfig.hasAuth ? [
                                 {
@@ -521,7 +521,7 @@ const SessionsManager = () => {
                                         restApiConfig.authType === 'basic' ? 'Basic {credentials}' : '{api_key}',
                                     description: 'Authentication header',
                                     required: true,
-                                    type: 'string',
+                                    type: 'string' as const,
                                     in: 'header' as const
                                 }
                             ] : [],

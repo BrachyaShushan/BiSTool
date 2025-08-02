@@ -1,4 +1,4 @@
-import { URLData } from "../types/core/app.types";
+import { URLData } from "@/types";
 
 // Define Segment interface
 export interface Segment {

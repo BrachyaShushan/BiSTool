@@ -6,7 +6,7 @@ import Settings from "./windows/Settings";
 import SessionsManager from "./windows/SessionsManager";
 import ProjectsManager from "./windows/ProjectsManager";
 import VariablesManager from "./windows/VariablesManager";
-import { TabType } from "../../types/core/app.types";
+import { TabType } from "../../types";
 interface UnifiedManagerProps {
     isOpen: boolean;
     onClose: () => void;

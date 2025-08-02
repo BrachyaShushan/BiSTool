@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { ExtendedSession } from "../types/features/SavedManager";
-import { URLData, RequestConfigData, Variable } from "../types";
-import { DEFAULT_URL_DATA } from "../utils/storage";
+import { ExtendedSession } from "@/types";
+import { URLData, RequestConfigData, Variable } from "@/types";
+import { DEFAULT_URL_DATA } from "@/utils/storage";
 
 // Custom event for opening session manager
 const SESSION_MANAGER_EVENT = "openSessionManager";

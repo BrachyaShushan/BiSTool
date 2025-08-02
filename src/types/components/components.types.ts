@@ -1,10 +1,10 @@
 import {
   URLData,
   RequestConfigData,
-  QueryParam,
-  Header,
+  QueryParameter,
+  HeaderParameter,
   FormDataField,
-} from "../core/app.types";
+} from "@/types/shared";
 
 export interface URLBuilderProps {
   onSubmit: (data: URLData) => void;
@@ -52,8 +52,8 @@ export interface AnthropicResponse {
 
 export interface RequestConfigState {
   activeTab: "params" | "headers" | "body";
-  queryParams: QueryParam[];
-  headers: Header[];
+  queryParams: QueryParameter[];
+  headers: HeaderParameter[];
   method: string;
   bodyType: "none" | "json" | "form";
   jsonBody: string;

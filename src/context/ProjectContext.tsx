@@ -6,7 +6,7 @@ import React, {
     useCallback,
     useMemo,
 } from "react";
-import { Project, ProjectContextType } from "../types/core/project.types";
+import { Project, ProjectContextType } from "@/types";
 import { useNavigate } from "react-router-dom";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);

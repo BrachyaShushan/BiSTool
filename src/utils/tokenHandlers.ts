@@ -1,4 +1,4 @@
-import { TokenConfig } from "../types/core/app.types";
+import { TokenConfig } from "@/types";
 
 // Token extraction patterns and utilities
 export class TokenExtractor {
@@ -945,7 +945,10 @@ export class TokenManager {
     throw new Error("Token generation failed after all attempts");
   }
 
-  async refreshTokenIfNeeded(token: string, globalVariables: Record<string, string>): Promise<string> {
+  async refreshTokenIfNeeded(
+    token: string,
+    globalVariables: Record<string, string>
+  ): Promise<string> {
     if (this.validator.shouldRefreshToken(token)) {
       const refreshToken = globalVariables[this.config.refreshTokenName];
       if (refreshToken) {
@@ -960,7 +963,9 @@ export class TokenManager {
   }
 
   // Generate authentication headers for API requests
-  generateAuthHeaders(globalVariables: Record<string, string>): Record<string, string> {
+  generateAuthHeaders(
+    globalVariables: Record<string, string>
+  ): Record<string, string> {
     const headers: Record<string, string> = {};
 
     switch (this.config.authType) {
@@ -1005,9 +1010,7 @@ export class TokenManager {
 
       case "session":
         const sessionId =
-          globalVariables[
-            this.config.session?.sessionIdField || "session_id"
-          ];
+          globalVariables[this.config.session?.sessionIdField || "session_id"];
         const sessionToken =
           globalVariables[
             this.config.session?.sessionTokenField || "session_token"
