@@ -42,7 +42,37 @@ if (fs.existsSync("public")) {
   copyDir("public", "dist");
 }
 
-// Create a simple HTML file
+// Process CSS file with Tailwind CSS
+console.log("📄 Processing CSS file with Tailwind...");
+let cssContent = "";
+if (fs.existsSync("src/index.css")) {
+  // Use Tailwind CSS CLI to process the CSS
+  try {
+    const tailwindOutput = execSync(
+      "npx tailwindcss -i src/index.css -o dist/temp.css --minify",
+      { encoding: "utf8" }
+    );
+    cssContent = fs.readFileSync("dist/temp.css", "utf8");
+
+    // Fix font paths to be relative
+    cssContent = cssContent.replace(/url\("\/fonts\//g, 'url("./fonts/');
+
+    // Clean up temp file
+    if (fs.existsSync("dist/temp.css")) {
+      fs.unlinkSync("dist/temp.css");
+    }
+  } catch (error) {
+    console.warn(
+      "⚠️ Tailwind CSS processing failed, using original CSS:",
+      error.message
+    );
+    cssContent = fs.readFileSync("src/index.css", "utf8");
+    // Fix font paths to be relative
+    cssContent = cssContent.replace(/url\("\/fonts\//g, 'url("./fonts/');
+  }
+}
+
+// Create a simple HTML file with inline CSS
 const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,7 +80,9 @@ const htmlContent = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BiSTool - API Testing Tool</title>
     <link rel="icon" type="image/svg+xml" href="./icon.png">
-    <link rel="stylesheet" href="./index.css">
+    <style>
+${cssContent}
+    </style>
 </head>
 <body>
     <div id="root"></div>
@@ -59,17 +91,6 @@ const htmlContent = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync("dist/index.html", htmlContent);
-
-// Process CSS file to fix font paths
-console.log("📄 Processing CSS file...");
-if (fs.existsSync("src/index.css")) {
-  let cssContent = fs.readFileSync("src/index.css", "utf8");
-
-  // Fix font paths to be relative
-  cssContent = cssContent.replace(/url\("\/fonts\//g, 'url("./fonts/');
-
-  fs.writeFileSync("dist/index.css", cssContent);
-}
 
 // Create a temporary entry point without CSS imports
 console.log("📄 Creating temporary entry point...");
@@ -93,6 +114,11 @@ try {
   // Rename the output file
   if (fs.existsSync("dist/index.temp.js")) {
     fs.renameSync("dist/index.temp.js", "dist/index.js");
+  }
+
+  // Clean up temporary CSS file if it exists
+  if (fs.existsSync("dist/index.temp.css")) {
+    fs.unlinkSync("dist/index.temp.css");
   }
 
   console.log("✅ Build completed successfully!");

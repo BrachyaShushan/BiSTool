@@ -35,9 +35,10 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && NODE_OPTIONS='--max-old-space-size=4096' vite build",
+    "build": "tsc && cross-env NODE_OPTIONS=--max-old-space-size=4096 vite build",
     "build:netlify": "node scripts/build-netlify.js",
     "build:simple": "node scripts/build-simple.js",
+    "test:build": "node scripts/test-build.js",
     "build:extension": "tsc -p tsconfig.extension.json",
     "build:full": "node scripts/build-extension.js",
     "dev:extension": "node scripts/dev-extension.js",
@@ -63,6 +64,7 @@
     "BiSTool": "file:",
     "jsonata": "^2.0.6",
     "monaco-editor": "^0.52.2",
+    "picomatch": "^4.0.3",
     "postcss": "^8.5.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -76,16 +78,19 @@
   "devDependencies": {
     "@playwright/test": "^1.53.2",
     "@tailwindcss/forms": "^0.5.10",
+    "@testing-library/dom": "^10.0.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^20.0.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/uuid": "^10.0.0",
     "@types/vscode": "^1.99.0",
-    "@typescript-eslint/eslint-plugin": "^8.36.0",
-    "@typescript-eslint/parser": "^8.36.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "@vitejs/plugin-react": "^4.6.0",
+    "cross-env": "^10.0.0",
     "eslint": "^8.57.0",
     "eslint-plugin-jsx-a11y": "^6.10.1",
     "eslint-plugin-react": "^7.37.2",
@@ -94,6 +99,5 @@
     "terser": "^5.43.1",
     "typescript": "^5.8.3",
     "vite": "^7.0.2"
-  },
-  "optionalDependencies": {}
+  }
 }

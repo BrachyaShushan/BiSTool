@@ -16,7 +16,7 @@ try {
 
   // Step 2: Build React application
   console.log("\n🔨 Building React application...");
-  execSync("npm run build", { stdio: "inherit" });
+  execSync("npm run build:simple", { stdio: "inherit" });
 
   // Step 2.5: Copy icon to dist folder
   console.log("\n🖼️  Copying icon to dist folder...");
