@@ -55,7 +55,7 @@
     "test:e2e:mobile-only": "playwright test tests/mobile.test.ts",
     "test:report": "playwright show-report",
     "devtools": "react-devtools",
-    "postinstall": "node -e \"try { require('@rollup/rollup-linux-x64-gnu'); } catch(e) { try { require('@rollup/rollup-win32-x64-msvc'); } catch(e2) { console.log('Rollup optional dependencies not available for this platform'); } }\""
+    "postinstall": "node scripts/install-dependencies.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",
@@ -76,7 +76,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.53.2",
-    "@rollup/rollup-linux-x64-gnu": "^4.21.0",
     "@rollup/rollup-win32-x64-msvc": "^4.21.0",
     "@tailwindcss/forms": "^0.5.10",
     "@testing-library/jest-dom": "^6.6.3",
@@ -97,5 +96,8 @@
     "terser": "^5.43.1",
     "typescript": "^5.8.3",
     "vite": "^7.0.2"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.21.0"
   }
 }
