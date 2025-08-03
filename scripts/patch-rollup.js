@@ -30,8 +30,7 @@ function parseAsync() {
   return Promise.resolve({ ast: null });
 }
 
-// Export both CommonJS and ES module formats
-module.exports = { parse, parseAsync };
+// Export as ES module only (since Rollup expects ES modules)
 export { parse, parseAsync };
 export default { parse, parseAsync };
 `;

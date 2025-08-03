@@ -47,16 +47,37 @@ console.log("🏗️ Building with Vite...");
 try {
   execSync("vite build", { stdio: "inherit" });
 } catch (error) {
-  console.error("❌ Vite build failed, trying alternative approach...");
+  console.error("❌ Standard Vite build failed, trying simplified Vite...");
 
-  // Alternative: Try building with webpack (avoids Rollup entirely)
-  console.log("🔄 Trying webpack build...");
+  // Try simplified Vite build
+  console.log("🔄 Trying simplified Vite build...");
   try {
-    execSync("node scripts/build-webpack.js", { stdio: "inherit" });
-    console.log("✅ Build completed with webpack");
-  } catch (webpackError) {
-    console.error("❌ All build methods failed");
-    process.exit(1);
+    execSync("node scripts/build-vite-simple.js", { stdio: "inherit" });
+    console.log("✅ Build completed with simplified Vite");
+  } catch (viteError) {
+    console.error("❌ Simplified Vite failed, trying webpack...");
+
+    // Alternative: Try building with webpack (avoids Rollup entirely)
+    console.log("🔄 Trying webpack build...");
+    try {
+      execSync("node scripts/build-webpack.js", { stdio: "inherit" });
+      console.log("✅ Build completed with webpack");
+    } catch (webpackError) {
+      console.error("❌ Webpack build failed, trying esbuild fallback...");
+
+      // Final fallback: Try esbuild
+      console.log("🔄 Trying esbuild fallback...");
+      try {
+        execSync(
+          "npx esbuild src/index.tsx --bundle --outdir=dist --format=esm --target=esnext --loader:.css=css --loader:.woff2=file --loader:.ttf=file",
+          { stdio: "inherit" }
+        );
+        console.log("✅ Build completed with esbuild fallback");
+      } catch (esbuildError) {
+        console.error("❌ All build methods failed");
+        process.exit(1);
+      }
+    }
   }
 }
 
