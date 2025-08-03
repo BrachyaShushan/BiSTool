@@ -35,7 +35,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && NODE_OPTIONS='--max-old-space-size=4096' vite build",
+    "build:netlify": "ROLLUP_SKIP_NATIVE=true tsc && NODE_OPTIONS='--max-old-space-size=4096' vite build",
     "build:extension": "tsc -p tsconfig.extension.json",
     "build:full": "node scripts/build-extension.js",
     "dev:extension": "node scripts/dev-extension.js",
@@ -52,7 +53,7 @@
     "test:e2e:mobile-only": "playwright test tests/mobile.test.ts",
     "test:report": "playwright show-report",
     "devtools": "react-devtools",
-    "postinstall": "node -e \"console.log('Postinstall: Checking for platform-specific dependencies...'); try { require('@rollup/rollup-linux-x64-gnu'); console.log('Linux Rollup dependency found'); } catch(e) { console.log('No platform-specific Rollup dependency found - this is normal'); }\""
+    "postinstall": "node -e \"console.log('Postinstall: Checking for platform-specific dependencies...'); const platforms = ['@rollup/rollup-linux-x64-gnu', '@rollup/rollup-darwin-x64', '@rollup/rollup-win32-x64-msvc', '@rollup/rollup-win32-arm64-msvc', '@rollup/rollup-darwin-arm64']; let found = false; for (const platform of platforms) { try { require(platform); console.log(platform + ' found'); found = true; break; } catch(e) { console.log(platform + ' not found - this is normal'); } } if (!found) { console.log('No platform-specific Rollup dependency found - this is normal'); }\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",

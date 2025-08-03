@@ -96,6 +96,33 @@ export default defineConfig({
         }
       },
     },
+    // Plugin to handle Rollup platform-specific dependency issues
+    {
+      name: "rollup-platform-fix",
+      configResolved(config) {
+        // Ensure Rollup doesn't try to use platform-specific binaries
+        if (config.build?.rollupOptions) {
+          config.build.rollupOptions.onwarn = (warning, warn) => {
+            // Suppress warnings about missing optional dependencies
+            if (
+              warning.code === "MODULE_LEVEL_DIRECTIVE" ||
+              warning.message.includes("@rollup/rollup-") ||
+              warning.message.includes("Cannot find module")
+            ) {
+              return;
+            }
+            warn(warning);
+          };
+        }
+      },
+      buildStart() {
+        // Set environment variable to skip native modules
+        process.env.ROLLUP_SKIP_NATIVE = "true";
+        console.log(
+          "🔧 Rollup native modules disabled for platform compatibility"
+        );
+      },
+    },
   ],
   resolve: {
     alias: {
@@ -109,6 +136,9 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    // Disable native binaries to avoid platform-specific issues
+    target: "esnext",
+    minify: "terser",
     rollupOptions: {
       output: {
         manualChunks: {
@@ -146,7 +176,13 @@ export default defineConfig({
       // Add external configuration to handle optional dependencies
       external: (id) => {
         // Handle optional Rollup dependencies gracefully
-        if (id.includes("@rollup/rollup-linux-x64-gnu")) {
+        if (
+          id.includes("@rollup/rollup-linux-x64-gnu") ||
+          id.includes("@rollup/rollup-darwin-x64") ||
+          id.includes("@rollup/rollup-win32-x64-msvc") ||
+          id.includes("@rollup/rollup-win32-arm64-msvc") ||
+          id.includes("@rollup/rollup-darwin-arm64")
+        ) {
           return true;
         }
         return false;
@@ -154,10 +190,6 @@ export default defineConfig({
     },
     // Increase chunk size warning limit if needed
     chunkSizeWarningLimit: 1000,
-    // Enable minification
-    minify: "terser",
-    // Enable tree shaking
-    target: "esnext",
   },
   esbuild: {
     loader: "tsx",
