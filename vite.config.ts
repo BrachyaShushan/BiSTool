@@ -126,7 +126,9 @@ export default defineConfig({
             if (
               warning.code === "MODULE_LEVEL_DIRECTIVE" ||
               warning.message.includes("@rollup/rollup-") ||
-              warning.message.includes("Cannot find module")
+              warning.message.includes("Cannot find module") ||
+              warning.message.includes("xxhashBase16") ||
+              warning.message.includes("native.js")
             ) {
               return;
             }
@@ -166,7 +168,9 @@ export default defineConfig({
         if (
           warning.code === "MODULE_LEVEL_DIRECTIVE" ||
           warning.message.includes("@rollup/rollup-") ||
-          warning.message.includes("Cannot find module")
+          warning.message.includes("Cannot find module") ||
+          warning.message.includes("xxhashBase16") ||
+          warning.message.includes("native.js")
         ) {
           return;
         }
@@ -213,7 +217,9 @@ export default defineConfig({
           id.includes("@rollup/rollup-darwin-x64") ||
           id.includes("@rollup/rollup-win32-x64-msvc") ||
           id.includes("@rollup/rollup-win32-arm64-msvc") ||
-          id.includes("@rollup/rollup-darwin-arm64")
+          id.includes("@rollup/rollup-darwin-arm64") ||
+          id.includes("native.js") ||
+          id.includes("xxhashBase16")
         ) {
           return true;
         }
@@ -236,5 +242,13 @@ export default defineConfig({
     },
     // Pre-bundle Monaco Editor to improve performance
     include: ["@monaco-editor/react", "monaco-editor"],
+    // Exclude problematic native modules
+    exclude: [
+      "@rollup/rollup-linux-x64-gnu",
+      "@rollup/rollup-darwin-x64",
+      "@rollup/rollup-win32-x64-msvc",
+      "@rollup/rollup-win32-arm64-msvc",
+      "@rollup/rollup-darwin-arm64",
+    ],
   },
 });

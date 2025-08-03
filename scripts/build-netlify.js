@@ -68,10 +68,7 @@ try {
       // Final fallback: Try esbuild
       console.log("🔄 Trying esbuild fallback...");
       try {
-        execSync(
-          "npx esbuild src/index.tsx --bundle --outdir=dist --format=esm --target=esnext --loader:.css=css --loader:.woff2=file --loader:.ttf=file",
-          { stdio: "inherit" }
-        );
+        execSync("node scripts/build-esbuild.js", { stdio: "inherit" });
         console.log("✅ Build completed with esbuild fallback");
       } catch (esbuildError) {
         console.error("❌ All build methods failed");

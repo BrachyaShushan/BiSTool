@@ -37,6 +37,7 @@
     "dev": "vite",
     "build": "tsc && NODE_OPTIONS='--max-old-space-size=4096' vite build",
     "build:netlify": "node scripts/build-netlify.js",
+    "build:simple": "node scripts/build-simple.js",
     "build:extension": "tsc -p tsconfig.extension.json",
     "build:full": "node scripts/build-extension.js",
     "dev:extension": "node scripts/dev-extension.js",

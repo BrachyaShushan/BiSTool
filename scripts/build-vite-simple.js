@@ -41,6 +41,8 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['@rollup/rollup-linux-x64-gnu', '@rollup/rollup-darwin-x64', '@rollup/rollup-win32-x64-msvc'],
   },
+  // Add public directory configuration for font resolution
+  publicDir: "public",
 });
 `;
 
