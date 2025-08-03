@@ -146,10 +146,7 @@ export default defineConfig({
       // Add external configuration to handle optional dependencies
       external: (id) => {
         // Handle optional Rollup dependencies gracefully
-        if (
-          id.includes("@rollup/rollup-linux-x64-gnu") ||
-          id.includes("@rollup/rollup-win32-x64-msvc")
-        ) {
+        if (id.includes("@rollup/rollup-linux-x64-gnu")) {
           return true;
         }
         return false;

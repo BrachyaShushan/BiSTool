@@ -15,9 +15,6 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:bistool.open"
-  ],
   "main": "./dist/extension/extension.js",
   "contributes": {
     "commands": [
@@ -55,7 +52,7 @@
     "test:e2e:mobile-only": "playwright test tests/mobile.test.ts",
     "test:report": "playwright show-report",
     "devtools": "react-devtools",
-    "postinstall": "node -e \"console.log('Postinstall: Checking for platform-specific dependencies...'); try { require('@rollup/rollup-linux-x64-gnu'); console.log('Linux Rollup dependency found'); } catch(e) { try { require('@rollup/rollup-win32-x64-msvc'); console.log('Windows Rollup dependency found'); } catch(e2) { console.log('No platform-specific Rollup dependency found - this is normal'); } }\""
+    "postinstall": "node -e \"console.log('Postinstall: Checking for platform-specific dependencies...'); try { require('@rollup/rollup-linux-x64-gnu'); console.log('Linux Rollup dependency found'); } catch(e) { console.log('No platform-specific Rollup dependency found - this is normal'); }\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",
@@ -76,7 +73,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.53.2",
-    "@rollup/rollup-win32-x64-msvc": "^4.21.0",
     "@tailwindcss/forms": "^0.5.10",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -97,7 +93,5 @@
     "typescript": "^5.8.3",
     "vite": "^7.0.2"
   },
-  "optionalDependencies": {
-    "@rollup/rollup-win32-x64-msvc": "^4.21.0"
-  }
+  "optionalDependencies": {}
 }
