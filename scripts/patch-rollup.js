@@ -19,21 +19,21 @@ if (fs.existsSync(rollupNativePath)) {
   const patchedContent = `// Patched Rollup native module loader
 // This version handles missing platform-specific modules gracefully
 
-function requireWithFriendlyError(id) {
-  try {
-    return require(id);
-  } catch (e) {
-    // If it's a platform-specific Rollup module, return a mock
-    if (id.includes('@rollup/rollup-') && (id.includes('-x64-') || id.includes('-arm64-'))) {
-      console.log('🚫 Mocking native module:', id);
-      return { default: null, __esModule: true };
-    }
-    throw e;
-  }
+// Mock parse and parseAsync functions
+function parse() {
+  console.log('🚫 Mock parse function called');
+  return { ast: null };
 }
 
-// Export the patched function
-module.exports = requireWithFriendlyError;
+function parseAsync() {
+  console.log('🚫 Mock parseAsync function called');
+  return Promise.resolve({ ast: null });
+}
+
+// Export both CommonJS and ES module formats
+module.exports = { parse, parseAsync };
+export { parse, parseAsync };
+export default { parse, parseAsync };
 `;
 
   fs.writeFileSync(rollupNativePath, patchedContent);

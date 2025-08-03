@@ -49,15 +49,12 @@ try {
 } catch (error) {
   console.error("❌ Vite build failed, trying alternative approach...");
 
-  // Alternative: Try building with esbuild directly
-  console.log("🔄 Trying esbuild fallback...");
+  // Alternative: Try building with webpack (avoids Rollup entirely)
+  console.log("🔄 Trying webpack build...");
   try {
-    execSync(
-      "npx esbuild src/index.tsx --bundle --outdir=dist --format=esm --target=esnext",
-      { stdio: "inherit" }
-    );
-    console.log("✅ Build completed with esbuild fallback");
-  } catch (esbuildError) {
+    execSync("node scripts/build-webpack.js", { stdio: "inherit" });
+    console.log("✅ Build completed with webpack");
+  } catch (webpackError) {
     console.error("❌ All build methods failed");
     process.exit(1);
   }
