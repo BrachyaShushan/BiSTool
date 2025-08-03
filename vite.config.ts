@@ -3,6 +3,10 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import fs from "fs";
 
+// Force disable Rollup native modules
+process.env.ROLLUP_SKIP_NATIVE = "true";
+process.env.ROLLUP_SKIP_NATIVE_BINARIES = "true";
+
 // Enhanced plugin to handle asset paths for VS Code extension
 function vsCodeExtensionPlugin() {
   return {
@@ -118,6 +122,7 @@ export default defineConfig({
       buildStart() {
         // Set environment variable to skip native modules
         process.env.ROLLUP_SKIP_NATIVE = "true";
+        process.env.ROLLUP_SKIP_NATIVE_BINARIES = "true";
         console.log(
           "🔧 Rollup native modules disabled for platform compatibility"
         );

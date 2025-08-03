@@ -1,11 +1,12 @@
 [build]
-  command = "npm ci --legacy-peer-deps && ROLLUP_SKIP_NATIVE=true NODE_OPTIONS='--max-old-space-size=4096' npm run build"
+  command = "npm ci --legacy-peer-deps && npm run build:netlify"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
   NPM_FLAGS = "--legacy-peer-deps"
   ROLLUP_SKIP_NATIVE = "true"
+  ROLLUP_SKIP_NATIVE_BINARIES = "true"
   NODE_OPTIONS = "--max-old-space-size=4096"
 
 [[redirects]]
