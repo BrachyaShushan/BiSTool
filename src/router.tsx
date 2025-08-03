@@ -22,7 +22,7 @@ const router = createBrowserRouter([
                 <AppLayout />
             </Providers>
         ),
-        errorElement: <ErrorBoundary />,
+        errorElement: <ErrorBoundary>{null}</ErrorBoundary>,
         children: [
             { index: true, element: <WelcomeScreen /> },
             { path: "details/:type/:id", element: <ResultDetailPage /> },

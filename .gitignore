@@ -4,3 +4,5 @@ build
 test-results
 playwright-report
 backend
+dist
+*.vsix

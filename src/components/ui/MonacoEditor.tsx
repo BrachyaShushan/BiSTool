@@ -16,8 +16,212 @@ import { Card, Toggle, IconButton } from './index';
 import { EDITOR_OPTIONS } from '../../constants/requestConfig';
 import IconWrapper from './IconWrapper';
 
+// Type declarations for VS Code extension environment
+declare global {
+    interface Window {
+        monaco?: typeof monaco;
+        acquireVsCodeApi?: () => any;
+        vscode?: {
+            getState: () => { webviewUri?: string } | undefined;
+        };
+    }
+}
+
 // Dynamically import Monaco Editor to reduce initial bundle size
 const MonacoEditorEditor = lazy(() => import('@monaco-editor/react').then(module => ({ default: module.Editor })));
+
+// Pre-load Monaco Editor CSS for VS Code extension
+const preloadMonacoCSS = () => {
+    // Check if we're in a VS Code extension environment
+    const isVSCodeExtension = typeof window.acquireVsCodeApi === 'function';
+
+    if (isVSCodeExtension) {
+        // Find and load Monaco Editor CSS files
+        const monacoCSSLinks = document.querySelectorAll('link[href*="monaco-editor"]');
+        monacoCSSLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            if (href && href.startsWith('/')) {
+                // Convert absolute path to relative path
+                const relativePath = '.' + href;
+                link.setAttribute('href', relativePath);
+            }
+        });
+
+        // Try multiple possible CSS file patterns
+        const possibleCSSFiles = [
+            'monaco-editor-CVj9lebq.css',
+            'monaco-editor.css',
+            'monaco-editor-*.css'
+        ];
+
+        possibleCSSFiles.forEach(cssFile => {
+            const cssPath = `./css/${cssFile}`;
+
+            // Check if the CSS is already loaded
+            const existingLink = document.querySelector(`link[href*="${cssFile.replace('*', '')}"]`);
+            if (!existingLink) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.type = 'text/css';
+                link.href = cssPath;
+                link.onerror = () => {
+                    console.warn('Failed to load Monaco Editor CSS:', cssPath);
+                };
+                link.onload = () => {
+                    console.log('Successfully loaded Monaco Editor CSS:', cssPath);
+                };
+                document.head.appendChild(link);
+            }
+        });
+
+        // Also try to load from the webview URI if available
+        if (window.vscode) {
+            const webviewUri = window.vscode.getState?.()?.webviewUri;
+            if (webviewUri) {
+                const webviewCSSPath = `${webviewUri}/css/monaco-editor-CVj9lebq.css`;
+                const webviewLink = document.createElement('link');
+                webviewLink.rel = 'stylesheet';
+                webviewLink.type = 'text/css';
+                webviewLink.href = webviewCSSPath;
+                webviewLink.onerror = () => {
+                    console.warn('Failed to load Monaco Editor CSS from webview:', webviewCSSPath);
+                };
+                webviewLink.onload = () => {
+                    console.log('Successfully loaded Monaco Editor CSS from webview:', webviewCSSPath);
+                };
+                document.head.appendChild(webviewLink);
+            }
+        }
+    }
+};
+
+// Configure Monaco Editor for VS Code extension environment
+const configureMonacoForExtension = () => {
+    // Check if we're in a VS Code extension environment
+    const isVSCodeExtension = typeof window.acquireVsCodeApi === 'function';
+
+    if (isVSCodeExtension) {
+        // Pre-load CSS first
+        preloadMonacoCSS();
+
+        // Override Monaco Editor's CSS loading to handle extension paths
+        if (window.monaco) {
+            const originalLoadCSS = window.monaco.editor?.create?.prototype?.loadCSS;
+            if (originalLoadCSS) {
+                window.monaco.editor.create.prototype.loadCSS = function (cssPath: string) {
+                    // Convert absolute paths to relative paths for VS Code extension
+                    if (cssPath.startsWith('/')) {
+                        cssPath = '.' + cssPath;
+                    }
+                    return originalLoadCSS.call(this, cssPath);
+                };
+            }
+        }
+
+        // Intercept dynamic CSS loading
+        const originalCreateElement = document.createElement;
+        document.createElement = function (tagName: string) {
+            const element = originalCreateElement.call(this, tagName);
+            if (tagName.toLowerCase() === 'link') {
+                const originalSetAttribute = element.setAttribute;
+                element.setAttribute = function (name: string, value: string) {
+                    if (name === 'href' && value && value.startsWith('/')) {
+                        // Convert absolute paths to relative paths
+                        value = '.' + value;
+                    }
+                    return originalSetAttribute.call(this, name, value);
+                };
+            }
+            return element;
+        };
+    }
+};
+
+// Error boundary component for Monaco Editor
+class MonacoErrorBoundary extends React.Component<
+    { children: React.ReactNode; fallback?: React.ReactNode; value?: string; onChange?: (value: string) => void; language?: string },
+    { hasError: boolean; error?: Error }
+> {
+    constructor(props: { children: React.ReactNode; fallback?: React.ReactNode; value?: string; onChange?: (value: string) => void; language?: string }) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+        console.warn('Monaco Editor error caught:', error, errorInfo);
+
+        // Log additional debugging information for VS Code extension
+        const isVSCodeExtension = typeof window.acquireVsCodeApi === 'function';
+        if (isVSCodeExtension) {
+            console.log('VS Code Extension Environment detected');
+            console.log('Available CSS links:', document.querySelectorAll('link[href*="monaco-editor"]'));
+            console.log('Document ready state:', document.readyState);
+            console.log('Window monaco object:', !!window.monaco);
+        }
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return this.props.fallback || (
+                <div className="flex flex-col items-center justify-center p-4 text-sm text-gray-500 border border-gray-200 rounded-md bg-gray-50">
+                    <div className="text-center mb-4">
+                        <div className="mb-2 text-red-500">
+                            <FiX className="w-5 h-5 mx-auto" />
+                        </div>
+                        <p>Monaco Editor failed to load</p>
+                        <p className="text-xs text-gray-400 mt-1">CSS loading issue detected</p>
+                    </div>
+
+                    {/* Fallback textarea for basic editing */}
+                    <div className="w-full">
+                        <div className="mb-2 text-xs text-gray-600">
+                            Fallback Editor ({this.props.language || 'text'})
+                        </div>
+                        <textarea
+                            value={this.props.value || ''}
+                            onChange={(e) => this.props.onChange?.(e.target.value)}
+                            className="w-full h-32 p-2 text-sm font-mono border border-gray-300 rounded resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter your code here..."
+                            style={{
+                                fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", "Monaco", "Menlo", "Consolas", monospace',
+                                fontSize: '14px',
+                                lineHeight: '1.5'
+                            }}
+                        />
+                    </div>
+
+                    <button
+                        onClick={() => {
+                            this.setState({ hasError: false });
+                            // Force reload Monaco Editor CSS
+                            const isVSCodeExtension = typeof window.acquireVsCodeApi === 'function';
+                            if (isVSCodeExtension) {
+                                // Remove existing Monaco CSS links
+                                document.querySelectorAll('link[href*="monaco-editor"]').forEach(link => {
+                                    link.remove();
+                                });
+                                // Re-trigger CSS loading
+                                setTimeout(() => {
+                                    preloadMonacoCSS();
+                                    configureMonacoForExtension();
+                                }, 100);
+                            }
+                        }}
+                        className="mt-3 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                    >
+                        Retry Monaco Editor
+                    </button>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
 
 export interface MonacoEditorProps {
     value?: string;
@@ -133,6 +337,11 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         transparentBackground,
         backgroundOpacity
     });
+
+    // Configure Monaco Editor for extension environment on mount
+    useEffect(() => {
+        configureMonacoForExtension();
+    }, []);
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -854,25 +1063,46 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                             )}
 
                             <div className={localOptions.transparentBackground ? 'monaco-transparent' : ''}>
-                                <Suspense fallback={
-                                    <div
-                                        className="flex items-center justify-center border border-gray-300 rounded-md bg-gray-50"
-                                        style={{ height, width }}
-                                    >
-                                        <div className="text-gray-500">Loading editor...</div>
-                                    </div>
-                                }>
-                                    <MonacoEditorEditor
-                                        height={height}
-                                        width={width}
-                                        language={language}
-                                        value={value}
-                                        {...(onChange && { onChange })}
-                                        onMount={handleEditorDidMount}
-                                        theme={editorTheme}
-                                        options={combinedOptions}
-                                    />
-                                </Suspense>
+                                <MonacoErrorBoundary
+                                    value={value}
+                                    onChange={onChange || (() => { })}
+                                    language={language}
+                                >
+                                    <Suspense fallback={
+                                        <div
+                                            className="flex items-center justify-center border border-gray-300 rounded-md bg-gray-50"
+                                            style={{ height, width }}
+                                        >
+                                            <div className="text-gray-500">Loading editor...</div>
+                                        </div>
+                                    }>
+                                        <MonacoEditorEditor
+                                            height={height}
+                                            width={width}
+                                            language={language}
+                                            value={value}
+                                            {...(onChange && { onChange })}
+                                            onMount={handleEditorDidMount}
+                                            theme={editorTheme}
+                                            options={combinedOptions}
+                                            beforeMount={(monaco) => {
+                                                // Additional configuration for VS Code extension
+                                                if (typeof window.acquireVsCodeApi === 'function') {
+                                                    // Ensure CSS paths are handled correctly
+                                                    const originalLoadCSS = monaco.editor?.create?.prototype?.loadCSS;
+                                                    if (originalLoadCSS) {
+                                                        monaco.editor.create.prototype.loadCSS = function (cssPath: string) {
+                                                            if (cssPath.startsWith('/')) {
+                                                                cssPath = '.' + cssPath;
+                                                            }
+                                                            return originalLoadCSS.call(this, cssPath);
+                                                        };
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </Suspense>
+                                </MonacoErrorBoundary>
                             </div>
                         </div>
                     </Card>
@@ -1151,29 +1381,50 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
                         {/* Fullscreen Editor */}
                         <div className="flex-1 relative" style={{ height: 'calc(100vh - 80px)' }}>
-                            <MonacoEditorEditor
+                            <MonacoErrorBoundary
                                 value={value}
                                 onChange={onChange || (() => { })}
-                                onMount={handleEditorDidMount}
                                 language={language}
-                                theme={theme}
-                                height="100%"
-                                width="100%"
-                                options={{
-                                    ...EDITOR_OPTIONS,
-                                    ...options,
-                                    fontSize: localOptions.fontSize,
-                                    tabSize: localOptions.tabSize,
-                                    wordWrap: localOptions.wordWrap,
-                                    lineNumbers: localOptions.showLineNumbers ? 'on' : 'off',
-                                    minimap: { enabled: localOptions.showMinimap },
-                                    fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", "Monaco", "Menlo", "Consolas", monospace',
-                                    fontLigatures: true,
-                                    scrollBeyondLastLine: scrollBeyondLastLine,
-                                    readOnly: readOnly,
-                                    placeholder: placeholder,
-                                }}
-                            />
+                            >
+                                <MonacoEditorEditor
+                                    value={value}
+                                    onChange={onChange || (() => { })}
+                                    onMount={handleEditorDidMount}
+                                    language={language}
+                                    theme={theme}
+                                    height="100%"
+                                    width="100%"
+                                    options={{
+                                        ...EDITOR_OPTIONS,
+                                        ...options,
+                                        fontSize: localOptions.fontSize,
+                                        tabSize: localOptions.tabSize,
+                                        wordWrap: localOptions.wordWrap,
+                                        lineNumbers: localOptions.showLineNumbers ? 'on' : 'off',
+                                        minimap: { enabled: localOptions.showMinimap },
+                                        fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", "Monaco", "Menlo", "Consolas", monospace',
+                                        fontLigatures: true,
+                                        scrollBeyondLastLine: scrollBeyondLastLine,
+                                        readOnly: readOnly,
+                                        placeholder: placeholder,
+                                    }}
+                                    beforeMount={(monaco) => {
+                                        // Additional configuration for VS Code extension
+                                        if (typeof window.acquireVsCodeApi === 'function') {
+                                            // Ensure CSS paths are handled correctly
+                                            const originalLoadCSS = monaco.editor?.create?.prototype?.loadCSS;
+                                            if (originalLoadCSS) {
+                                                monaco.editor.create.prototype.loadCSS = function (cssPath: string) {
+                                                    if (cssPath.startsWith('/')) {
+                                                        cssPath = '.' + cssPath;
+                                                    }
+                                                    return originalLoadCSS.call(this, cssPath);
+                                                };
+                                            }
+                                        }
+                                    }}
+                                />
+                            </MonacoErrorBoundary>
                         </div>
                     </div>
                 </div>

@@ -1,50 +1,80 @@
-import React from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 
-interface ErrorBoundaryProps {
-    children?: React.ReactNode;
+interface Props {
+    children: ReactNode;
+    fallback?: ReactNode;
 }
 
-interface ErrorBoundaryState {
+interface State {
     hasError: boolean;
-    error: Error | null;
-    errorInfo: React.ErrorInfo | null;
+    error?: Error;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-    constructor(props: ErrorBoundaryProps) {
+class ErrorBoundary extends Component<Props, State> {
+    constructor(props: Props) {
         super(props);
-        this.state = { hasError: false, error: null, errorInfo: null };
+        this.state = { hasError: false };
     }
 
-    static getDerivedStateFromError(error: Error) {
-        return { hasError: true, error, errorInfo: null };
+    static getDerivedStateFromError(error: Error): State {
+        return { hasError: true, error };
     }
 
-    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-        this.setState({ error, errorInfo });
-        // You can log error to an error reporting service here
+    componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+        console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
 
     render() {
         if (this.state.hasError) {
-            return (
-                <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800">
-                    <h2 className="text-2xl font-bold text-red-700 dark:text-red-300 mb-2">Something went wrong.</h2>
-                    <p className="text-gray-700 dark:text-gray-200 mb-4">An unexpected error occurred. Please try refreshing the page or contact support if the problem persists.</p>
-                    {this.state.error && (
-                        <pre className="bg-red-100 dark:bg-red-800/40 text-red-800 dark:text-red-200 rounded p-4 text-xs overflow-x-auto max-w-xl mb-2">
-                            {this.state.error.toString()}
-                        </pre>
-                    )}
-                    {this.state.errorInfo && (
-                        <details className="text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap max-w-xl">
-                            {this.state.errorInfo.componentStack}
-                        </details>
-                    )}
+            // Custom fallback UI
+            return this.props.fallback || (
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                    <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
+                        <div className="flex items-center mb-4">
+                            <div className="flex-shrink-0">
+                                <svg className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-lg font-medium text-gray-900">Application Error</h3>
+                                <p className="text-sm text-gray-500">Something went wrong while loading the application.</p>
+                            </div>
+                        </div>
+
+                        {this.state.error && (
+                            <div className="mt-4">
+                                <details className="text-sm">
+                                    <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
+                                        Show error details
+                                    </summary>
+                                    <div className="mt-2 p-3 bg-gray-100 rounded text-xs font-mono text-red-600 overflow-auto max-h-32">
+                                        {this.state.error.message}
+                                    </div>
+                                </details>
+                            </div>
+                        )}
+
+                        <div className="mt-6 flex space-x-3">
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                Reload Application
+                            </button>
+                            <button
+                                onClick={() => this.setState({ hasError: false })}
+                                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
                 </div>
             );
         }
-        return this.props.children ?? null;
+
+        return this.props.children;
     }
 }
 

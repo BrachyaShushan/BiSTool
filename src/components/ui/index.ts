@@ -17,6 +17,7 @@ export { default as ModeSwitcher } from "./ModeSwitcher";
 export { default as IconWrapper } from "./IconWrapper";
 export { default as OptionButton } from "./OptionButton";
 export { default as ResponsiveWorkflowSelector } from "./ResponsiveWorkflowSelector";
+export { default as ResponsiveTabSelector } from "./ResponsiveTabSelector";
 export { default as VerticalCategorySelector } from "./VerticalCategorySelector";
 export { default as SearchBar } from "./SearchBar";
 
@@ -41,6 +42,10 @@ export type {
   ResponsiveWorkflowSelectorProps,
   Section,
 } from "./ResponsiveWorkflowSelector";
+export type {
+  ResponsiveTabSelectorProps,
+  TabSection,
+} from "./ResponsiveTabSelector";
 export type {
   VerticalCategorySelectorProps,
   Category,

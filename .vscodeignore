@@ -1,0 +1,45 @@
+# Source files
+src/**/*.ts
+src/**/*.tsx
+src/**/*.js
+src/**/*.jsx
+!src/extension/**
+
+# Development files
+.vscode/**
+.git/**
+.gitignore
+README.md
+VSCODE_EXTENSION_README.md
+*.log
+debug.log
+
+# Build artifacts (except dist)
+build/**
+node_modules/**
+
+# Test files
+tests/**
+test-results/**
+playwright-report/**
+playwright.config.ts
+
+# Development configs
+.eslintrc.json
+postcss.config.js
+tailwind.config.js
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+
+# Other files
+sample-data.json
+PROMPT_CONFIG_FIXES.md
+REACT_DEVTOOLS_SETUP.md
+SEARCH_AND_WIZARD_FEATURES.md
+
+# Keep only the built React app and extension
+!dist/**
+!src/extension/** 
+!public/icon.png
+backend/**

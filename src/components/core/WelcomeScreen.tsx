@@ -9,7 +9,7 @@ import {
     FiCommand, FiTerminal, FiPackage, FiServer, FiCpu, FiWifi, FiEye, FiEdit3,
     FiSun, FiMoon
 } from "react-icons/fi";
-import { Button, Badge, Card, IconWrapper, SearchBar } from "../ui";
+import { Button, Badge, Card, IconWrapper, SearchBar, ResponsiveTabSelector } from "../ui";
 import { useAppContext } from "../../context/AppContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useSearchContext } from "../../context/SearchContext";
@@ -235,13 +235,110 @@ const WelcomeScreen: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-            {/* Enhanced Background Pattern */}
-            <div className="overflow-hidden fixed inset-0">
-                <div className="fixed top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-5 animate-pulse translate-x-48 -translate-y-48"></div>
-                <div className="fixed bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full opacity-5 animate-pulse -translate-x-48 translate-y-48" style={{ animationDelay: '2s' }}></div>
-                <div className="fixed top-1/2 left-1/2 w-64 h-64 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full opacity-5 animate-pulse -translate-x-32 -translate-y-32" style={{ animationDelay: '4s' }}></div>
-                <div className="fixed top-1/4 left-1/4 w-32 h-32 bg-gradient-to-br from-orange-500 to-red-600 rounded-full opacity-5 animate-pulse" style={{ animationDelay: '1s' }}></div>
+            {/* Enhanced Moving Background Bubbles */}
+            <div className="overflow-hidden fixed inset-0 pointer-events-none">
+                {/* Bubble 1 - Large blue bubble moving diagonally */}
+                <div
+                    className="fixed w-96 h-96 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-5 animate-bounce"
+                    style={{
+                        animation: 'moveBubble1 20s linear infinite',
+                        animationDelay: '0s'
+                    }}
+                ></div>
+
+                {/* Bubble 2 - Purple bubble moving in a wave pattern */}
+                <div
+                    className="fixed w-80 h-80 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full opacity-5 animate-pulse"
+                    style={{
+                        animation: 'moveBubble2 25s linear infinite',
+                        animationDelay: '2s'
+                    }}
+                ></div>
+
+                {/* Bubble 3 - Green bubble moving in a circular path */}
+                <div
+                    className="fixed w-64 h-64 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full opacity-5 animate-pulse"
+                    style={{
+                        animation: 'moveBubble3 30s linear infinite',
+                        animationDelay: '4s'
+                    }}
+                ></div>
+
+                {/* Bubble 4 - Orange bubble moving horizontally */}
+                <div
+                    className="fixed w-32 h-32 bg-gradient-to-br from-orange-500 to-red-600 rounded-full opacity-5 animate-pulse"
+                    style={{
+                        animation: 'moveBubble4 15s linear infinite',
+                        animationDelay: '1s'
+                    }}
+                ></div>
+
+                {/* Bubble 5 - Small cyan bubble moving vertically */}
+                <div
+                    className="fixed w-24 h-24 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full opacity-5 animate-pulse"
+                    style={{
+                        animation: 'moveBubble5 18s linear infinite',
+                        animationDelay: '3s'
+                    }}
+                ></div>
+
+                {/* Bubble 6 - Medium yellow bubble moving in a figure-8 pattern */}
+                <div
+                    className="fixed w-48 h-48 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full opacity-5 animate-pulse"
+                    style={{
+                        animation: 'moveBubble6 22s linear infinite',
+                        animationDelay: '5s'
+                    }}
+                ></div>
             </div>
+
+            {/* CSS Animations for Bubble Movement */}
+            <style>{`
+                @keyframes moveBubble1 {
+                    0% { transform: translate(-100px, -100px) rotate(0deg); }
+                    25% { transform: translate(calc(100vw - 200px), 100px) rotate(90deg); }
+                    50% { transform: translate(calc(100vw - 100px), calc(100vh - 200px)) rotate(180deg); }
+                    75% { transform: translate(200px, calc(100vh - 100px)) rotate(270deg); }
+                    100% { transform: translate(-100px, -100px) rotate(360deg); }
+                }
+                
+                @keyframes moveBubble2 {
+                    0% { transform: translate(calc(100vw - 100px), -100px) scale(1); }
+                    20% { transform: translate(calc(100vw - 300px), 200px) scale(1.2); }
+                    40% { transform: translate(calc(100vw - 500px), calc(100vh - 300px)) scale(0.8); }
+                    60% { transform: translate(300px, calc(100vh - 100px)) scale(1.1); }
+                    80% { transform: translate(100px, 300px) scale(0.9); }
+                    100% { transform: translate(calc(100vw - 100px), -100px) scale(1); }
+                }
+                
+                @keyframes moveBubble3 {
+                    0% { transform: translate(50vw, 50vh) rotate(0deg); }
+                    25% { transform: translate(calc(50vw + 200px), calc(50vh - 200px)) rotate(90deg); }
+                    50% { transform: translate(calc(50vw - 200px), calc(50vh - 200px)) rotate(180deg); }
+                    75% { transform: translate(calc(50vw - 200px), calc(50vh + 200px)) rotate(270deg); }
+                    100% { transform: translate(50vw, 50vh) rotate(360deg); }
+                }
+                
+                @keyframes moveBubble4 {
+                    0% { transform: translate(-100px, 50vh); }
+                    50% { transform: translate(calc(100vw + 100px), calc(50vh - 100px)); }
+                    100% { transform: translate(-100px, 50vh); }
+                }
+                
+                @keyframes moveBubble5 {
+                    0% { transform: translate(50vw, -100px); }
+                    50% { transform: translate(calc(50vw + 100px), calc(100vh + 100px)); }
+                    100% { transform: translate(50vw, -100px); }
+                }
+                
+                @keyframes moveBubble6 {
+                    0% { transform: translate(100px, 100px) scale(1); }
+                    25% { transform: translate(calc(100vw - 200px), 100px) scale(1.3); }
+                    50% { transform: translate(calc(100vw - 100px), calc(100vh - 200px)) scale(0.7); }
+                    75% { transform: translate(200px, calc(100vh - 100px)) scale(1.1); }
+                    100% { transform: translate(100px, 100px) scale(1); }
+                }
+            `}</style>
 
             <div className="relative px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 {/* Theme Toggle - Top Right */}
@@ -353,28 +450,21 @@ const WelcomeScreen: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Enhanced Tab Navigation */}
+                {/* Enhanced Responsive Tab Navigation */}
                 <div className="flex justify-center mb-8">
-                    <div className="flex p-2 space-x-2 rounded-2xl border shadow-lg backdrop-blur-sm bg-white/80 border-gray-200/50 dark:bg-gray-800/80 dark:border-gray-700/50">
-                        {[
-                            { id: 'overview', label: 'Overview', icon: FiEye },
-                            { id: 'features', label: 'All Features', icon: FiGrid },
-                            { id: 'getting-started', label: 'Getting Started', icon: FiPlay },
-                            { id: 'system', label: 'System Status', icon: FiMonitor },
-                            { id: 'activity', label: 'Activity', icon: FiActivity }
-                        ].map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex items-center px-6 py-3 space-x-2 rounded-xl font-medium transition-all duration-200 ${activeTab === tab.id
-                                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    }`}
-                            >
-                                <tab.icon className="w-4 h-4" />
-                                <span>{tab.label}</span>
-                            </button>
-                        ))}
+                    <div className="w-full max-w-4xl">
+                        <ResponsiveTabSelector
+                            sections={[
+                                { id: 'overview', label: 'Overview', icon: FiEye },
+                                { id: 'features', label: 'All Features', icon: FiGrid },
+                                { id: 'getting-started', label: 'Getting Started', icon: FiPlay },
+                                { id: 'system', label: 'System Status', icon: FiMonitor },
+                                { id: 'activity', label: 'Activity', icon: FiActivity }
+                            ]}
+                            activeSection={activeTab}
+                            onSectionChange={(sectionId) => setActiveTab(sectionId as any)}
+                            className="p-2 rounded-2xl border shadow-lg backdrop-blur-sm bg-white/80 border-gray-200/50 dark:bg-gray-800/80 dark:border-gray-700/50"
+                        />
                     </div>
                 </div>
 

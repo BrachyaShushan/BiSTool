@@ -33,7 +33,8 @@
     ".next",
     "coverage",
     "**/*.spec.ts",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "src/extension"
   ],
   "references": [
     {

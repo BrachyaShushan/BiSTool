@@ -14,7 +14,7 @@ const NotFoundPage: React.FC = () => {
                 Please check the URL or return to the home page.
             </p>
             <button
-                onClick={() => navigate('/url')}
+                onClick={() => navigate('/')}
                 className="px-6 py-3 font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition-all duration-200"
             >
                 Go to Home
