@@ -143,6 +143,17 @@ export default defineConfig({
           return `assets/[name]-[hash].${ext}`;
         },
       },
+      // Add external configuration to handle optional dependencies
+      external: (id) => {
+        // Handle optional Rollup dependencies gracefully
+        if (
+          id.includes("@rollup/rollup-linux-x64-gnu") ||
+          id.includes("@rollup/rollup-win32-x64-msvc")
+        ) {
+          return true;
+        }
+        return false;
+      },
     },
     // Increase chunk size warning limit if needed
     chunkSizeWarningLimit: 1000,
