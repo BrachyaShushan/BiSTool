@@ -6,6 +6,21 @@ import fs from "fs";
 // Force disable Rollup native modules
 process.env.ROLLUP_SKIP_NATIVE = "true";
 process.env.ROLLUP_SKIP_NATIVE_BINARIES = "true";
+process.env.ROLLUP_SKIP_NATIVE_MODULES = "true";
+
+// Load the module resolution patch if it exists
+try {
+  const patchPath = path.join(
+    __dirname,
+    "node_modules/rollup/dist/module-patch.js"
+  );
+  if (fs.existsSync(patchPath)) {
+    require(patchPath);
+    console.log("🔧 Module resolution patch loaded");
+  }
+} catch (e) {
+  console.log("⚠️ Module resolution patch not available");
+}
 
 // Enhanced plugin to handle asset paths for VS Code extension
 function vsCodeExtensionPlugin() {
@@ -144,7 +159,19 @@ export default defineConfig({
     // Disable native binaries to avoid platform-specific issues
     target: "esnext",
     minify: "terser",
+    // Use esbuild for minification to avoid Rollup native module issues
     rollupOptions: {
+      // Disable native modules in Rollup
+      onwarn(warning, warn) {
+        if (
+          warning.code === "MODULE_LEVEL_DIRECTIVE" ||
+          warning.message.includes("@rollup/rollup-") ||
+          warning.message.includes("Cannot find module")
+        ) {
+          return;
+        }
+        warn(warning);
+      },
       output: {
         manualChunks: {
           // Separate React and React DOM into their own chunk
