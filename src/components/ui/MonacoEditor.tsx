@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useEffect, useState, Suspense, lazy } from 'react';
-import { Editor } from '@monaco-editor/react';
+import { createPortal } from 'react-dom';
 import * as monaco from 'monaco-editor';
 import { useTheme } from '../../context/ThemeContext';
 import { IconType } from 'react-icons';
@@ -12,7 +12,7 @@ import {
     FiCheck,
     FiX
 } from 'react-icons/fi';
-import { Card, Toggle } from './index';
+import { Card, Toggle, IconButton } from './index';
 import { EDITOR_OPTIONS } from '../../constants/requestConfig';
 import IconWrapper from './IconWrapper';
 
@@ -526,6 +526,22 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         setIsFullscreen(!isFullscreen);
     }, [isFullscreen]);
 
+    // Handle escape key to exit fullscreen
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isFullscreen) {
+                handleFullscreen();
+            }
+        };
+
+        if (isFullscreen) {
+            document.addEventListener('keydown', handleEscape);
+            return () => document.removeEventListener('keydown', handleEscape);
+        }
+
+        return undefined;
+    }, [isFullscreen, handleFullscreen]);
+
     // Update editor options when local options change
     useEffect(() => {
         if (editorRef.current) {
@@ -560,12 +576,10 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         switch (variant) {
             case 'elevated':
                 return 'shadow-lg shadow-gray-200/50 dark:shadow-gray-900/50';
-            case 'outlined':
-                return 'border-2 border-gray-300 dark:border-gray-600';
             case 'compact':
-                return 'border border-gray-200 dark:border-gray-700 rounded-lg';
+                return 'rounded-lg';
             default:
-                return 'border border-gray-200 dark:border-gray-700';
+                return '';
         }
     };
 
@@ -866,9 +880,9 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
             </div>
 
             {/* Settings Panel - Positioned outside Card for proper floating */}
-            {showSettings && (
+            {showSettings && createPortal(
                 <div
-                    className="fixed inset-0 z-[100] pointer-events-auto"
+                    className="fixed inset-0 z-[9998] pointer-events-auto"
                     onClick={() => setShowSettings(false)}
                 >
                     <div
@@ -1054,7 +1068,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Status Messages */}
@@ -1075,42 +1090,97 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     );
 
     // Render fullscreen version if needed
+
     if (isFullscreen) {
-        return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-                <div className="w-full h-full overflow-hidden bg-white rounded-lg max-w-none dark:bg-gray-800">
-                    <div className="h-full">
-                        {React.cloneElement(editorContent, {
-                            className: `h-full ${className}`,
-                            children: React.Children.map(editorContent.props.children, (child) => {
-                                if (child?.type === Card) {
-                                    return React.cloneElement(child, {
-                                        className: `h-full ${child.props.className}`,
-                                        children: React.Children.map(child.props.children, (grandChild) => {
-                                            if (grandChild?.props?.className?.includes('relative')) {
-                                                return React.cloneElement(grandChild, {
-                                                    className: `${grandChild.props.className} h-full`,
-                                                    children: React.Children.map(grandChild.props.children, (greatGrandChild) => {
-                                                        if (greatGrandChild?.type === Editor) {
-                                                            return React.cloneElement(greatGrandChild, {
-                                                                height: '100%'
-                                                            });
-                                                        }
-                                                        return greatGrandChild;
-                                                    })
-                                                });
-                                            }
-                                            return grandChild;
-                                        })
-                                    });
-                                }
-                                return child;
-                            })
-                        })}
+        const fullscreenContent = (
+            <div
+                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 9999,
+                    width: '100vw',
+                    height: '100vh'
+                }}
+                onClick={(e) => {
+                    if (e.target === e.currentTarget) {
+                        handleFullscreen();
+                    }
+                }}
+            >
+                <div className="w-full h-full overflow-hidden bg-white dark:bg-gray-800" style={{ width: '100vw', height: '100vh' }}>
+                    <div className="h-full flex flex-col">
+                        {/* Fullscreen Header */}
+                        <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    {Icon && <Icon className="w-5 h-5 text-gray-500" />}
+                                    <div>
+                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                                            {label || 'Editor'}
+                                        </h3>
+                                        {description && (
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
+                                        )}
+                                        <p className="text-xs text-gray-400 dark:text-gray-500">Press Escape to exit</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    {allowCopy && (
+                                        <IconButton
+                                            onClick={handleCopy}
+                                            variant="ghost"
+                                            size="sm"
+                                            icon={FiCopy}
+                                            title="Copy to clipboard"
+                                        />
+                                    )}
+                                    <IconButton
+                                        onClick={handleFullscreen}
+                                        variant="ghost"
+                                        size="sm"
+                                        icon={FiMinimize2}
+                                        title="Exit fullscreen (or press Escape)"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Fullscreen Editor */}
+                        <div className="flex-1 relative" style={{ height: 'calc(100vh - 80px)' }}>
+                            <MonacoEditorEditor
+                                value={value}
+                                onChange={onChange || (() => { })}
+                                onMount={handleEditorDidMount}
+                                language={language}
+                                theme={theme}
+                                height="100%"
+                                width="100%"
+                                options={{
+                                    ...EDITOR_OPTIONS,
+                                    ...options,
+                                    fontSize: localOptions.fontSize,
+                                    tabSize: localOptions.tabSize,
+                                    wordWrap: localOptions.wordWrap,
+                                    lineNumbers: localOptions.showLineNumbers ? 'on' : 'off',
+                                    minimap: { enabled: localOptions.showMinimap },
+                                    fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", "Monaco", "Menlo", "Consolas", monospace',
+                                    fontLigatures: true,
+                                    scrollBeyondLastLine: scrollBeyondLastLine,
+                                    readOnly: readOnly,
+                                    placeholder: placeholder,
+                                }}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
         );
+
+        return createPortal(fullscreenContent, document.body);
     }
 
     return editorContent;
