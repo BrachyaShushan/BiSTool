@@ -6,6 +6,7 @@ src/**/*.jsx
 !src/extension/**
 
 # Development files
+.env
 .vscode/**
 .git/**
 .gitignore
