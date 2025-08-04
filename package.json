@@ -4,7 +4,7 @@
   "description": "API Testing Tool with YAML generation and AI test creation",
   "version": "1.0.0",
   "publisher": "bistool",
-  "icon": "public/icon.png",
+  "icon": "dist/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/bistool/bistool.git"
@@ -16,6 +16,9 @@
     "Other"
   ],
   "main": "./dist/extension/extension.js",
+  "activationEvents": [
+    "onCommand:bistool.open"
+  ],
   "contributes": {
     "commands": [
       {
@@ -42,6 +45,7 @@
     "build:extension": "tsc -p tsconfig.extension.json",
     "build:full": "node scripts/build-extension.js",
     "dev:extension": "node scripts/dev-extension.js",
+    "test:extension": "node scripts/test-extension.js",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx --fix",
     "lint:check": "eslint src --ext .ts,.tsx",

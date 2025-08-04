@@ -34,7 +34,30 @@ try {
   console.log("\n🔧 Building VS Code extension...");
   execSync("npm run build:extension", { stdio: "inherit" });
 
-  // Step 4: Check if vsce is installed
+  // Step 4: Verify extension files exist
+  console.log("\n🔍 Verifying extension files...");
+  const extensionFile = path.join(
+    process.cwd(),
+    "dist",
+    "extension",
+    "extension.js"
+  );
+  const indexFile = path.join(process.cwd(), "dist", "index.html");
+  const iconFile = path.join(process.cwd(), "dist", "icon.png");
+
+  if (!fs.existsSync(extensionFile)) {
+    throw new Error("Extension file not found: " + extensionFile);
+  }
+  if (!fs.existsSync(indexFile)) {
+    throw new Error("Index.html not found: " + indexFile);
+  }
+  if (!fs.existsSync(iconFile)) {
+    throw new Error("Icon file not found: " + iconFile);
+  }
+
+  console.log("✅ All required files found");
+
+  // Step 5: Check if vsce is installed
   console.log("\n📦 Checking for vsce...");
   try {
     execSync("vsce --version", { stdio: "pipe" });
@@ -43,9 +66,14 @@ try {
     execSync("npm install -g vsce", { stdio: "inherit" });
   }
 
-  // Step 5: Package extension
+  // Step 6: Package extension
   console.log("\n📦 Packaging extension...");
-  execSync('echo "y\ny" | vsce package', { stdio: "inherit" });
+  try {
+    execSync('echo "y\ny" | vsce package', { stdio: "inherit" });
+  } catch (error) {
+    console.log("Trying alternative packaging method...");
+    execSync("vsce package --no-yarn", { stdio: "inherit" });
+  }
 
   console.log("\n✅ Extension built successfully!");
   console.log("📁 Look for the .vsix file in the current directory");
@@ -54,6 +82,9 @@ try {
   console.log("   2. Go to Extensions (Ctrl+Shift+X)");
   console.log('   3. Click "..." and select "Install from VSIX..."');
   console.log("   4. Choose the generated .vsix file");
+  console.log("\n🔧 To test the extension:");
+  console.log("   1. Press F5 in VS Code to launch extension development host");
+  console.log("   2. Use Ctrl+Shift+P and type 'Open BiSTool'");
 } catch (error) {
   console.error("\n❌ Build failed:", error.message);
   process.exit(1);
