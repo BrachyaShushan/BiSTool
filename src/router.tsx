@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, createHashRouter, Navigate } from "react-router-dom";
 import Providers from "./Providers";
 import URLBuilder from "./components/workflow/URLBuilder";
 import RequestConfig from "./components/workflow/RequestConfig";
@@ -14,7 +14,13 @@ import NotFoundPage from './components/NotFoundPage';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import ProjectRouteWrapper from './components/core/ProjectRouteWrapper';
 
-const router = createBrowserRouter([
+// Check if we're in a VS Code extension environment
+const isVSCodeExtension = typeof window.acquireVsCodeApi === 'function';
+
+// Use hash router for VS Code extension, browser router for web
+const createRouter = isVSCodeExtension ? createHashRouter : createBrowserRouter;
+
+const routes = [
     {
         path: "/",
         element: (
@@ -47,6 +53,8 @@ const router = createBrowserRouter([
             { path: "json", element: <JsonDiffTool /> },
         ],
     },
-]);
+];
+
+const router = createRouter(routes);
 
 export default router; 

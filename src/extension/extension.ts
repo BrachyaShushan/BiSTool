@@ -7,6 +7,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register the command
   let disposable = vscode.commands.registerCommand("bistool.open", () => {
+    console.log("BiSTool command executed!");
+    vscode.window.showInformationMessage("Opening BiSTool...");
     BiSToolPanel.createOrShow(context.extensionUri);
   });
 
@@ -46,8 +48,12 @@ class BiSToolPanel {
           vscode.Uri.joinPath(extensionUri, "dist", "assets"),
           vscode.Uri.joinPath(extensionUri, "dist", "fonts"),
         ],
+        retainContextWhenHidden: true,
       }
     );
+
+    // Set the panel icon
+    panel.iconPath = vscode.Uri.joinPath(extensionUri, "dist", "icon.png");
 
     BiSToolPanel.currentPanel = new BiSToolPanel(panel, extensionUri);
   }
@@ -109,6 +115,7 @@ class BiSToolPanel {
     );
 
     if (!fs.existsSync(indexPath)) {
+      console.warn("Index.html not found at:", indexPath);
       return this._getFallbackHtml();
     }
 
@@ -122,6 +129,36 @@ class BiSToolPanel {
     // Handle relative paths starting with ./
     htmlContent = htmlContent.replace(/href="\.\//g, `href="${reactAppUri}/`);
     htmlContent = htmlContent.replace(/src="\.\//g, `src="${reactAppUri}/`);
+
+    // Handle font-face declarations with absolute paths (most comprehensive)
+    htmlContent = htmlContent.replace(
+      /url\(\/fonts\/([^)]+)\)/g,
+      `url(${reactAppUri}/fonts/$1)`
+    );
+
+    // Handle any remaining absolute font paths in different formats
+    htmlContent = htmlContent.replace(
+      /url\("\/fonts\/([^"]+)"\)/g,
+      `url("${reactAppUri}/fonts/$1")`
+    );
+    htmlContent = htmlContent.replace(
+      /url\('\/fonts\/([^']+)'\)/g,
+      `url('${reactAppUri}/fonts/$1')`
+    );
+
+    // Handle any remaining absolute CSS paths in different formats
+    htmlContent = htmlContent.replace(
+      /url\(\/css\/([^)]+)\)/g,
+      `url(${reactAppUri}/css/$1)`
+    );
+    htmlContent = htmlContent.replace(
+      /url\("\/css\/([^"]+)"\)/g,
+      `url("${reactAppUri}/css/$1")`
+    );
+    htmlContent = htmlContent.replace(
+      /url\('\/css\/([^']+)'\)/g,
+      `url('${reactAppUri}/css/$1')`
+    );
 
     // Handle specific asset paths that might be missed
     htmlContent = htmlContent.replace(
@@ -158,13 +195,31 @@ class BiSToolPanel {
       `src="${reactAppUri}/fonts/`
     );
 
-    // Handle Monaco Editor specific CSS paths
+    // Handle Monaco Editor specific CSS paths - more comprehensive
     htmlContent = htmlContent.replace(
       /href="\/css\/monaco-editor-[^"]+\.css"/g,
       (match) => {
         const cssFileName = match.match(/monaco-editor-[^"]+\.css/)?.[0];
         if (cssFileName) {
           return `href="${reactAppUri}/css/${cssFileName}"`;
+        }
+        return match;
+      }
+    );
+
+    // Handle any Monaco Editor CSS paths that might be missed
+    htmlContent = htmlContent.replace(
+      /href="\/css\/monaco-editor\.css"/g,
+      `href="${reactAppUri}/css/monaco-editor.css"`
+    );
+
+    // Handle dynamic Monaco Editor CSS loading
+    htmlContent = htmlContent.replace(
+      /url\(\/css\/monaco-editor-[^)]+\.css\)/g,
+      (match) => {
+        const cssFileName = match.match(/monaco-editor-[^)]+\.css/)?.[0];
+        if (cssFileName) {
+          return `url(${reactAppUri}/css/${cssFileName})`;
         }
         return match;
       }
@@ -182,23 +237,116 @@ class BiSToolPanel {
       }
     );
 
-    // Add global error handler for CSS loading issues
+    // Final catch-all for any remaining absolute paths in url() functions
+    htmlContent = htmlContent.replace(/url\(\/([^)]+)\)/g, (match, path) => {
+      return `url(${reactAppUri}/${path})`;
+    });
+
+    // Handle any remaining absolute paths in CSS @font-face declarations
+    htmlContent = htmlContent.replace(
+      /@font-face\s*{[^}]*url\s*\(\s*["']?\/fonts\/([^"')]+)["']?\s*\)[^}]*}/g,
+      (match, fontFile) => {
+        return match.replace(
+          /url\s*\(\s*["']?\/fonts\/([^"')]+)["']?\s*\)/g,
+          `url(${reactAppUri}/fonts/$1)`
+        );
+      }
+    );
+
+    // Handle any remaining absolute paths in CSS @import statements
+    htmlContent = htmlContent.replace(
+      /@import\s+["']?\/[^"']+["']?/g,
+      (match) => {
+        return match.replace(/\/[^"']+/, `${reactAppUri}$&`);
+      }
+    );
+
+    // Handle font-face declarations with absolute paths
+    htmlContent = htmlContent.replace(
+      /url\(\/fonts\/([^)]+)\)/g,
+      `url(${reactAppUri}/fonts/$1)`
+    );
+
+    // Handle any remaining absolute font paths
+    htmlContent = htmlContent.replace(
+      /url\("\/fonts\/([^"]+)"\)/g,
+      `url("${reactAppUri}/fonts/$1")`
+    );
+    htmlContent = htmlContent.replace(
+      /url\('\/fonts\/([^']+)'\)/g,
+      `url('${reactAppUri}/fonts/$1')`
+    );
+
+    // Handle any remaining CSS paths that might be missed
+    htmlContent = htmlContent.replace(
+      /url\("\/css\/([^"]+)"\)/g,
+      `url("${reactAppUri}/css/$1")`
+    );
+    htmlContent = htmlContent.replace(
+      /url\('\/css\/([^']+)'\)/g,
+      `url('${reactAppUri}/css/$1')`
+    );
+    htmlContent = htmlContent.replace(
+      /url\(\/css\/([^)]+)\)/g,
+      `url(${reactAppUri}/css/$1)`
+    );
+
+    // Add comprehensive debugging and error handling script
     const errorHandlerScript = `
       <script>
-        // Global error handler for CSS loading issues
+        // Enhanced debugging for VS Code extension
+        console.log('🔧 BiSTool Extension Debug Mode Active');
+        console.log('📍 Base URI:', window.location.href);
+        console.log('🌐 User Agent:', navigator.userAgent);
+        console.log('🔗 React App URI:', '${reactAppUri}');
+        
+        // Global error handler for all resource loading issues
         window.addEventListener('error', function(e) {
-          if (e.message && e.message.includes('Unable to preload CSS')) {
-            console.warn('CSS loading error caught and handled:', e.message);
-            // Don't throw the error, just log it
-            e.preventDefault();
-            return false;
+          console.warn('🚨 Resource loading error:', e.message);
+          console.warn('📁 Target:', e.target);
+          console.warn('🔗 URL:', e.target?.src || e.target?.href);
+          
+          if (e.target && e.target.tagName === 'LINK' && e.target.rel === 'stylesheet') {
+            console.warn('🎨 CSS loading failed:', e.target.href);
+          }
+          if (e.target && e.target.tagName === 'SCRIPT') {
+            console.warn('📜 Script loading failed:', e.target.src);
+          }
+          if (e.target && e.target.tagName === 'IMG') {
+            console.warn('🖼️ Image loading failed:', e.target.src);
           }
         }, true);
+
+        // Handle unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(e) {
+          console.warn('💥 Unhandled promise rejection:', e.reason);
+          console.warn('📋 Stack:', e.reason?.stack);
+        });
+
+        // Monitor all resource loads
+        const observer = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.entryType === 'resource') {
+              console.log('📦 Resource loaded:', entry.name, 'Type:', entry.initiatorType);
+            }
+          }
+        });
+        observer.observe({ entryTypes: ['resource'] });
+
+        // Override fetch to handle relative paths
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+          if (typeof url === 'string' && url.startsWith('/')) {
+            console.log('🔄 Converting absolute path to relative:', url);
+            url = '.' + url;
+          }
+          return originalFetch.call(this, url, options);
+        };
 
         // Handle Monaco Editor CSS loading errors specifically
         window.addEventListener('unhandledrejection', function(e) {
           if (e.reason && e.reason.message && e.reason.message.includes('Unable to preload CSS')) {
-            console.warn('Monaco Editor CSS loading error caught:', e.reason.message);
+            console.warn('🎨 Monaco Editor CSS loading error caught:', e.reason.message);
             e.preventDefault();
             return false;
           }
@@ -209,7 +357,7 @@ class BiSToolPanel {
           const originalLoadCSS = window.monaco.editor?.create?.prototype?.loadCSS;
           if (originalLoadCSS) {
             window.monaco.editor.create.prototype.loadCSS = function(cssPath) {
-              // Convert absolute paths to relative paths for VS Code extension
+              console.log('🎨 Monaco CSS path conversion:', cssPath);
               if (cssPath.startsWith('/')) {
                 cssPath = '.' + cssPath;
               }
@@ -226,7 +374,7 @@ class BiSToolPanel {
             const originalSetAttribute = element.setAttribute;
             element.setAttribute = function(name, value) {
               if (name === 'href' && value && value.startsWith('/')) {
-                // Convert absolute paths to relative paths
+                console.log('🔗 Converting CSS href:', value);
                 value = '.' + value;
               }
               return originalSetAttribute.call(this, name, value);
@@ -234,6 +382,33 @@ class BiSToolPanel {
           }
           return element;
         };
+
+        // Add keyboard shortcut for debugging (Ctrl+Shift+D)
+        document.addEventListener('keydown', function(e) {
+          if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+            console.log('🔧 Debug Info:');
+            console.log('📍 Current URL:', window.location.href);
+            console.log('📁 Document ready state:', document.readyState);
+            console.log('🎨 Stylesheets loaded:', document.styleSheets.length);
+            console.log('📜 Scripts loaded:', document.scripts.length);
+            console.log('🖼️ Images loaded:', document.images.length);
+          }
+        });
+
+        // Log when DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ DOM fully loaded');
+          });
+        } else {
+          console.log('✅ DOM already loaded');
+        }
+
+        // Log when window is fully loaded
+        window.addEventListener('load', function() {
+          console.log('🚀 Window fully loaded');
+          console.log('📊 Performance metrics:', performance.getEntriesByType('navigation')[0]);
+        });
       </script>
     `;
 
