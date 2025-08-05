@@ -14,7 +14,7 @@ try {
     "dist/index.html",
     "dist/index.js",
     "dist/extension/extension.js",
-    "dist/icon.png",
+    "dist/icon.webp",
   ];
 
   for (const file of requiredFiles) {
@@ -57,7 +57,7 @@ try {
 
   // Step 4: Check icon file
   console.log("\n🖼️  Checking icon file...");
-  const iconStats = fs.statSync("dist/icon.png");
+  const iconStats = fs.statSync("dist/icon.webp");
 
   if (iconStats.size < 1000) {
     throw new Error("Icon file seems too small");

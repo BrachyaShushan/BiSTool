@@ -42,5 +42,5 @@ SEARCH_AND_WIZARD_FEATURES.md
 # Keep only the built React app and extension
 !dist/**
 !src/extension/** 
-!public/icon.png
+!public/icon.webp
 backend/**

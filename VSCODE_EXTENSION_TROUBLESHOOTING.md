@@ -25,7 +25,7 @@
    - `dist/index.html` - Main React app
    - `dist/index.js` - React app bundle
    - `dist/extension/extension.js` - Extension code
-   - `dist/icon.png` - Extension icon
+   - `dist/icon.webp` - Extension icon
 
 3. **Verify the build process**:
 
@@ -61,15 +61,15 @@
 1. **Verify icon exists**:
 
    ```bash
-   ls public/icon.png
-   ls dist/icon.png
+   ls public/icon.webp
+   ls dist/icon.webp
    ```
 
 2. **Check package.json icon path**:
 
    ```json
    {
-     "icon": "dist/icon.png"
+     "icon": "dist/icon.webp"
    }
    ```
 
@@ -177,7 +177,7 @@
 npm run build:simple
 
 # 2. Copy icon
-cp public/icon.png dist/icon.png
+cp public/icon.webp dist/icon.webp
 
 # 3. Build extension
 npm run build:extension
@@ -192,7 +192,7 @@ npm run build:full
 dist/
 ├── index.html          # React app
 ├── index.js           # React app bundle
-├── icon.png           # Extension icon
+├── icon.webp           # Extension icon
 └── extension/
     └── extension.js   # Extension code
 ```
@@ -202,7 +202,7 @@ dist/
 Before reporting issues, verify:
 
 - [ ] All build files exist in `dist/` folder
-- [ ] Icon file is copied to `dist/icon.png`
+- [ ] Icon file is copied to `dist/icon.webp`
 - [ ] Extension compiles without TypeScript errors
 - [ ] React app builds successfully
 - [ ] Extension activates when command is run
@@ -238,7 +238,7 @@ npm run dev:extension
 
 **For missing icons**:
 
-1. Icon path in package.json is now correctly set to `"dist/icon.png"`
+1. Icon path in package.json is now correctly set to `"dist/icon.webp"`
 2. Build script ensures icon is copied to dist folder
 3. Icon file is verified during build process
 

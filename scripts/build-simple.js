@@ -79,7 +79,7 @@ const htmlContent = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BiSTool - API Testing Tool</title>
-    <link rel="icon" type="image/svg+xml" href="./icon.png">
+    <link rel="icon" type="image/svg+xml" href="./icon.webp">
     <style>
 ${cssContent}
     </style>

@@ -4,7 +4,7 @@
   "description": "API Testing Tool with YAML generation and AI test creation",
   "version": "1.0.0",
   "publisher": "bistool",
-  "icon": "dist/icon.png",
+  "icon": "dist/icon.webp",
   "repository": {
     "type": "git",
     "url": "https://github.com/bistool/bistool.git"

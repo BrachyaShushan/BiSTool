@@ -53,7 +53,7 @@ class BiSToolPanel {
     );
 
     // Set the panel icon
-    panel.iconPath = vscode.Uri.joinPath(extensionUri, "dist", "icon.png");
+    panel.iconPath = vscode.Uri.joinPath(extensionUri, "dist", "icon.webp");
 
     BiSToolPanel.currentPanel = new BiSToolPanel(panel, extensionUri);
   }

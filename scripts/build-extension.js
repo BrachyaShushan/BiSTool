@@ -20,8 +20,8 @@ try {
 
   // Step 2.5: Copy icon to dist folder
   console.log("\n🖼️  Copying icon to dist folder...");
-  const iconSource = path.join(process.cwd(), "public", "icon.png");
-  const iconDest = path.join(process.cwd(), "dist", "icon.png");
+  const iconSource = path.join(process.cwd(), "public", "icon.webp");
+  const iconDest = path.join(process.cwd(), "dist", "icon.webp");
 
   if (fs.existsSync(iconSource)) {
     fs.copyFileSync(iconSource, iconDest);
@@ -43,7 +43,7 @@ try {
     "extension.js"
   );
   const indexFile = path.join(process.cwd(), "dist", "index.html");
-  const iconFile = path.join(process.cwd(), "dist", "icon.png");
+  const iconFile = path.join(process.cwd(), "dist", "icon.webp");
 
   if (!fs.existsSync(extensionFile)) {
     throw new Error("Extension file not found: " + extensionFile);
@@ -57,8 +57,8 @@ try {
 
   console.log("✅ All required files found");
 
-  // Step 5: Package extension using local @vscode/vsce
-  console.log("\n📦 Packaging extension with local @vscode/vsce...");
+  // Step 5: Package extension using npx @vscode/vsce
+  console.log("\n📦 Packaging extension with npx @vscode/vsce...");
   try {
     // Use npx to run the local @vscode/vsce package
     execSync("npx @vscode/vsce package", { stdio: "inherit" });

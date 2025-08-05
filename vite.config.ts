@@ -106,8 +106,8 @@ export default defineConfig({
       name: "copy-icon",
       generateBundle() {
         // Copy icon to dist folder
-        const iconSource = path.join(__dirname, "public", "icon.png");
-        const iconDest = path.join(__dirname, "dist", "icon.png");
+        const iconSource = path.join(__dirname, "public", "icon.webp");
+        const iconDest = path.join(__dirname, "dist", "icon.webp");
 
         if (fs.existsSync(iconSource)) {
           fs.copyFileSync(iconSource, iconDest);
