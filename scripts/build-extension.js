@@ -57,22 +57,14 @@ try {
 
   console.log("✅ All required files found");
 
-  // Step 5: Check if vsce is installed
-  console.log("\n📦 Checking for vsce...");
+  // Step 5: Package extension using local @vscode/vsce
+  console.log("\n📦 Packaging extension with local @vscode/vsce...");
   try {
-    execSync("vsce --version", { stdio: "pipe" });
-  } catch (error) {
-    console.log("Installing vsce globally...");
-    execSync("npm install -g vsce", { stdio: "inherit" });
-  }
-
-  // Step 6: Package extension
-  console.log("\n📦 Packaging extension...");
-  try {
-    execSync('echo "y\ny" | vsce package', { stdio: "inherit" });
+    // Use npx to run the local @vscode/vsce package
+    execSync("npx @vscode/vsce package", { stdio: "inherit" });
   } catch (error) {
     console.log("Trying alternative packaging method...");
-    execSync("vsce package --no-yarn", { stdio: "inherit" });
+    execSync("npx @vscode/vsce package --no-yarn", { stdio: "inherit" });
   }
 
   console.log("\n✅ Extension built successfully!");
