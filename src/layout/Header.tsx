@@ -42,6 +42,7 @@ const Header = () => {
     const [tokenDuration, setTokenDuration] = useState<number | null>(null);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+    const [isSessionNavigatorOpen, setIsSessionNavigatorOpen] = useState(false);
     const { currentProject } = useProjectContext();
     const navigate = useNavigate();
     const tokenName = (globalVariables && tokenConfig && tokenConfig.tokenName) || "x-access-token";
@@ -151,6 +152,10 @@ const Header = () => {
         setIsMobileSidebarOpen(prev => !prev);
     }, []);
 
+    const toggleSessionNavigator = useCallback(() => {
+        setIsSessionNavigatorOpen(prev => !prev);
+    }, []);
+
     // Close mobile sidebar when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -206,95 +211,56 @@ const Header = () => {
     return (
         <>
             <header className={`sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm transition-all duration-300 dark:bg-gray-900 dark:border-gray-700`}>
-                <div className="flex justify-between items-center px-3 py-2 sm:px-4 md:px-6 sm:py-3">
-                    {/* Left side - Project info and navigation */}
-                    <div className="flex flex-1 items-center space-x-2 min-w-0 sm:space-x-4">
-                        <button
-                            onClick={handleReturnToWelcome}
-                            className="flex flex-shrink-0 items-center space-x-2 transition-all duration-200 sm:space-x-3 group hover:scale-105"
-                            title="Return to Welcome Screen"
-                        >
-                            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg sm:p-3 sm:rounded-xl">
-                                <h1 className="text-lg font-bold text-white sm:text-2xl">B</h1>
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                                <h1 className="text-lg font-bold text-transparent truncate bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 sm:text-xl md:text-2xl dark:from-blue-400 dark:to-indigo-400">
-                                    BiSTool
-                                </h1>
-                                {currentProject && (
-                                    <div className="flex items-center mt-0.5 sm:mt-1 space-x-1 sm:space-x-2 min-w-0">
-                                        <FiFolder size={12} className="text-gray-500 dark:text-gray-400 flex-shrink-0 sm:w-3.5 sm:h-3.5" />
-                                        <span className="text-xs font-medium text-gray-600 truncate sm:text-sm dark:text-gray-300">
-                                            {currentProject.name}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        </button>
-                    </div>
-
-                    {/* Center - Search Bar */}
-                    <div className="hidden md:flex flex-1 justify-center items-center max-w-md mx-4">
-                        <SearchBar
-                            placeholder="Search projects, sessions, variables..."
-                            compact
-                            className="w-full"
-                        />
-                    </div>
-
-                    {/* Category and Session Selectors - Hidden on mobile when collapsed */}
-                    {categories.length > 0 && (
-                        <div className={`hidden sm:flex sm:items-center gap-2 bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-md min-w-0 transition-all duration-300 ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-lg lg:max-w-xl opacity-100'} dark:bg-gray-700 dark:border-gray-600`}>
-                            {/* Vertical Category Selector */}
-                            <div className="flex flex-shrink-0">
-                                <VerticalCategorySelector
-                                    categories={categories}
-                                    activeCategory={activeSession?.category || ''}
-                                    onCategoryChange={handleCategoryChange}
-                                    className="w-32"
-                                />
-                            </div>
-
-                            {/* Divider */}
-                            <div className="w-px h-full bg-gray-300 dark:bg-gray-600"></div>
-
-                            {/* Horizontal Session Selector */}
-                            {activeSession?.category && sessionSections.length > 0 && (
-                                <div className="flex-1 min-w-0">
-                                    <ResponsiveWorkflowSelector
-                                        sections={sessionSections}
-                                        activeSection={activeSession.id as SectionId}
-                                        onSectionChange={handleSessionChange}
-                                        className="max-w-full"
-                                        useCustomStyling={true}
-                                    />
+                <div className="px-3 py-2 sm:px-4 md:px-6 sm:py-3">
+                    {/* Main Header Row */}
+                    <div className="flex items-center justify-between gap-2 sm:gap-4">
+                        {/* Left: Logo & Project Info */}
+                        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink-0">
+                            <button
+                                onClick={handleReturnToWelcome}
+                                className="flex items-center space-x-2 transition-all duration-200 group hover:scale-105"
+                                title="Return to Welcome Screen"
+                            >
+                                <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg sm:p-2.5">
+                                    <h1 className="text-base font-bold text-white sm:text-lg">B</h1>
                                 </div>
-                            )}
+                                <div className="hidden sm:flex flex-col min-w-0">
+                                    <h1 className="text-lg font-bold text-transparent truncate bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 md:text-xl dark:from-blue-400 dark:to-indigo-400">
+                                        BiSTool
+                                    </h1>
+                                    {currentProject && (
+                                        <div className="flex items-center mt-0.5 space-x-1 min-w-0">
+                                            <FiFolder size={12} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                                            <span className="text-xs font-medium text-gray-600 truncate dark:text-gray-300">
+                                                {currentProject.name}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </button>
                         </div>
-                    )}
 
-                    {/* Right side - Desktop controls and mobile menu button */}
-                    <div className="flex flex-shrink-0 items-center space-x-1 sm:space-x-2 md:space-x-3">
-
-
-                        {/* Center - Mode Switcher (Desktop only) */}
-                        <div className="hidden flex-1 justify-center items-center sm:flex">
+                        {/* Center: Mode Switcher (Desktop) & Search (Large screens) */}
+                        <div className="hidden lg:flex items-center space-x-4 flex-1 justify-center max-w-2xl">
                             <ModeSwitcher
                                 mode={mode}
                                 onModeChange={setMode}
-                                className="mx-4"
                             />
+                            <div className="flex-1 max-w-md">
+                                <SearchBar
+                                    placeholder="Search projects, sessions, variables..."
+                                    compact
+                                    className="w-full"
+                                />
+                            </div>
                         </div>
 
-
-                        {/* Desktop Controls */}
-                        <div className="hidden sm:flex gap-1 justify-end items-center sm:gap-2">
-                            {/* Collapsible Header Content */}
-                            <div className={`flex items-center space-x-2 sm:space-x-3 md:space-x-4 transition-all duration-300 ease-in-out ${isHeaderCollapsed === true ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
-                                {/* Action Buttons */}
-                                <div className="flex items-center space-x-1 sm:space-x-2">
-
-                                    {/* Save Status Indicator */}
+                        {/* Right: Action Buttons */}
+                        <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                            {/* Desktop Controls */}
+                            <div className="hidden sm:flex items-center space-x-1 md:space-x-2">
+                                {/* Collapsible Content */}
+                                <div className={`flex items-center space-x-1 md:space-x-2 transition-all duration-300 ease-in-out ${isHeaderCollapsed ? 'overflow-hidden max-w-0 opacity-0' : 'max-w-full opacity-100'}`}>
                                     <SaveControls
                                         autoSave={autoSave}
                                         hasUnsavedChanges={hasUnsavedChanges}
@@ -302,57 +268,50 @@ const Header = () => {
                                         lastSaved={lastSaved}
                                     />
 
-                                    {/* Theme toggle */}
-                                    <button
-                                        onClick={toggleDarkMode}
-                                        className={`p-1.5 sm:p-2 rounded-lg transition-colors dark:hover:bg-gray-700 hover:bg-gray-100`}
-                                        title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
-                                    >
-                                        {isDarkMode ? <FiSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FiMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
-                                    </button>
-
                                     {/* Active Session Method Badge */}
                                     {activeSession?.requestConfig && (
-                                        <div className="flex items-center space-x-2">
-                                            <span className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-bold shadow-md ${methodColor[activeSession.requestConfig.method]?.color
-                                                }`}>
-                                                {activeSession.requestConfig.method}
-                                            </span>
-                                        </div>
+                                        <span className={`px-2 py-1 rounded text-xs font-bold shadow-sm ${methodColor[activeSession.requestConfig.method]?.color}`}>
+                                            {activeSession.requestConfig.method}
+                                        </span>
                                     )}
 
-                                    {/* Search Button */}
                                     <button
-                                        onClick={() => {
-                                            // Focus on search input
-                                            const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
-                                            if (searchInput) {
-                                                searchInput.focus();
-                                            }
-                                        }}
-                                        className={`p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group sm:p-3 sm:rounded-xl hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-white hover:bg-gray-200 hover:text-gray-900`}
-                                        title="Search"
+                                        onClick={toggleDarkMode}
+                                        className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
                                     >
-                                        <FiSearch size={16} className="transition-transform duration-200 group-hover:scale-110 sm:w-4.5 sm:h-4.5" />
+                                        {isDarkMode ? <FiSun className="w-4 h-4" /> : <FiMoon className="w-4 h-4" />}
                                     </button>
 
-                                    {/* Project Manager Button */}
+                                    {/* Session Navigator Button */}
+                                    {categories.length > 0 && (
+                                        <button
+                                            onClick={toggleSessionNavigator}
+                                            className={`p-2 rounded-lg shadow-sm transition-all duration-200 hover:scale-105 ${isSessionNavigatorOpen
+                                                ? "text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-300"
+                                                : "text-gray-700 bg-gray-100 dark:text-gray-300 dark:bg-gray-700"
+                                            } dark:hover:bg-gray-600`}
+                                            title={isSessionNavigatorOpen ? "Hide Session Navigator" : "Show Session Navigator"}
+                                        >
+                                            <FiFolder size={16} />
+                                        </button>
+                                    )}
+
                                     <button
                                         onClick={() => openUnifiedManager()}
-                                        className={`p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group sm:p-3 sm:rounded-xl hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-white hover:bg-gray-200 hover:text-gray-900`}
+                                        className="p-2 text-gray-700 bg-gray-100 rounded-lg shadow-sm transition-all duration-200 hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
                                         title="Manager"
                                     >
-                                        <FiSettings size={16} className="transition-transform duration-200 group-hover:rotate-90 sm:w-4.5 sm:h-4.5" />
+                                        <FiSettings size={16} />
                                     </button>
 
-                                    {/* Token Status */}
                                     <button
                                         onClick={handleRegenerateToken}
-                                        className={`group p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-200 hover:scale-105 shadow-md ${isTokenExpired
-                                            ? "text-red-500 bg-red-100 dark:bg-red-900 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800"
+                                        className={`p-2 rounded-lg shadow-sm transition-all duration-200 hover:scale-105 ${isTokenExpired
+                                            ? "text-red-500 bg-red-100 dark:bg-red-900 dark:text-red-300"
                                             : isTokenLoading
                                                 ? "text-blue-500 bg-blue-100 dark:bg-blue-900 dark:text-blue-300"
-                                                : "text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800"
+                                                : "text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300"
                                             }`}
                                         title={
                                             isTokenExpired
@@ -361,56 +320,91 @@ const Header = () => {
                                                     ? "Checking token..."
                                                     : `Token valid${tokenDuration !== null ? ` (${Math.round(tokenDuration)} min left)` : ""}`
                                         }
-                                        aria-label="Regenerate token"
                                     >
-                                        <FiKey size={16} className={`transition-transform duration-200 group-hover:scale-110 ${isTokenLoading ? 'animate-spin' : ''} sm:w-4.5 sm:h-4.5`} />
+                                        <FiKey size={16} className={isTokenLoading ? 'animate-spin' : ''} />
                                     </button>
                                 </div>
+
+                                {/* Collapse Toggle */}
+                                <button
+                                    onClick={toggleHeaderCollapse}
+                                    className="p-2 text-gray-700 bg-gray-100 rounded-lg shadow-sm transition-all duration-200 hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                                    title={isHeaderCollapsed ? "Expand header" : "Collapse header"}
+                                >
+                                    {isHeaderCollapsed ? <FiMenu size={16} /> : <FiX size={16} />}
+                                </button>
                             </div>
 
-                            {/* Desktop Hamburger Menu Button */}
-                            <button
-                                onClick={toggleHeaderCollapse}
-                                className={`flex justify-center items-center p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group sm:p-3 sm:rounded-xl hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 hover:bg-gray-200`}
-                                title={isHeaderCollapsed === true ? "Expand header" : "Collapse header"}
-                                aria-label={isHeaderCollapsed === true ? "Expand header" : "Collapse header"}
-                            >
-                                <div className="transition-transform duration-200 group-hover:scale-110">
-                                    {isHeaderCollapsed === true ? <FiMenu size={16} className="sm:w-4.5 sm:h-4.5" /> : <FiX size={16} className="sm:w-4.5 sm:h-4.5" />}
-                                </div>
-                            </button>
+                            {/* Mobile Controls */}
+                            <div className="flex sm:hidden items-center space-x-2">
+                                <button
+                                    onClick={() => {
+                                        setIsMobileSidebarOpen(true);
+                                        setTimeout(() => {
+                                            const searchInput = document.querySelector('.mobile-sidebar input[type="text"]') as HTMLInputElement;
+                                            searchInput?.focus();
+                                        }, 100);
+                                    }}
+                                    className="p-2 text-gray-700 bg-gray-100 rounded-lg shadow-sm transition-all duration-200 dark:text-gray-300 dark:bg-gray-700"
+                                    title="Search"
+                                >
+                                    <FiSearch size={16} />
+                                </button>
+
+                                <button
+                                    onClick={toggleMobileSidebar}
+                                    className="mobile-sidebar-toggle p-2 text-gray-700 bg-gray-100 rounded-lg shadow-sm transition-all duration-200 dark:text-gray-300 dark:bg-gray-700"
+                                    title="Open menu"
+                                >
+                                    <FiMenu size={16} />
+                                </button>
+                            </div>
                         </div>
-
-                        {/* Mobile Search Button */}
-                        <button
-                            onClick={() => {
-                                // Focus on search input in mobile sidebar
-                                setIsMobileSidebarOpen(true);
-                                // Add a small delay to ensure sidebar is open
-                                setTimeout(() => {
-                                    const searchInput = document.querySelector('.mobile-sidebar input[type="text"]') as HTMLInputElement;
-                                    if (searchInput) {
-                                        searchInput.focus();
-                                    }
-                                }, 100);
-                            }}
-                            className="flex sm:hidden justify-center items-center p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 hover:bg-gray-200 mr-2"
-                            title="Search"
-                            aria-label="Search"
-                        >
-                            <FiSearch size={16} className="transition-transform duration-200 group-hover:scale-110" />
-                        </button>
-
-                        {/* Mobile Menu Button */}
-                        <button
-                            onClick={toggleMobileSidebar}
-                            className="mobile-sidebar-toggle flex sm:hidden justify-center items-center p-2 text-gray-700 bg-gray-100 rounded-lg shadow-md transition-all duration-200 group hover:scale-105 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 hover:bg-gray-200"
-                            title="Open menu"
-                            aria-label="Open menu"
-                        >
-                            <FiMenu size={16} className="transition-transform duration-200 group-hover:scale-110" />
-                        </button>
                     </div>
+
+                    {/* Secondary Row: Categories & Sessions (Desktop) - Only show when navigator is open */}
+                    {categories.length > 0 && !isHeaderCollapsed && isSessionNavigatorOpen && (
+                        <div className="hidden sm:flex items-center justify-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top-2 duration-200">
+                            <div className="flex items-center gap-2 bg-white rounded-xl border border-gray-200 shadow-sm p-2 max-w-4xl w-full dark:bg-gray-800 dark:border-gray-700">
+                                {/* Category Selector */}
+                                <div className="flex-shrink-0">
+                                    <VerticalCategorySelector
+                                        categories={categories}
+                                        activeCategory={activeSession?.category || ''}
+                                        onCategoryChange={handleCategoryChange}
+                                        className="w-32"
+                                    />
+                                </div>
+
+                                {/* Divider */}
+                                {activeSession?.category && sessionSections.length > 0 && (
+                                    <div className="w-px h-8 bg-gray-300 dark:bg-gray-600"></div>
+                                )}
+
+                                {/* Session Selector */}
+                                {activeSession?.category && sessionSections.length > 0 && (
+                                    <div className="flex-1 min-w-0">
+                                        <ResponsiveWorkflowSelector
+                                            sections={sessionSections}
+                                            activeSection={activeSession.id as SectionId}
+                                            onSectionChange={handleSessionChange}
+                                            className="w-full"
+                                            useCustomStyling={true}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Close Button */}
+                                <button
+                                    onClick={toggleSessionNavigator}
+                                    className="flex-shrink-0 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700"
+                                    title="Hide Session Navigator"
+                                >
+                                    <FiX size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -432,6 +426,7 @@ const Header = () => {
                                 <button
                                     onClick={() => setIsMobileSidebarOpen(false)}
                                     className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                    title="Close Menu"
                                 >
                                     <FiX size={20} />
                                 </button>

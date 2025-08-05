@@ -1155,6 +1155,7 @@ const SessionsManager = () => {
                                     <select
                                         value={divideBy}
                                         onChange={e => setDivideBy(e.target.value as 'none' | 'category')}
+                                        aria-label="Group sessions by"
                                         className={`appearance-none px-4 py-2 pr-10 rounded-lg text-sm border transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm cursor-pointer dark:text-white dark:bg-gray-700 dark:border-gray-600 dark:focus:bg-gray-600 dark:hover:bg-gray-600 dark:focus:border-blue-400 text-gray-900 bg-white border-gray-300 focus:bg-white hover:bg-gray-50 `}
                                         data-grouping-options="none,category"
                                         data-default-value="category"
@@ -1218,6 +1219,7 @@ const SessionsManager = () => {
                         return (
                             <div key={cat} className="mb-4">
                                 <button
+                                    title="Toggle category"
                                     className={`flex items-center w-full text-left font-semibold mb-2 px-4 py-3 rounded-lg transition-colors focus:outline-none border border-transparent hover:border-blue-300 focus:border-blue-400 bg-white dark:bg-gray-800 dark:text-gray-100 ${isOpen ? 'dark:shadow-lg shadow-md' : ''}`}
                                     onClick={() => toggleCategory(cat)}
                                     aria-expanded={isOpen}
@@ -1230,8 +1232,7 @@ const SessionsManager = () => {
                                     <span className="text-xs text-gray-400">{sessions.length} session{sessions.length !== 1 ? 's' : ''}</span>
                                 </button>
                                 <div
-                                    className={`overflow-hidden transition-all duration-300 ${isOpen ? 'opacity-100' : 'max-h-0 opacity-0'}`}
-                                    style={{ willChange: 'max-height, opacity' }}
+                                    className={`overflow-hidden transition-all duration-300 will-change-transform ${isOpen ? 'opacity-100' : 'max-h-0 opacity-0'}`}
                                     aria-hidden={!isOpen}
                                 >
                                     <div className="p-2 space-y-2">
@@ -1842,6 +1843,7 @@ const SessionsManager = () => {
                                             <select
                                                 value={restApiConfig.authType}
                                                 onChange={(e) => setRestApiConfig(prev => ({ ...prev, authType: e.target.value as any }))}
+                                                aria-label="Authentication type"
                                                 className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
                                             >
                                                 <option value="bearer">Bearer Token</option>
@@ -1978,6 +1980,7 @@ const SessionsManager = () => {
                                             <select
                                                 value={graphqlApiConfig.authType}
                                                 onChange={(e) => setGraphqlApiConfig(prev => ({ ...prev, authType: e.target.value as any }))}
+                                                aria-label="Authentication type"
                                                 className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
                                             >
                                                 <option value="bearer">Bearer Token</option>
@@ -2127,6 +2130,7 @@ const SessionsManager = () => {
                                             <select
                                                 value={websocketApiConfig.authType}
                                                 onChange={(e) => setWebsocketApiConfig(prev => ({ ...prev, authType: e.target.value as any }))}
+                                                aria-label="Authentication type"
                                                 className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
                                             >
                                                 <option value="bearer">Bearer Token</option>
@@ -2265,6 +2269,7 @@ const SessionsManager = () => {
                                         <select
                                             value={customApiConfig.method}
                                             onChange={(e) => setCustomApiConfig(prev => ({ ...prev, method: e.target.value }))}
+                                            aria-label="HTTP method"
                                             className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
                                         >
                                             {HTTP_METHODS.map(method => (
@@ -2282,6 +2287,7 @@ const SessionsManager = () => {
                                         <select
                                             value={customApiConfig.bodyType}
                                             onChange={(e) => setCustomApiConfig(prev => ({ ...prev, bodyType: e.target.value as any }))}
+                                            aria-label="Body type"
                                             className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
                                         >
                                             <option value="none">None</option>
@@ -2329,6 +2335,7 @@ const SessionsManager = () => {
                                             <select
                                                 value={customApiConfig.authType}
                                                 onChange={(e) => setCustomApiConfig(prev => ({ ...prev, authType: e.target.value as any }))}
+                                                aria-label="Authentication type"
                                                 className="w-full px-3 py-2 rounded-lg border dark:text-white dark:bg-gray-700 dark:border-gray-600 text-gray-900 bg-white border-gray-300"
                                             >
                                                 <option value="bearer">Bearer Token</option>
