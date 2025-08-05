@@ -3,6 +3,7 @@ import { RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import { initializeDevTools } from "./utils/devtools";
 import ErrorBoundary from "./components/ui/ErrorBoundary";
+import { isFilePath, handleFilePathRedirect } from "./utils/filePathHandler";
 import router from "./router";
 
 // Global Monaco Editor CSS loader for VS Code extension
@@ -73,7 +74,15 @@ const App: React.FC = () => {
         initializeDevTools();
         // Load Monaco Editor CSS on app start
         loadMonacoEditorCSS();
-    }, []);
+
+        // Handle file path detection and store the original URL
+        if (isFilePath()) {
+            handleFilePathRedirect();
+            // Continue with normal app initialization instead of returning early
+        }
+
+
+        }, []);
 
     return (
         <ErrorBoundary>

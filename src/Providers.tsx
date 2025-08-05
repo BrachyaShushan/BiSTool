@@ -1,34 +1,35 @@
 import React from "react";
-import { ProjectProvider } from "./context/ProjectContext";
-import { StorageProvider } from "./context/StorageContext";
 import { AIConfigProvider } from "./context/AIConfigContext";
+import { URLBuilderProvider } from "./context/URLBuilderContext";
+import { ProjectProvider } from "./context/ProjectContext";
 import { AppProvider } from "./context/AppContext";
+import { SearchProvider } from "./context/SearchContext";
+import { StorageProvider } from "./context/StorageContext";
 import { VariablesProvider } from "./context/VariablesContext";
 import { TokenProvider } from "./context/TokenContext";
 import { PromptConfigProvider } from "./context/PromptConfigContext";
-import { SearchProvider } from "./context/SearchContext";
-import { URLBuilderProvider } from "./context/URLBuilderContext";
 
+// Single provider hierarchy with proper dependency order
 export default function Providers({ children }: { children: React.ReactNode }) {
     return (
-        <ProjectProvider>
-            <StorageProvider>
-                <AIConfigProvider getProjectStorageKey={() => ''} currentProjectId={null}>
-                    <AppProvider currentProjectId={null} forceReload={0}>
-                        <VariablesProvider>
-                            <TokenProvider currentProjectId={null} forceReload={0}>
-                                <PromptConfigProvider>
-                                    <SearchProvider>
-                                        <URLBuilderProvider>
+        <AIConfigProvider getProjectStorageKey={() => ''} currentProjectId={null}>
+            <ProjectProvider>
+                <StorageProvider>
+                    <PromptConfigProvider>
+                        <AppProvider currentProjectId={null} forceReload={0}>
+                            <VariablesProvider>
+                                <TokenProvider currentProjectId={null} forceReload={0}>
+                                    <URLBuilderProvider>
+                                        <SearchProvider>
                                             {children}
-                                        </URLBuilderProvider>
-                                    </SearchProvider>
-                                </PromptConfigProvider>
-                            </TokenProvider>
-                        </VariablesProvider>
-                    </AppProvider>
-                </AIConfigProvider>
-            </StorageProvider>
-        </ProjectProvider>
+                                        </SearchProvider>
+                                    </URLBuilderProvider>
+                                </TokenProvider>
+                            </VariablesProvider>
+                        </AppProvider>
+                    </PromptConfigProvider>
+                </StorageProvider>
+            </ProjectProvider>
+        </AIConfigProvider>
     );
 } 
